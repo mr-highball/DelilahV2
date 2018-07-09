@@ -1,0 +1,9 @@
+[submodule "src/slf4p"]
+	path = src/slf4p
+	url = https://github.com/michaelJustin/slf4p.git
+[submodule "src/coinbase-pro"]
+	path = src/coinbase-pro
+	url = https://github.com/mr-highball/coinbase-pro.git
+[submodule "src/ledger"]
+	path = src/ledger
+	url = https://github.com/mr-highball/ledger.git

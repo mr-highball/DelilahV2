@@ -1,0 +1,8 @@
+object Main: TMain
+  Left = 396
+  Height = 404
+  Top = 210
+  Width = 511
+  Caption = 'DelilahV2'
+  LCLVersion = '1.8.2.0'
+end

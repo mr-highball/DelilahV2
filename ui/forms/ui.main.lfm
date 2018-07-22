@@ -6,22 +6,106 @@ object Main: TMain
   Caption = 'Simple Bot v1.0.0'
   ClientHeight = 377
   ClientWidth = 472
+  OnCreate = FormCreate
   LCLVersion = '1.8.2.0'
-  inline UserControl1_1: TUserControl1
-    Width = 472
-    Align = alTop
-    ClientWidth = 472
-    inherited pnl_control: TPanel
-      Width = 462
+  object pctrl_main: TPageControl
+    Left = 5
+    Height = 367
+    Top = 5
+    Width = 462
+    ActivePage = ts_auth
+    Align = alClient
+    BorderSpacing.Left = 5
+    BorderSpacing.Top = 5
+    BorderSpacing.Right = 5
+    BorderSpacing.Bottom = 5
+    TabIndex = 0
+    TabOrder = 0
+    object ts_auth: TTabSheet
+      Caption = 'Authenicator'
+      ClientHeight = 339
+      ClientWidth = 454
+      inline auth: TAuthenticator
+        AnchorSideLeft.Control = ts_auth
+        AnchorSideLeft.Side = asrCenter
+        AnchorSideTop.Control = ts_auth
+        AnchorSideTop.Side = asrCenter
+        Left = 45
+        Top = 89
+        inherited pnl_edits: TPanel
+          inherited edit_key: TEdit
+            AnchorSideLeft.Control = auth
+          end
+        end
+      end
     end
-    inherited lbl_title: TLabel
-      Width = 462
+    object ts_strategy: TTabSheet
+      Caption = 'Strategy'
+      ClientHeight = 339
+      ClientWidth = 454
+      inline ignition_main: TIgnition
+        Top = 270
+        Width = 454
+        Align = alBottom
+        ClientWidth = 454
+        inherited btn_stop: TButton
+          AnchorSideTop.Control = ignition_main
+          Left = 304
+        end
+        inherited btn_start: TButton
+          AnchorSideTop.Control = ignition_main
+          AnchorSideRight.Control = ignition_main
+          Left = 379
+        end
+        inherited lbl_status: TLabel
+          AnchorSideLeft.Control = ignition_main
+        end
+      end
+      object scroll_strategy: TScrollBox
+        Left = 5
+        Height = 260
+        Top = 5
+        Width = 444
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Align = alClient
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        BorderSpacing.Right = 5
+        BorderSpacing.Bottom = 5
+        TabOrder = 1
+      end
     end
-    inherited lbl_descr: TLabel
-      Width = 462
-    end
-    inherited lbl_author: TLabel
-      Width = 462
+    object ts_log: TTabSheet
+      Caption = 'Logging'
+      ClientHeight = 339
+      ClientWidth = 454
+      inline multi_log: TMultiLine
+        Left = 5
+        Height = 329
+        Top = 5
+        Width = 444
+        Align = alClient
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        BorderSpacing.Right = 5
+        BorderSpacing.Bottom = 5
+        ClientHeight = 329
+        ClientWidth = 444
+        inherited pnl_control: TPanel
+          Height = 259
+          Width = 434
+        end
+        inherited lbl_title: TLabel
+          Width = 434
+        end
+        inherited lbl_descr: TLabel
+          Width = 434
+        end
+        inherited lbl_author: TLabel
+          Width = 434
+        end
+      end
     end
   end
   object json_main: TJSONPropStorage

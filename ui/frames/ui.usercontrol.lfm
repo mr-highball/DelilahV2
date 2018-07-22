@@ -32,7 +32,9 @@ object UserControl: TUserControl
     BorderSpacing.Top = 5
     BorderSpacing.Right = 5
     Caption = '(Title)'
+    Font.Style = [fsBold]
     ParentColor = False
+    ParentFont = False
   end
   object lbl_descr: TLabel
     Left = 5
@@ -40,6 +42,7 @@ object UserControl: TUserControl
     Top = 25
     Width = 310
     Align = alTop
+    Alignment = taCenter
     BorderSpacing.Left = 5
     BorderSpacing.Top = 5
     BorderSpacing.Right = 5
@@ -58,6 +61,8 @@ object UserControl: TUserControl
     BorderSpacing.Top = 5
     BorderSpacing.Right = 5
     Caption = '(Author)'
+    Font.Style = [fsItalic]
     ParentColor = False
+    ParentFont = False
   end
 end

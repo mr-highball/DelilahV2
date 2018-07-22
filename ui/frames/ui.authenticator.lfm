@@ -1,0 +1,135 @@
+object Authenticator: TAuthenticator
+  Left = 0
+  Height = 160
+  Top = 0
+  Width = 364
+  ClientHeight = 160
+  ClientWidth = 364
+  TabOrder = 0
+  DesignLeft = 628
+  DesignTop = 239
+  object pnl_edits: TPanel
+    Left = 0
+    Height = 135
+    Top = 0
+    Width = 364
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 135
+    ClientWidth = 364
+    TabOrder = 0
+    object edit_key: TEdit
+      AnchorSideLeft.Control = Owner
+      AnchorSideTop.Control = pnl_edits
+      AnchorSideRight.Control = pnl_edits
+      AnchorSideRight.Side = asrBottom
+      Left = 75
+      Height = 23
+      Top = 5
+      Width = 264
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 75
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 25
+      TabOrder = 0
+    end
+    object edit_secret: TEdit
+      AnchorSideLeft.Control = edit_key
+      AnchorSideTop.Control = pnl_edits
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = pnl_edits
+      AnchorSideRight.Side = asrBottom
+      Left = 75
+      Height = 23
+      Top = 56
+      Width = 264
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Right = 25
+      TabOrder = 1
+    end
+    object edit_pass: TEdit
+      AnchorSideLeft.Control = edit_key
+      AnchorSideTop.Control = pnl_edits
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_key
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = pnl_edits
+      AnchorSideBottom.Side = asrBottom
+      Left = 75
+      Height = 23
+      Top = 102
+      Width = 264
+      Anchors = [akLeft, akRight, akBottom]
+      BorderSpacing.Bottom = 10
+      TabOrder = 2
+    end
+    object lbl_key: TLabel
+      AnchorSideLeft.Control = pnl_edits
+      AnchorSideTop.Control = edit_key
+      Left = 5
+      Height = 15
+      Top = 5
+      Width = 22
+      BorderSpacing.Left = 5
+      Caption = 'Key:'
+      ParentColor = False
+    end
+    object lbl_secret: TLabel
+      AnchorSideLeft.Control = pnl_edits
+      AnchorSideTop.Control = edit_secret
+      Left = 5
+      Height = 15
+      Top = 56
+      Width = 35
+      BorderSpacing.Left = 5
+      Caption = 'Secret:'
+      ParentColor = False
+    end
+    object lbl_pass: TLabel
+      AnchorSideLeft.Control = pnl_edits
+      AnchorSideTop.Control = edit_pass
+      Left = 5
+      Height = 15
+      Top = 102
+      Width = 61
+      BorderSpacing.Left = 5
+      Caption = 'Passphrase:'
+      ParentColor = False
+    end
+  end
+  object pnl_switches: TPanel
+    Left = 0
+    Height = 25
+    Top = 135
+    Width = 364
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 25
+    ClientWidth = 364
+    TabOrder = 1
+    object chk_mode: TCheckBox
+      Left = 240
+      Height = 25
+      Top = 0
+      Width = 99
+      Align = alRight
+      BorderSpacing.Right = 25
+      Caption = 'Sandbox Mode'
+      Checked = True
+      State = cbChecked
+      TabOrder = 0
+    end
+    object chk_local_time: TCheckBox
+      Left = 137
+      Height = 25
+      Top = 0
+      Width = 78
+      Align = alRight
+      BorderSpacing.Right = 25
+      Caption = 'Local Time'
+      Checked = True
+      State = cbChecked
+      TabOrder = 1
+    end
+  end
+end

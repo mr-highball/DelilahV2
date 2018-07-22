@@ -1,0 +1,53 @@
+object Ignition: TIgnition
+  Left = 0
+  Height = 69
+  Top = 0
+  Width = 399
+  ClientHeight = 69
+  ClientWidth = 399
+  TabOrder = 0
+  DesignLeft = 597
+  DesignTop = 245
+  object btn_stop: TButton
+    AnchorSideTop.Control = Owner
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = btn_start
+    Left = 249
+    Height = 25
+    Top = 22
+    Width = 70
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 5
+    Caption = 'S&top'
+    Constraints.MaxHeight = 25
+    Constraints.MaxWidth = 70
+    TabOrder = 0
+  end
+  object btn_start: TButton
+    AnchorSideTop.Control = Owner
+    AnchorSideTop.Side = asrCenter
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 324
+    Height = 25
+    Top = 22
+    Width = 70
+    Anchors = [akTop, akRight]
+    BorderSpacing.Right = 5
+    Caption = '&Start'
+    Constraints.MaxHeight = 25
+    Constraints.MaxWidth = 70
+    TabOrder = 1
+  end
+  object lbl_status: TLabel
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = btn_stop
+    Left = 5
+    Height = 15
+    Top = 22
+    Width = 41
+    BorderSpacing.Left = 5
+    Caption = 'Status...'
+    ParentColor = False
+  end
+end

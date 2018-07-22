@@ -1,0 +1,36 @@
+object Main: TMain
+  Left = 579
+  Height = 377
+  Top = 225
+  Width = 472
+  Caption = 'Simple Bot v1.0.0'
+  ClientHeight = 377
+  ClientWidth = 472
+  LCLVersion = '1.8.2.0'
+  inline UserControl1_1: TUserControl1
+    Width = 472
+    Align = alTop
+    ClientWidth = 472
+    inherited pnl_control: TPanel
+      Width = 462
+    end
+    inherited lbl_title: TLabel
+      Width = 462
+    end
+    inherited lbl_descr: TLabel
+      Width = 462
+    end
+    inherited lbl_author: TLabel
+      Width = 462
+    end
+  end
+  object json_main: TJSONPropStorage
+    StoredValues = <>
+    JSONFileName = 'simplebot_settings.json'
+    Formatted = True
+    OnSavingProperties = json_mainSavingProperties
+    OnRestoringProperties = json_mainRestoringProperties
+    left = 424
+    top = 328
+  end
+end

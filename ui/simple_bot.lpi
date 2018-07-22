@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="10"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
+      <AutoCreateForms Value="False"/>
+      <Title Value="simple_bot"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+    </General>
+    <BuildModes Count="1">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="1">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+    </RequiredPackages>
+    <Units Count="8">
+      <Unit0>
+        <Filename Value="simple_bot.lpr"/>
+        <IsPartOfProject Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="forms\ui.main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Main"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="frames\ui.authenticator.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Authenticator"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="frames\ui.ignition.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Ignition"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="frames\ui.usercontrol.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="UserControl"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="frames\ui.usercontrol.multiline.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="MultiLine"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="frames\ui.usercontrol.boolean.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Bool"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="frames\ui.usercontrol.singleline.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="UserControl1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit7>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="simple_bot"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="forms;coinbase-pro\src;coinbase-pro\src\mORMot;coinbase-pro\src\mORMot\CrossPlatform;coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto;coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces;coinbase-pro\src\HashLib4Pascal\HashLib\src\Utils;coinbase-pro\src\HashLib4Pascal\HashLib\src\Base;coinbase-pro\src\HashLib4Pascal\HashLib\src\Nullable;coinbase-pro\src\HashLib4Pascal\HashLib\src\NullDigest;coinbase-pro\src\HashLib4Pascal\HashLib\src\Checksum;coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash32;coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash64;coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash128;coinbase-pro\src\HashLib4Pascal\HashLib\src\Include;coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2BConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2SConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2BConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2SConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\KDF;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Bases;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Include;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Interfaces;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Utils;coinbase-pro\src\internettools\internet;coinbase-pro\src\internettools\data;frames"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <SyntaxMode Value="Delphi"/>
+      </SyntaxOptions>
+    </Parsing>
+    <Linking>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

@@ -1,4 +1,4 @@
-program DelilahV2;
+program simple_bot;
 
 {$mode objfpc}{$H+}
 
@@ -6,9 +6,9 @@ uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}
   cthreads,
   {$ENDIF}{$ENDIF}
-  Interfaces, // this includes the LCL widgetset
-  Forms, uDelilahV2
-  { you can add units after this };
+  Interfaces,
+  Forms,
+  ui.main;
 
 {$R *.res}
 

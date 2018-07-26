@@ -10,9 +10,9 @@ uses
 
 type
 
-  { TUserControl1 }
+  { TSingleLine }
 
-  TUserControl1 = class(TUserControl)
+  TSingleLine = class(TUserControl)
   private
     function GetText: String;
     procedure SetText(AValue: String);
@@ -29,19 +29,19 @@ uses
 
 {$R *.lfm}
 
-{ TUserControl1 }
+{ TSingleLine }
 
-function TUserControl1.GetText: String;
+function TSingleLine.GetText: String;
 begin
   Result:=TEdit(Control).Text;
 end;
 
-procedure TUserControl1.SetText(AValue: String);
+procedure TSingleLine.SetText(AValue: String);
 begin
   TEdit(Control).Text:=AValue;
 end;
 
-procedure TUserControl1.DoInitControls;
+procedure TSingleLine.DoInitControls;
 begin
   inherited DoInitControls;
   Control.Visible:=True;
@@ -53,7 +53,7 @@ begin
   Options:=[ucTitle,ucDescr,ucAuthor,ucControl];
 end;
 
-constructor TUserControl1.Create(TheOwner: TComponent);
+constructor TSingleLine.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   Control:=TEdit.Create(nil);

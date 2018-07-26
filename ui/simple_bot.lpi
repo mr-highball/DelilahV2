@@ -78,7 +78,7 @@
       <Unit7>
         <Filename Value="frames\ui.usercontrol.singleline.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="UserControl1"/>
+        <ComponentName Value="SingleLine"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
       </Unit7>

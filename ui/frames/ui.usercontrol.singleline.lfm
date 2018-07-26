@@ -1,2 +1,2 @@
-inherited UserControl1: TUserControl1
+inherited SingleLine: TSingleLine
 end

@@ -50,6 +50,8 @@ procedure TMultiLine.DoInitControls;
 begin
   inherited DoInitControls;
   Control.Align:=TAlign.alClient;
+  TMemo(Control).ScrollBars:=ssAutoBoth;
+  TMemo(Control).WordWrap:=False;
   Options:=[ucTitle,ucDescr,ucAuthor,ucControl];
 end;
 

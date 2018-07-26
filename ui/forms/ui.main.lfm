@@ -13,13 +13,13 @@ object Main: TMain
     Height = 367
     Top = 5
     Width = 462
-    ActivePage = ts_auth
+    ActivePage = ts_chart
     Align = alClient
     BorderSpacing.Left = 5
     BorderSpacing.Top = 5
     BorderSpacing.Right = 5
     BorderSpacing.Bottom = 5
-    TabIndex = 0
+    TabIndex = 2
     TabOrder = 0
     object ts_auth: TTabSheet
       Caption = 'Authenicator'
@@ -76,6 +76,49 @@ object Main: TMain
         TabOrder = 1
       end
     end
+    object ts_chart: TTabSheet
+      Caption = 'Chart'
+      ClientHeight = 339
+      ClientWidth = 454
+      object chart_ticker: TChart
+        Left = 5
+        Height = 329
+        Top = 5
+        Width = 444
+        AxisList = <        
+          item
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.LabelFont.Orientation = 900
+            Title.LabelBrush.Style = bsClear
+          end        
+          item
+            Grid.JoinStyle = pjsMiter
+            Alignment = calBottom
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.LabelFont.Style = [fsBold]
+            Title.Visible = True
+            Title.Caption = 'Tickers'
+            Title.LabelBrush.Style = bsClear
+          end>
+        BackColor = clNone
+        Foot.Brush.Color = clBtnFace
+        Foot.Font.Color = clBlue
+        Title.Brush.Color = clBtnFace
+        Title.Font.Color = clBlue
+        Title.Text.Strings = (
+          'TAChart'
+        )
+        Align = alClient
+        BorderSpacing.Around = 5
+        Color = clNone
+        object chart_tickerLineSeries1: TLineSeries
+          LinePen.Color = clRed
+          Source = chart_source
+        end
+      end
+    end
     object ts_log: TTabSheet
       Caption = 'Logging'
       ClientHeight = 339
@@ -116,5 +159,9 @@ object Main: TMain
     OnRestoringProperties = json_mainRestoringProperties
     left = 424
     top = 328
+  end
+  object chart_source: TListChartSource
+    left = 424
+    top = 280
   end
 end

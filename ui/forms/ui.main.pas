@@ -5,9 +5,10 @@ unit ui.main;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  JSONPropStorage, ExtCtrls, ComCtrls, ui.ignition, ui.authenticator,
-  ui.usercontrol.multiline, ui.usercontrol.boolean, ui.usercontrol.singleline;
+  Classes, SysUtils, FileUtil, TANavigation, TAGraph, TASources, TASeries,
+  Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
+  ui.ignition, ui.authenticator, ui.usercontrol.multiline,
+  ui.usercontrol.boolean, ui.usercontrol.singleline;
 
 type
 
@@ -15,11 +16,15 @@ type
 
   TMain = class(TForm)
     auth: TAuthenticator;
+    chart_source: TListChartSource;
+    chart_ticker: TChart;
+    chart_tickerLineSeries1: TLineSeries;
     ignition_main: TIgnition;
     json_main: TJSONPropStorage;
     multi_log: TMultiLine;
     pctrl_main: TPageControl;
     scroll_strategy: TScrollBox;
+    ts_chart: TTabSheet;
     ts_log: TTabSheet;
     ts_strategy: TTabSheet;
     ts_auth: TTabSheet;

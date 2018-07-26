@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces,
-  Forms,
+  Forms, tachartlazaruspkg,
   ui.main;
 
 {$R *.res}

@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, TANavigation, TAGraph, TASources, TASeries,
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
-  ui.ignition, ui.authenticator, ui.usercontrol.multiline,
+  StdCtrls, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.boolean, ui.usercontrol.singleline;
 
 type
@@ -15,15 +15,17 @@ type
   { TMain }
 
   TMain = class(TForm)
-    auth: TAuthenticator;
     chart_source: TListChartSource;
     chart_ticker: TChart;
     chart_tickerLineSeries1: TLineSeries;
     ignition_main: TIgnition;
+    icons: TImageList;
     json_main: TJSONPropStorage;
+    memo_licenses: TMemo;
     multi_log: TMultiLine;
     pctrl_main: TPageControl;
     scroll_strategy: TScrollBox;
+    ts_about: TTabSheet;
     ts_chart: TTabSheet;
     ts_log: TTabSheet;
     ts_strategy: TTabSheet;
@@ -32,6 +34,7 @@ type
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
   private
+    FAuth : TAuthenticator;
     procedure InitControls;
   public
 
@@ -68,6 +71,11 @@ begin
   multi_log.Title:='Strategy Logger';
   multi_log.Author:='Mr. Highball';
   multi_log.Description:='logging for the strategy';
+  //authenticator
+  FAuth:=TAuthenticator.Create(Self);
+  FAuth.Parent:=ts_auth;
+  FAuth.AnchorHorizontalCenterTo(ts_auth);
+  FAuth.AnchorVerticalCenterTo(ts_auth);
 end;
 
 

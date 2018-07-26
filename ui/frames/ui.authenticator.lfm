@@ -5,6 +5,8 @@ object Authenticator: TAuthenticator
   Width = 364
   ClientHeight = 160
   ClientWidth = 364
+  ParentShowHint = False
+  ShowHint = True
   TabOrder = 0
   DesignLeft = 628
   DesignTop = 239
@@ -110,24 +112,30 @@ object Authenticator: TAuthenticator
     object chk_mode: TCheckBox
       Left = 240
       Height = 25
+      Hint = 'when this is toggled ''on'' the trade engine will operate on the gdax sandbox'
       Top = 0
       Width = 99
       Align = alRight
       BorderSpacing.Right = 25
       Caption = 'Sandbox Mode'
       Checked = True
+      ParentShowHint = False
+      ShowHint = True
       State = cbChecked
       TabOrder = 0
     end
     object chk_local_time: TCheckBox
       Left = 137
       Height = 25
+      Hint = 'when this is toggled ''on'' the local computer time is used to authenticate gdax requests'
       Top = 0
       Width = 78
       Align = alRight
       BorderSpacing.Right = 25
       Caption = 'Local Time'
       Checked = True
+      ParentShowHint = False
+      ShowHint = True
       State = cbChecked
       TabOrder = 1
     end

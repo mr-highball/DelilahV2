@@ -18,7 +18,7 @@ type
   (*
     event triggered when an error occurs for a related product
   *)
-  TProductErrorEvent = procedure(Const AProductID:String;Const AError:String);
+  TProductErrorEvent = procedure(Const AProductID:String;Const AError:String) of object;
 
   { TProductFrame }
 

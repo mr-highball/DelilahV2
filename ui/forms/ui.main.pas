@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, FileUtil, TAGraph, TASources, TASeries,
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
-  ui.usercontrol.products, ui.usercontrol;
+  ui.usercontrol.products, ui.usercontrol, gdax.api.types;
 
 type
 
@@ -40,6 +40,8 @@ type
     FProducts : TProducts;
     FProductInit : Boolean;
     procedure InitControls;
+    procedure ProductError(Const AProductID:String;Const AError:String);
+    procedure ProductTick(Sender : TObject; Const ATick : IGDAXTicker);
   public
 
   end;
@@ -102,9 +104,34 @@ begin
   FProducts.Parent:=ts_product;
   FProducts.Align:=TAlign.alClient;
   FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
+  FProducts.ProductFrame.OnError:=ProductError;
+  FProducts.ProductFrame.OnTick:=ProductTick;
   FProductInit:=False;
   //main tab
   pctrl_main.ActivePage:=ts_auth;
+end;
+
+procedure TMain.ProductError(const AProductID: String; const AError: String);
+begin
+  multi_log.Lines.Append(Format('-ERROR- Product : %s - %s',[AProductID,AError]));
+end;
+
+procedure TMain.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
+begin
+  //right now we just log visually, will change later to slf4p
+  multi_log.Lines.Append(
+    Format(
+      '-INFO- Product : %s - %s',
+      [
+        ATick.Product.ID,
+        'ticker price:' + FloatToStr(ATick.Price)
+      ]
+    )
+  );
+  //add the ticker price
+  chart_source.Add(ATick.Time,ATick.Price);
+  //add any additional info from strategy
+  //todo...
 end;
 
 

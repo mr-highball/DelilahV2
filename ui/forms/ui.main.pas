@@ -34,9 +34,11 @@ type
     procedure FormCreate(Sender: TObject);
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
+    procedure pctrl_mainChange(Sender: TObject);
   private
     FAuth : TAuthenticator;
     FProducts : TProducts;
+    FProductInit : Boolean;
     procedure InitControls;
   public
 
@@ -67,6 +69,23 @@ begin
   //todo
 end;
 
+procedure TMain.pctrl_mainChange(Sender: TObject);
+begin
+  if pctrl_main.ActivePage=ts_product then
+    if not FProductInit then
+    begin
+      MessageDlg(
+        'Products',
+        'please wait while we fetch products from GDAX...',
+        TMsgDlgType.mtInformation,
+        [TMsgDlgBtn.mbOK],
+        ''
+      );
+      FProducts.ProductFrame.Init;
+      FProductInit:=True;
+    end;
+end;
+
 procedure TMain.InitControls;
 begin
   //logger
@@ -82,6 +101,8 @@ begin
   FProducts:=TProducts.Create(Self);
   FProducts.Parent:=ts_product;
   FProducts.Align:=TAlign.alClient;
+  FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
+  FProductInit:=False;
   //main tab
   pctrl_main.ActivePage:=ts_auth;
 end;

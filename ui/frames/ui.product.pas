@@ -10,9 +10,16 @@ uses
 
 type
 
-  TTickEvent = procedure(Sender : TObject;
-    Const ATick : IGDAXTicker) of object;
+  (*
+    event triggered when a tick is recorded successfully
+  *)
+  TTickEvent = procedure(Sender : TObject; Const ATick : IGDAXTicker) of object;
+
+  (*
+    event triggered when an error occurs for a related product
+  *)
   TProductErrorEvent = procedure(Const AProductID:String;Const AError:String);
+
   { TProductFrame }
 
   TProductFrame = class(TFrame)

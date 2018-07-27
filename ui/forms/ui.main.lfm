@@ -14,15 +14,16 @@ object Main: TMain
     Height = 367
     Top = 5
     Width = 572
-    ActivePage = ts_auth
+    ActivePage = ts_chart
     Align = alClient
     BorderSpacing.Left = 5
     BorderSpacing.Top = 5
     BorderSpacing.Right = 5
     BorderSpacing.Bottom = 5
     Images = icons
-    TabIndex = 0
+    TabIndex = 3
     TabOrder = 0
+    OnChange = pctrl_mainChange
     object ts_auth: TTabSheet
       Caption = 'Authenicator'
       ImageIndex = 1
@@ -72,13 +73,13 @@ object Main: TMain
     object ts_chart: TTabSheet
       Caption = 'Chart'
       ClientHeight = 324
-      ClientWidth = 537
+      ClientWidth = 564
       ImageIndex = 0
       object chart_ticker: TChart
         Left = 5
         Height = 314
         Top = 5
-        Width = 490
+        Width = 554
         AxisList = <        
           item
             Marks.LabelBrush.Style = bsClear
@@ -88,7 +89,8 @@ object Main: TMain
           end        
           item
             Grid.JoinStyle = pjsMiter
-            Alignment = calBottom
+            Alignment = calTop
+            Marks.Visible = False
             Marks.LabelBrush.Style = bsClear
             Minors = <>
             Title.LabelFont.Style = [fsBold]

@@ -25,6 +25,7 @@ type
     pnl_edits: TPanel;
   private
     FAuth : IGDAXAuthenticator;
+    function GetAuth: IGDAXAuthenticator;
     function GetIsSandbox: Boolean;
     function GetKey: String;
     function GetPass: String;
@@ -41,6 +42,7 @@ type
     property Secret : String read GetSecret write SetSecret;
     property IsSanboxMode : Boolean read GetIsSandbox write SetIsSandbox;
     property UseLocalTime : Boolean read GetUseLocalTime write SetUseLocalTime;
+    property Authenticator : IGDAXAuthenticator read GetAuth;
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
   end;
@@ -55,6 +57,11 @@ uses
 function TAuthenticator.GetIsSandbox: Boolean;
 begin
   Result:=chk_mode.Checked;
+end;
+
+function TAuthenticator.GetAuth: IGDAXAuthenticator;
+begin
+  Result:=FAuth;
 end;
 
 function TAuthenticator.GetKey: String;

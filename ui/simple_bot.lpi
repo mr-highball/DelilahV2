@@ -31,7 +31,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="9">
+    <Units Count="11">
       <Unit0>
         <Filename Value="simple_bot.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -92,6 +92,20 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
       </Unit8>
+      <Unit9>
+        <Filename Value="frames\ui.product.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ProductFrame"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="frames\ui.usercontrol.products.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Products"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit10>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -102,7 +116,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="forms;coinbase-pro\src;coinbase-pro\src\mORMot;coinbase-pro\src\mORMot\CrossPlatform;coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto;coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces;coinbase-pro\src\HashLib4Pascal\HashLib\src\Utils;coinbase-pro\src\HashLib4Pascal\HashLib\src\Base;coinbase-pro\src\HashLib4Pascal\HashLib\src\Nullable;coinbase-pro\src\HashLib4Pascal\HashLib\src\NullDigest;coinbase-pro\src\HashLib4Pascal\HashLib\src\Checksum;coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash32;coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash64;coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash128;coinbase-pro\src\HashLib4Pascal\HashLib\src\Include;coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2BConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2SConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2BConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2SConfigurations;coinbase-pro\src\HashLib4Pascal\HashLib\src\KDF;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Bases;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Include;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Interfaces;coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Utils;coinbase-pro\src\internettools\internet;coinbase-pro\src\internettools\data;frames"/>
+      <OtherUnitFiles Value="forms;..\src\coinbase-pro\src;..\src\coinbase-pro\src\mORMot;..\src\coinbase-pro\src\mORMot\CrossPlatform;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Utils;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Base;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Nullable;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\NullDigest;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Checksum;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash32;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash64;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash128;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Include;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2BConfigurations;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2SConfigurations;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2BConfigurations;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2SConfigurations;..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\KDF;..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Bases;..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Include;..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Interfaces;..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Utils;..\src\coinbase-pro\src\internettools\internet;..\src\coinbase-pro\src\internettools\data;frames"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

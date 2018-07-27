@@ -5,7 +5,8 @@ unit ui.authenticator;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, StdCtrls, ExtCtrls;
+  Classes, SysUtils, FileUtil, Forms, Controls, StdCtrls, ExtCtrls,
+  gdax.api.types;
 
 type
 
@@ -23,6 +24,7 @@ type
     pnl_switches: TPanel;
     pnl_edits: TPanel;
   private
+    FAuth : IGDAXAuthenticator;
     function GetIsSandbox: Boolean;
     function GetKey: String;
     function GetPass: String;
@@ -33,17 +35,19 @@ type
     procedure SetPass(AValue: String);
     procedure SetSecret(AValue: String);
     procedure SetUseLocalTime(AValue: Boolean);
-
   public
     property Key : String read GetKey write SetKey;
     property Passphrase : String read GetPass write SetPass;
     property Secret : String read GetSecret write SetSecret;
     property IsSanboxMode : Boolean read GetIsSandbox write SetIsSandbox;
     property UseLocalTime : Boolean read GetUseLocalTime write SetUseLocalTime;
+    constructor Create(TheOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 implementation
-
+uses
+  gdax.api.authenticator, gdax.api.consts;
 {$R *.lfm}
 
 { TAuthenticator }
@@ -76,26 +80,46 @@ end;
 procedure TAuthenticator.SetIsSandbox(AValue: Boolean);
 begin
   chk_mode.Checked:=AValue;
+  if AValue then
+    FAuth.Mode:=gdSand
+  else
+    FAuth.Mode:=gdProd;
 end;
 
 procedure TAuthenticator.SetKey(AValue: String);
 begin
   edit_key.Text:=AValue;
+  FAuth.Key:=AValue;
 end;
 
 procedure TAuthenticator.SetPass(AValue: String);
 begin
   edit_pass.Text:=AValue;
+  FAuth.Passphrase:=AValue;
 end;
 
 procedure TAuthenticator.SetSecret(AValue: String);
 begin
   edit_secret.Text:=AValue;
+  FAuth.Secret:=AValue;
 end;
 
 procedure TAuthenticator.SetUseLocalTime(AValue: Boolean);
 begin
   chk_local_time.Checked:=AValue;
+  FAuth.UseLocalTime:=AValue;
+end;
+
+constructor TAuthenticator.Create(TheOwner: TComponent);
+begin
+  inherited Create(TheOwner);
+  FAuth:=TGDAXAuthenticatorImpl.Create;
+end;
+
+destructor TAuthenticator.Destroy;
+begin
+  FAuth:=nil;
+  inherited Destroy;
 end;
 
 end.

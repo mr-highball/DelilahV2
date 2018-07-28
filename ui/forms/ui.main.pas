@@ -5,7 +5,7 @@ unit ui.main;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, TAGraph, TASources, TASeries,
+  Classes, SysUtils, FileUtil, TAGraph, TASources, TASeries, TATools,
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types;
@@ -16,6 +16,9 @@ type
   { TMain }
 
   TMain = class(TForm)
+    chart_tools: TChartToolset;
+    chart_toolsDataPointCrosshairTool1: TDataPointCrosshairTool;
+    chart_toolsZoomMouseWheelTool1: TZoomMouseWheelTool;
     chart_source: TListChartSource;
     chart_ticker: TChart;
     chart_tickerLineSeries1: TLineSeries;

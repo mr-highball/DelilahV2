@@ -23,6 +23,11 @@ type
     lbl_pass: TLabel;
     pnl_switches: TPanel;
     pnl_edits: TPanel;
+    procedure chk_local_timeChange(Sender: TObject);
+    procedure chk_modeChange(Sender: TObject);
+    procedure edit_keyChange(Sender: TObject);
+    procedure edit_passChange(Sender: TObject);
+    procedure edit_secretChange(Sender: TObject);
   private
     FAuth : IGDAXAuthenticator;
     function GetAuth: IGDAXAuthenticator;
@@ -57,6 +62,34 @@ uses
 function TAuthenticator.GetIsSandbox: Boolean;
 begin
   Result:=chk_mode.Checked;
+end;
+
+procedure TAuthenticator.chk_modeChange(Sender: TObject);
+begin
+  if chk_mode.Checked then
+    FAuth.Mode:=gdSand
+  else
+    FAuth.Mode:=gdProd;
+end;
+
+procedure TAuthenticator.edit_keyChange(Sender: TObject);
+begin
+  FAuth.Key:=edit_key.Text;
+end;
+
+procedure TAuthenticator.edit_passChange(Sender: TObject);
+begin
+  FAuth.Passphrase:=edit_pass.Text
+end;
+
+procedure TAuthenticator.edit_secretChange(Sender: TObject);
+begin
+  FAuth.Secret:=edit_secret.Text
+end;
+
+procedure TAuthenticator.chk_local_timeChange(Sender: TObject);
+begin
+  FAuth.UseLocalTime:=chk_local_time.Checked;
 end;
 
 function TAuthenticator.GetAuth: IGDAXAuthenticator;

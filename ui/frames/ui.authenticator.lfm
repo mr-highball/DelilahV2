@@ -33,6 +33,7 @@ object Authenticator: TAuthenticator
       BorderSpacing.Left = 75
       BorderSpacing.Top = 5
       BorderSpacing.Right = 25
+      OnChange = edit_keyChange
       TabOrder = 0
     end
     object edit_secret: TEdit
@@ -47,6 +48,7 @@ object Authenticator: TAuthenticator
       Width = 264
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Right = 25
+      OnChange = edit_secretChange
       TabOrder = 1
     end
     object edit_pass: TEdit
@@ -63,6 +65,7 @@ object Authenticator: TAuthenticator
       Width = 264
       Anchors = [akLeft, akRight, akBottom]
       BorderSpacing.Bottom = 10
+      OnChange = edit_passChange
       TabOrder = 2
     end
     object lbl_key: TLabel
@@ -119,6 +122,7 @@ object Authenticator: TAuthenticator
       BorderSpacing.Right = 25
       Caption = 'Sandbox Mode'
       Checked = True
+      OnChange = chk_modeChange
       ParentShowHint = False
       ShowHint = True
       State = cbChecked
@@ -134,6 +138,7 @@ object Authenticator: TAuthenticator
       BorderSpacing.Right = 25
       Caption = 'Local Time'
       Checked = True
+      OnChange = chk_local_timeChange
       ParentShowHint = False
       ShowHint = True
       State = cbChecked

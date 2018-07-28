@@ -85,6 +85,8 @@ object Main: TMain
             Marks.LabelBrush.Style = bsClear
             Minors = <>
             Title.LabelFont.Orientation = 900
+            Title.Visible = True
+            Title.Caption = 'Price'
             Title.LabelBrush.Style = bsClear
           end        
           item
@@ -106,9 +108,11 @@ object Main: TMain
         Title.Text.Strings = (
           'TAChart'
         )
+        Toolset = chart_tools
         Align = alClient
         BorderSpacing.Around = 5
         Color = clNone
+        DoubleBuffered = True
         object chart_tickerLineSeries1: TLineSeries
           LinePen.Color = clRed
           Source = chart_source
@@ -187,7 +191,7 @@ object Main: TMain
     Formatted = True
     OnSavingProperties = json_mainSavingProperties
     OnRestoringProperties = json_mainRestoringProperties
-    left = 464
+    left = 443
     top = 320
   end
   object chart_source: TListChartSource
@@ -196,13 +200,13 @@ object Main: TMain
       '2|51|$0000FF|'
     )
     Sorted = True
-    left = 464
+    left = 443
     top = 272
   end
   object icons: TImageList
     Height = 32
     Width = 32
-    left = 464
+    left = 443
     top = 224
     Bitmap = {
       4C69060000002000000020000000000000000000000000000000000000000000
@@ -975,5 +979,13 @@ object Main: TMain
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000
     }
+  end
+  object chart_tools: TChartToolset
+    left = 520
+    top = 272
+    object chart_toolsZoomMouseWheelTool1: TZoomMouseWheelTool
+    end
+    object chart_toolsDataPointCrosshairTool1: TDataPointCrosshairTool
+    end
   end
 end

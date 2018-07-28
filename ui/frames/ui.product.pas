@@ -90,6 +90,7 @@ begin
     if FRunning then
       if Assigned(FAuth) and Assigned(LProduct) then
       begin
+        LTick:=nil;
         LTick:=TGDAXTickerImpl.Create;
         LTick.Product:=LProduct;
         LTick.Authenticator:=FAuth;

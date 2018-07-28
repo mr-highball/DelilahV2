@@ -76,3 +76,4 @@ backup/
 lib/
 *.json
 *.txt
+*.log

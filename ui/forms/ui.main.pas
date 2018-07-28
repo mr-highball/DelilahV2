@@ -12,6 +12,7 @@ uses
 
 type
 
+
   { TMain }
 
   TMain = class(TForm)
@@ -40,10 +41,15 @@ type
     FProducts : TProducts;
     FProductInit : Boolean;
     procedure InitControls;
+    procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
+    procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
+    procedure StartStrategy(Sender:TObject);
+    procedure StopStrategy(Sender:TObject);
     procedure ProductError(Const AProductID:String;Const AError:String);
     procedure ProductTick(Sender : TObject; Const ATick : IGDAXTicker);
+    procedure LogError(Const AMessage:String);
+    procedure LogInfo(Const AMessage:String);
   public
-
   end;
 
 var
@@ -52,6 +58,9 @@ var
 implementation
 
 {$R *.lfm}
+
+const
+  LOG_ENTRY = '%s %s - %s';
 
 { TMain }
 
@@ -85,11 +94,20 @@ begin
       );
       FProducts.ProductFrame.Init;
       FProductInit:=True;
+      MessageDlg(
+        'Products',
+        'Finished',
+        TMsgDlgType.mtInformation,
+        [TMsgDlgBtn.mbOK],
+        ''
+      );
     end;
 end;
 
 procedure TMain.InitControls;
 begin
+  //main tab
+  pctrl_main.ActivePage:=ts_auth;
   //logger
   multi_log.Options:=multi_log.Options - [ucAuthor];
   multi_log.Title:='Strategy Logger';
@@ -107,31 +125,124 @@ begin
   FProducts.ProductFrame.OnError:=ProductError;
   FProducts.ProductFrame.OnTick:=ProductTick;
   FProductInit:=False;
-  //main tab
-  pctrl_main.ActivePage:=ts_auth;
+  //strategy
+  ignition_main.OnRequestStart:=CheckCanStart;
+  ignition_main.OnRequestStop:=CheckCanStop;
+  ignition_main.OnStart:=StartStrategy;
+  ignition_main.OnStop:=StopStrategy;
+  ignition_main.Status:='Stopped';
+end;
+
+procedure TMain.CheckCanStart(Sender: TObject; var Continue: Boolean);
+begin
+  //products need to be initialized before we can start the strategy
+  if not FProductInit then
+  begin
+    Continue:=False;
+    pctrl_main.ActivePage:=ts_product;
+    MessageDlg(
+      'Invalid Product',
+      'please setup the product page',
+      TMsgDlgType.mtWarning,
+      [TMsgDlgBtn.mbOK],
+      ''
+    );
+    pctrl_main.OnChange(ts_product);
+  end;
+  //make sure our authenticator has some values
+  if FAuth.Secret.IsEmpty or FAuth.Passphrase.IsEmpty or FAuth.Key.IsEmpty then
+  begin
+    Continue:=False;
+    pctrl_main.ActivePage:=ts_auth;
+    MessageDlg(
+      'Invalid Authenticator',
+      'please setup the authenticator page',
+      TMsgDlgType.mtWarning,
+      [TMsgDlgBtn.mbOK],
+      ''
+    );
+    pctrl_main.OnChange(ts_auth);
+    Exit;
+  end;
+  //now make sure we actually have a product selected
+  if not Assigned(FProducts.ProductFrame.Product) then
+  begin
+    Continue:=False;
+    pctrl_main.ActivePage:=ts_product;
+    MessageDlg(
+      'Invalid Product',
+      'please select a product',
+      TMsgDlgType.mtWarning,
+      [TMsgDlgBtn.mbOK],
+      ''
+    );
+    pctrl_main.OnChange(ts_product);
+  end;
+end;
+
+procedure TMain.CheckCanStop(Sender: TObject; var Continue: Boolean);
+begin
+  //for now we can always stop
+  Continue:=True;
+end;
+
+procedure TMain.StartStrategy(Sender: TObject);
+begin
+  //clear chart source
+  chart_source.Clear;
+  //start collecting tickers for the product
+  FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
+  FProducts.ProductFrame.Running:=True;
+  //update the status
+  ignition_main.Status:='Started';
+  //disable all controls that would cause issues
+  FAuth.Enabled:=False;
+  FProducts.Enabled:=False;
+  LogInfo('Strategy Started');
+end;
+
+procedure TMain.StopStrategy(Sender: TObject);
+begin
+  //stop the ticker collection
+  FProducts.ProductFrame.Running:=False;
+  //update status and re-enable controls
+  ignition_main.Status:='Stopped';
+  FAuth.Enabled:=True;
+  FProducts.Enabled:=True;
+  LogInfo('Strategy Stopped');
 end;
 
 procedure TMain.ProductError(const AProductID: String; const AError: String);
 begin
-  multi_log.Lines.Append(Format('-ERROR- Product : %s - %s',[AProductID,AError]));
+  LogError(Format('%s - %s',[AProductID,AError]));
 end;
 
 procedure TMain.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
 begin
-  //right now we just log visually, will change later to slf4p
-  multi_log.Lines.Append(
-    Format(
-      '-INFO- Product : %s - %s',
-      [
-        ATick.Product.ID,
-        'ticker price:' + FloatToStr(ATick.Price)
-      ]
+  LogInfo(
+    Format('%s - %s',
+      [ATick.Product.ID,'ticker price:' + FloatToStr(ATick.Price)]
     )
   );
   //add the ticker price
   chart_source.Add(ATick.Time,ATick.Price);
+  chart_ticker.Refresh;
   //add any additional info from strategy
   //todo...
+end;
+
+procedure TMain.LogError(const AMessage: String);
+begin
+  multi_log.Lines.Append(
+    Format(LOG_ENTRY,['-ERROR-',DateTimeToStr(Now),AMessage])
+  );
+end;
+
+procedure TMain.LogInfo(const AMessage: String);
+begin
+  multi_log.Lines.Append(
+    Format(LOG_ENTRY,['-INFO-',DateTimeToStr(Now),AMessage])
+  );
 end;
 
 

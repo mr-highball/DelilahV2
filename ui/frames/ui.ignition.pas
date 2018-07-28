@@ -16,6 +16,8 @@ type
     isStopping
   );
 
+  TRequestEvent = procedure (Sender:TObject;Var Continue:Boolean) of object;
+
   { TIgnition }
 
   TIgnition = class(TFrame)
@@ -23,25 +25,28 @@ type
     btn_start: TButton;
     lbl_status: TLabel;
   private
-    FOnRequestStart: TNotifyEvent;
-    FOnRequestStop: TNotifyEvent;
+    FOnRequestStart: TRequestEvent;
+    FOnRequestStop: TRequestEvent;
     FOnStart: TNotifyEvent;
     FOnStop: TNotifyEvent;
     FState: TIgnitionState;
+    function GetStatus: String;
+    procedure SetStatus(AValue: String);
     procedure StartClick(Sender:TObject);
     procedure StopClick(Sender:TObject);
-    procedure DefaultStart(Sender:TObject);
-    procedure DefaultStop(Sender:TObject);
+    procedure DefaultStart(Sender:TObject;Var Continue:Boolean);
+    procedure DefaultStop(Sender:TObject;Var Continue:Boolean);
   protected
     procedure Loaded; override;
   public
-    property OnRequestStart : TNotifyEvent read FOnRequestStart
+    property OnRequestStart : TRequestEvent read FOnRequestStart
       write FOnRequestStart;
     property OnStart : TNotifyEvent read FOnStart write FOnStart;
-    property OnRequestStop : TNotifyEvent read FOnRequestStop
+    property OnRequestStop : TRequestEvent read FOnRequestStop
       write FOnRequestStop;
     property OnStop : TNotifyEvent read FOnStop write FOnStop;
     property State : TIgnitionState read FState;
+    property Status : String read GetStatus write SetStatus;
   end;
 
 implementation
@@ -53,17 +58,25 @@ uses
 { TIgnition }
 
 procedure TIgnition.StartClick(Sender: TObject);
+var
+  LContinue:Boolean;
 begin
   if FState in [isStopped] then
   begin
     //this event controls what happens when start is requested
     if Assigned(FOnRequestStart) then
     begin
+      LContinue:=True;
       //update state to starting
       FState:=isStarting;
       try
         //attempt to start
-        FOnRequestStart(Self);
+        FOnRequestStart(Self,LContinue);
+        if not LContinue then
+        begin
+          FState:=isStopped;
+          Exit;
+        end;
         //no exception raised, so start assumed
         FState:=isStarted;
         //if there is an onstart event, trigger it
@@ -81,17 +94,37 @@ begin
   end;
 end;
 
+function TIgnition.GetStatus: String;
+begin
+  Result:=lbl_status.Caption;
+end;
+
+procedure TIgnition.SetStatus(AValue: String);
+begin
+  if not lbl_status.Visible then
+    lbl_status.Visible:=True;
+  lbl_status.Caption:=AValue;
+end;
+
 procedure TIgnition.StopClick(Sender: TObject);
+var
+  LContinue:Boolean;
 begin
   //make sure we are started
   if FState in [isStarted] then
   begin
     try
+      LContinue:=True;
       //update state to stopping
       FState:=isStopping;
       //attempt to stop if assigned
       if Assigned(FOnRequestStop) then
-        FOnRequestStop(Self);
+        FOnRequestStop(Self,LContinue);
+      if not LContinue then
+      begin
+        FState:=isStarted;
+        Exit;
+      end;
       FState:=isStopped;
       //notify listeners that we have stopped
       if Assigned(FOnStop) then
@@ -106,14 +139,14 @@ begin
   end;
 end;
 
-procedure TIgnition.DefaultStart(Sender: TObject);
+procedure TIgnition.DefaultStart(Sender: TObject; var Continue: Boolean);
 begin
   lbl_status.Visible:=True;
   lbl_status.Caption:='-Started-';
   ShowMessage('Default OnRequestStart Event is being used.');
 end;
 
-procedure TIgnition.DefaultStop(Sender: TObject);
+procedure TIgnition.DefaultStop(Sender: TObject; var Continue: Boolean);
 begin
   lbl_status.Visible:=True;
   lbl_status.Caption:='-Stopped-';

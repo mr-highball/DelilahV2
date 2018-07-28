@@ -92,6 +92,7 @@ begin
       begin
         LTick:=TGDAXTickerImpl.Create;
         LTick.Product:=LProduct;
+        LTick.Authenticator:=FAuth;
         //call to log error so we don't disrupt the next tick
         if not LTick.Get(LContent,LError) then
         begin
@@ -224,7 +225,7 @@ begin
   //below is a very simple logging of tickers, needs to be updated later
   LLog:=TStringList.Create;
   try
-    LFile:=ATicker.Product.ID + FormatDateTime('mm_dd_yyyy',Now) + '.log';
+    LFile:=ATicker.Product.ID + '_' + FormatDateTime('mm_dd_yyyy',Now) + '.log';
     if FileExists(LFile) then
     begin
       LLog.LoadFromFile(LFile);

@@ -5,7 +5,7 @@ unit delilah.types;
 interface
 
 uses
-  Classes, SysUtils, ledger, ledger.standard;
+  Classes, SysUtils, fgl, ledger, ledger.standard;
 
 type
 
@@ -95,6 +95,32 @@ type
     function Details(Out Details:IOrderDetails):Boolean;overload;
   end;
 
+  { ITicker }
+  (*
+    a ticker tells the price at a current point in time
+  *)
+  ITicker = interface
+    ['{52EC942B-4774-43F0-83EE-D0D301953103}']
+    //property methods
+    function GetPrice: Extended;
+    function GetTime: TDateTime;
+    procedure SetPrice(Const AValue: Extended);
+    procedure SetTime(Const AValue: TDateTime);
+    //properties
+    property Price : Extended read GetPrice write SetPrice;
+    property Time : TDateTime read GetTime write SetTime;
+  end;
+
+  { IStrategy }
+  (*
+    a strategy defines the "how" in trading
+  *)
+  IStrategy = interface
+    ['{7F3F7AE5-BD9A-45EE-B4E3-6F3E9DC52964}']
+  end;
+
+  TStrategies = TFPGList<IStrategy>;
+
   (*
     state of delilah engine
   *)
@@ -102,8 +128,6 @@ type
     esStopped,
     esStarted
   );
-
-  //todo - strategy, strategy list, allow mutliple strategies in delilah
 
   { IDelilah }
   (*

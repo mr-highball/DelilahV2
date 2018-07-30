@@ -5,7 +5,7 @@ unit delilah.order;
 interface
 
 uses
-  Classes, SysUtils, delilah.types;
+  Classes, SysUtils, delilah.types, ledger;
 
 type
 
@@ -61,7 +61,7 @@ end;
 
 procedure TOrderDetailsImpl.SetSize(const AValue: Extended);
 begin
-  Result:=DoSetSize(AValue);
+  DoSetSize(AValue);
 end;
 
 procedure TOrderDetailsImpl.SetType(const AValue: TLedgerType);

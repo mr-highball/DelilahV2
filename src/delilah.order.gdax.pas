@@ -5,17 +5,31 @@ unit delilah.order.gdax;
 interface
 
 uses
-  Classes, SysUtils, delilah.types, delilah.order, gdax.api.types, ledger;
+  Classes, SysUtils, delilah.types, delilah.order, gdax.api.types,
+  gdax.api.consts, ledger;
 
 type
 
-  { TGDAXOrderDetails }
+  { IGDAXOrderDetails }
+
+  IGDAXOrderDetails = interface(IOrderDetails)
+    ['{91294778-1291-44C4-87B4-A25779C3CF19}']
+    //property methods
+    function GetOrder: IGDAXOrder;
+    procedure SetOrder(Const AValue: IGDAXOrder);
+    //properties
+    property Order : IGDAXOrder read GetOrder write SetOrder;
+  end;
+
+  { TGDAXOrderDetailsImpl }
   (*
     order details adapter for a gdax order
   *)
-  TGDAXOrderDetails = class(TOrderDetailsImpl)
+  TGDAXOrderDetailsImpl = class(TOrderDetailsImpl,IGDAXOrderDetails)
   strict private
     FOrder: IGDAXOrder;
+    function GetOrder: IGDAXOrder;
+    procedure SetOrder(Const AValue: IGDAXOrder);
   strict protected
     function DoGetPrice: Extended; override;
     function DoGetSize: Extended; override;
@@ -25,55 +39,67 @@ type
     procedure DoSetType(const AValue: TLedgerType); override;
     function LedgerTypeForOrder:TLedgerType;
   public
-    constructor Create(Const AOrder:IGDAXOrder); override; overload;
+    property Order : IGDAXOrder read GetOrder write SetOrder;
+    constructor Create(Const AOrder:IGDAXOrder); overload;
     destructor Destroy; override;
   end;
 
 implementation
-uses
-  gdax.api.consts;
-{ TGDAXOrderDetails }
 
-function TGDAXOrderDetails.DoGetPrice: Extended;
+{ TGDAXOrderDetailsImpl }
+
+function TGDAXOrderDetailsImpl.GetOrder: IGDAXOrder;
+begin
+  Result:=FOrder;
+end;
+
+procedure TGDAXOrderDetailsImpl.SetOrder(const AValue: IGDAXOrder);
+begin
+  FOrder:=nil;
+  FOrder:=AValue;
+end;
+
+function TGDAXOrderDetailsImpl.DoGetPrice: Extended;
 begin
   if not Assigned(FOrder) then
     Exit(0);
   Result:=FOrder.Price;
 end;
 
-function TGDAXOrderDetails.DoGetSize: Extended;
+function TGDAXOrderDetailsImpl.DoGetSize: Extended;
 begin
   if not Assigned(FOrder) then
     Exit(0);
   Result:=FOrder.Size;
 end;
 
-function TGDAXOrderDetails.DoGetType: TLedgerType;
+function TGDAXOrderDetailsImpl.DoGetType: TLedgerType;
 begin
   Result:=LedgerTypeForOrder;
 end;
 
-procedure TGDAXOrderDetails.DoSetPrice(const AValue: Extended);
+procedure TGDAXOrderDetailsImpl.DoSetPrice(const AValue: Extended);
 begin
   if not Assigned(FOrder) then
     raise Exception.Create('GDAX order not assigned in ' + Self.Classname);
   FOrder.Price:=AValue;
 end;
 
-procedure TGDAXOrderDetails.DoSetSize(const AValue: Extended);
+procedure TGDAXOrderDetailsImpl.DoSetSize(const AValue: Extended);
 begin
   if not Assigned(FOrder) then
     raise Exception.Create('GDAX order not assigned in ' + Self.Classname);
   FOrder.Size:=AValue;
 end;
 
-procedure TGDAXOrderDetails.DoSetType(const AValue: TLedgerType);
+procedure TGDAXOrderDetailsImpl.DoSetType(const AValue: TLedgerType);
 begin
   raise Exception.Create('setting ledger type not supported in ' + Self.Classname);
 end;
 
-function TGDAXOrderDetails.LedgerTypeForOrder: TLedgerType;
+function TGDAXOrderDetailsImpl.LedgerTypeForOrder: TLedgerType;
 begin
+  Result:=ltDebit;
   if not Assigned(FOrder) then
     Exit(ltDebit);
   if FOrder.Side=osBuy then
@@ -84,13 +110,13 @@ begin
     Exit(ltDebit);
 end;
 
-constructor TGDAXOrderDetails.Create(const AOrder: IGDAXOrder);
+constructor TGDAXOrderDetailsImpl.Create(const AOrder: IGDAXOrder);
 begin
   inherited Create;
   FOrder:=AOrder;
 end;
 
-destructor TGDAXOrderDetails.Destroy;
+destructor TGDAXOrderDetailsImpl.Destroy;
 begin
   FOrder:=nil;
   inherited Destroy;

@@ -35,11 +35,21 @@ type
     procedure SetOnRemove(Const AValue: TOrderRemoveEvent);
     procedure SetOnStatus(Const AValue: TOrderStatusEvent);
   strict protected
-    function DoGetStatus(Const AID: String): TOrderManagerStatus;virtual;abstract;
-    procedure DoSetOnBeforePlace(Const AValue: TBeforeOrderPlaceEvent);virtual;abstract;
-    procedure DoSetOnPlace(Const AValue: TOrderPlaceEvent);virtual;abstract;
-    procedure DoSetOnRemove(Const AValue: TOrderRemoveEvent);virtual;abstract;
-    procedure DoSetOnStatus(Const AValue: TOrderStatusEvent);virtual;abstract;
+    //children override these
+    function DoGetStatus(
+      Const ADetails: IOrderDetails): TOrderManagerStatus;virtual;abstract;
+    function DoPlace(Const ADetails:IOrderDetails;
+      Out Error:String):Boolean;virtual;abstract;
+    function DoCancel(Const ADetails:IOrderDetails;
+      Out Error:String):Boolean;virtual;abstract;
+
+    //event helper methods
+    procedure DoOnBeforePlace(Const ADetails:IOrderDetails;
+      Var Allow:Boolean;Out ADisallowReason);
+    procedure DoOnPlace(Const ADetails:IOrderDetails;Const AID:String);
+    procedure DoOnRemove(Const ADetails:IOrderDetails;Const AID:String);
+    procedure DoOnStatus(Const ADetails:IOrderDetails;Const AID:String;
+      Const AOldStatus,ANewStatus:TOrderManagerStatus);
   public
     //events
     property OnBeforePlace : TBeforeOrderPlaceEvent read GetOnBeforePlace
@@ -62,7 +72,7 @@ type
     function Delete(Const AID:String;Out Error:String):Boolean;overload;
     function Delete(Const AID:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails;
-      Out Error):Boolean;overload;
+      Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
     constructor Create;virtual;
     destructor Destroy; override;
@@ -105,12 +115,18 @@ begin
 end;
 
 function TOrderManagerImpl.GetStatus(const AID: String): TOrderManagerStatus;
+var
+  LDetails:IOrderDetails;
+  LError:String;
 begin
+  Result:=omCanceled;
   //simple exist check first
   if not Exists[AID] then
     Exit(omCanceled);
+  if not Details(AID,LDetails,LError) then
+    raise Exception.Create(LError);
   //call to child for status
-  Result:=DoGetStatus(AID);
+  Result:=DoGetStatus(LDetails);
 end;
 
 procedure TOrderManagerImpl.SetOnBeforePlace(
@@ -134,20 +150,62 @@ begin
   FOnStatus:=AValue;
 end;
 
+procedure TOrderManagerImpl.DoOnBeforePlace(const ADetails: IOrderDetails;
+  var Allow: Boolean; out ADisallowReason);
+begin
+  if Assigned(FOnBeforePlace) then
+    FOnBeforePlace(ADetails,Allow,ADisallowReason)
+end;
+
+procedure TOrderManagerImpl.DoOnPlace(const ADetails: IOrderDetails;
+  const AID: String);
+begin
+  if Assigned(FOnPlace) then
+    FOnPlace(ADetails,AID);
+end;
+
+procedure TOrderManagerImpl.DoOnRemove(const ADetails: IOrderDetails;
+  const AID: String);
+begin
+  if Assigned(FOnRemove) then
+    FOnRemove(ADetails,AID);
+end;
+
+procedure TOrderManagerImpl.DoOnStatus(const ADetails: IOrderDetails;
+  const AID: String; const AOldStatus, ANewStatus: TOrderManagerStatus);
+begin
+  if Assigned(FOnStatus) then
+    FOnStatus(ADetails,AID,AOldStatus,ANewStatus);
+end;
+
 function TOrderManagerImpl.Place(const ADetails: IOrderDetails; out ID: String;
   out Error: String): Boolean;
+var
+  LAllow:Boolean;
 begin
   Result:=False;
-  //make sure the details is valid
-  //...
-  //notify on before place and see if we can continue
-  //...
-  //generate a guid and store the reference
-  //...
-  //call down to children to see if placing the order was successful
-  //...
-  //notify order place
-  //...
+  try
+    //make sure the details is valid
+    if not Assigned(ADetails) then
+      raise Exception.Create('details is unassigned');
+    //notify on before place and see if we can continue
+    LAllow:=True;
+    DoOnBeforePlace(ADetails,LAllow,Error);
+    if not LAllow then
+      Exit;
+    //generate a guid and store the reference
+    ID:=TGuid.NewGuid.ToString();
+    FOrders.Add(ID,ADetails);
+    //call down to children to see if placing the order was successful
+    if not DoPlace(ADetails,Error) then
+      Exit;
+    //notify order place
+    DoOnPlace(ADetails,ID);
+    //success
+    Result:=True;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
 function TOrderManagerImpl.Place(const ADetails: IOrderDetails; out ID: String): Boolean;
@@ -159,16 +217,31 @@ end;
 
 function TOrderManagerImpl.Cancel(const AID: String; out
   Details: IOrderDetails; out Error: String): Boolean;
+var
+  LOldStatus:TOrderManagerStatus;
 begin
   Result:=False;
-  //check for valid id
-  //...
-  //fetch the details
-  //...
-  //call to child for cancel
-  //...
-  //on success notify status change
-  //...
+  try
+    if not Self.Details(AID,Details,Error) then
+      Exit;
+    LOldStatus:=DoGetStatus(Details);
+    //can only perform a cancel request on active orders
+    if LOldStatus<>omActive then
+    begin
+      Error:='status of order id: ' + AID + ' is not omActive';
+      Exit;
+    end;
+    //call to child for cancel
+    if not DoCancel(Details,Error) then
+      Exit;
+    //for cancelling, we can raise the event since DoCancel is assumed to
+    //block until the status is changed to cancel
+    DoOnStatus(Details,AID,LOldStatus,omCanceled);
+    //success
+    Result:=True;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
 function TOrderManagerImpl.Cancel(const AID: String; out Details: IOrderDetails): Boolean;
@@ -179,14 +252,28 @@ begin
 end;
 
 function TOrderManagerImpl.Delete(const AID: String; out Error: String): Boolean;
+var
+  I:Integer;
+  LDetails:IOrderDetails;
 begin
   Result:=False;
-  //check to see if order exists, if not return true
-  //...
-  //remove the order from the map
-  //...
-  //notify remove
-  //...
+  try
+    //check to see if order exists, if not return true
+    if not Exists[AID] then
+      Exit(True);
+    //remove the order from the map
+    if not FOrders.Sorted then
+      FOrders.Sort;
+    I:=FOrders.IndexOf(AID);
+    LDetails:=FOrders.Data[I];
+    FOrders.Delete(I);
+    //notify remove
+    DoOnRemove(LDetails,AID);
+    //success
+    Result:=True;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
 function TOrderManagerImpl.Delete(const AID: String): Boolean;
@@ -196,17 +283,27 @@ begin
   Result:=Self.Delete(AID,LError);
 end;
 
-function TOrderManagerImpl.Details(Const AID:String;out Details: IOrderDetails;
-  out Error): Boolean;
+function TOrderManagerImpl.Details(const AID: String;
+  out Details: IOrderDetails; out Error:String): Boolean;
 begin
   Result:=False;
-  //see if exists
-  //...
-  //if so delete
-  //...
+  try
+    //see if exists
+    if not Exists[AID] then
+    begin
+      Error:=AID + ' does not exist when calling Details';
+      Exit;
+    end;
+    Details:=FOrders.Data[FOrders.IndexOf(AID)];
+    //success
+    Result:=True;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
-function TOrderManagerImpl.Details(Const AID:String;out Details: IOrderDetails): Boolean;
+function TOrderManagerImpl.Details(const AID: String;
+  out Details: IOrderDetails): Boolean;
 var
   LError:String;
 begin

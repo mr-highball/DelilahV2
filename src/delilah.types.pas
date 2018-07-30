@@ -100,7 +100,7 @@ type
     function Delete(Const AID:String;Out Error:String):Boolean;overload;
     function Delete(Const AID:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails;
-      Out Error):Boolean;overload;
+      Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
   end;
 

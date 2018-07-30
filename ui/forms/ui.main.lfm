@@ -3,7 +3,7 @@ object Main: TMain
   Height = 377
   Top = 223
   Width = 582
-  Caption = 'Simple Bot v1.0.0'
+  Caption = 'SimpleBot v1.0.0'
   ClientHeight = 377
   ClientWidth = 582
   OnCreate = FormCreate

@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, FileUtil, TAGraph, TASources, TASeries, TATools,
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
-  ui.usercontrol.products, ui.usercontrol, gdax.api.types;
+  ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.manager;
 
 type
 

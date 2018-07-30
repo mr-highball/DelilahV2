@@ -1,4 +1,4 @@
-program simple_bot;
+program SimpleBot;
 
 {$mode objfpc}{$H+}
 
@@ -13,6 +13,7 @@ uses
 {$R *.res}
 
 begin
+  Application.Title:='SimpleBot';
   RequireDerivedFormResource:=True;
   Application.Initialize;
   Application.CreateForm(TMain, Main);

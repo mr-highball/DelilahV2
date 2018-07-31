@@ -79,29 +79,74 @@ type
     procedure SetOnPlace(Const AValue: TOrderPlaceEvent);
     procedure SetOnRemove(Const AValue: TOrderRemoveEvent);
     procedure SetOnStatus(Const AValue: TOrderStatusEvent);
+
     //events
+    (*
+      event triggered during a request to place an order which allows listener
+      to deny the request when necessary
+    *)
     property OnBeforePlace : TBeforeOrderPlaceEvent read GetOnBeforePlace
       write SetOnBeforePlace;
+    (*
+      event triggered once an order is successfully placed
+    *)
     property OnPlace : TOrderPlaceEvent read GetOnPlace write SetOnPlace;
+    (*
+      event triggered once an order is successfully removed
+    *)
     property OnRemove : TOrderRemoveEvent read GetOnRemove write SetOnRemove;
+    (*
+      event triggered once an order changes from one status to another
+    *)
     property OnStatus : TOrderStatusEvent read GetOnStatus write SetOnStatus;
+
     //properties
+    (*
+      the current count of order details this manager instance is storing
+    *)
     property Count:Cardinal read GetCount;
+    (*
+      assuming an order id provided is valid, this property will fetch
+      the current status of the order details. additionally, if this fetch
+      results in a change of status, notifications will be made
+    *)
     property Status[Const AID:String] : TOrderManagerStatus read GetStatus;
+    (*
+      does a specific id exist
+    *)
     property Exists[Const AID:String] : Boolean read GetExists;default;
+
     //methods
+    (*
+      attempts to place an order provided all details. on success, proper
+      events will be raised and a new identifier will be generated
+    *)
     function Place(Const ADetails:IOrderDetails;
       Out ID:String;Out Error:String):Boolean;overload;
     function Place(Const ADetails:IOrderDetails;Out ID:String):Boolean;overload;
+    (*
+      will attempt to cancel an active order raising proper events if succesful
+    *)
     function Cancel(Const AID:String;
       Out Details:IOrderDetails;Out Error:String):Boolean;overload;
     function Cancel(Const AID:String;
       Out Details:IOrderDetails):Boolean;overload;
+    (*
+      removes an order if possible provided an identifier
+    *)
     function Delete(Const AID:String;Out Error:String):Boolean;overload;
     function Delete(Const AID:String):Boolean;overload;
+    (*
+      fetch order details provided an identifier
+    *)
     function Details(Const AID:String;Out Details:IOrderDetails;
       Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
+    (*
+      will attempt to remove all orders. orders unable to be removed will be
+      "silently" be skipped over
+    *)
+    procedure Clear;
   end;
 
   { ITicker }

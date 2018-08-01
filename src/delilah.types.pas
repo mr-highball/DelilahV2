@@ -192,8 +192,8 @@ type
   *)
   IDelilah = interface
     ['{1374EC48-BFA4-45E7-AE90-B4576B6A121B}']
-    function GetCompound: Boolean;
     //property methods
+    function GetCompound: Boolean;
     function GetFundsLedger: IDoubleLedger;
     function GetOnPlace: TOrderPlaceEvent;
     function GetOnRemove: TOrderRemoveEvent;

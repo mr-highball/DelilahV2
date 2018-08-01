@@ -74,6 +74,7 @@ type
     function Details(Const AID:String;Out Details:IOrderDetails;
       Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
+    procedure Clear;
     constructor Create;virtual;
     destructor Destroy; override;
   end;
@@ -308,6 +309,19 @@ var
   LError:String;
 begin
   Result:=Self.Details(AID,Details,LError);
+end;
+
+procedure TOrderManagerImpl.Clear;
+var
+  LIDS:TArray<String>;
+begin
+  SetLength(LIDS,FOrders.Count);
+  //get all of the ids
+  for I:=0 to Pred(FOrders.Count) do
+    LIDS[I]:=FOrders[I];
+  //silently fail if delete fails
+  for I:=0 to High(LIDS) do
+    Delete(LIDS[I]);
 end;
 
 constructor TOrderManagerImpl.Create;

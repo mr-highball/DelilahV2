@@ -194,7 +194,7 @@ type
     ['{1374EC48-BFA4-45E7-AE90-B4576B6A121B}']
     //property methods
     function GetCompound: Boolean;
-    function GetFundsLedger: IDoubleLedger;
+    function GetFundsLedger: IExtendedLedger;
     function GetOnPlace: TOrderPlaceEvent;
     function GetOnRemove: TOrderRemoveEvent;
     function GetOnStatus: TOrderStatusEvent;
@@ -203,8 +203,8 @@ type
     function GetStrategies: TStrategies;
     procedure SetCompound(AValue: Boolean);
     procedure SetFunds(Const AValue: Extended);
-    procedure SetFundsLedger(Const AValue: IDoubleLedger);
-    procedure SetHoldsLedger(Const AValue: IDoubleLedger);
+    procedure SetFundsLedger(Const AValue: IExtendedLedger);
+    procedure SetHoldsLedger(Const AValue: IExtendedLedger);
     procedure SetOnPlace(Const AValue: TOrderPlaceEvent);
     procedure SetOnRemove(Const AValue: TOrderRemoveEvent);
     procedure SetOnStatus(Const AValue: TOrderStatusEvent);
@@ -212,9 +212,9 @@ type
     function GetAvailableFunds: Extended;
     function GetFunds: Extended;
     function GetHolds: Extended;
-    function GetHoldsLedger: IDoubleLedger;
+    function GetHoldsLedger: IExtendedLedger;
     function GetInventory: Extended;
-    function GetInventoryLedger: IDoubleLedger;
+    function GetInventoryLedger: IExtendedLedger;
 
     //events
     property OnPlace : TOrderPlaceEvent read GetOnPlace write SetOnPlace;
@@ -236,18 +236,18 @@ type
     (*
       the funds ledger contains entries of completed orders
     *)
-    property FundsLedger : IDoubleLedger read GetFundsLedger write SetFundsLedger;
+    property FundsLedger : IExtendedLedger read GetFundsLedger write SetFundsLedger;
     (*
       the holds ledger contains entries of order details that have not been
       completed and counts negatively towards AvailableFunds. once an order
       is completed, a credit entry will automatically be made to Holds and
       a corresponding Debit will be made to FundsLedger
     *)
-    property HoldsLedger : IDoubleLedger read GetHoldsLedger write SetHoldsLedger;
+    property HoldsLedger : IExtendedLedger read GetHoldsLedger write SetHoldsLedger;
     (*
       the inventory ledger contains entries of completed orders Size
     *)
-    property InventoryLedger : IDoubleLedger read GetInventoryLedger write SetHoldsLedger;
+    property InventoryLedger : IExtendedLedger read GetInventoryLedger write SetHoldsLedger;
     (*
       assign the available Funds that the engine has to work with. orders can
       only be placed if they would not overdraft this amount

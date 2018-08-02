@@ -20,23 +20,32 @@ type
     FFundsLedger: IExtendedLedger;
     FHoldsLedger: IExtendedLedger;
     FInvLedger: IExtendedLedger;
+    FHoldsInvLedger: IExtendedLedger;
     FOnPlace: TOrderPlaceEvent;
     FOnRemove: TOrderRemoveEvent;
     FOnStatus: TOrderStatusEvent;
     FOrderManager: IOrderManager;
     FState: TEngineState;
     FStrategies: TStrategies;
+    FOldPlace: TOrderPlaceEvent;
+    FOldRemove: TOrderRemoveEvent;
+    FOldStatus: TOrderStatusEvent;
+    function GetAvailableInventory: Extended;
+    function GetInventoryHolds: Extended;
+    procedure SetInventoryLedger(Const AValue: IExtendedLedger);
     function GetCompound: Boolean;
     function GetFundsLedger: IExtendedLedger;
+    function GetHoldsInventoryLedger: IExtendedLedger;
     function GetOnPlace: TOrderPlaceEvent;
     function GetOnRemove: TOrderRemoveEvent;
     function GetOnStatus: TOrderStatusEvent;
     function GetOrderManager: IOrderManager;
     function GetState: TEngineState;
     function GetStrategies: TStrategies;
-    procedure SetCompound(AValue: Boolean);
+    procedure SetCompound(Const AValue: Boolean);
     procedure SetFunds(Const AValue: Extended);
     procedure SetFundsLedger(Const AValue: IExtendedLedger);
+    procedure SetHoldsInventoryLedger(Const AValue: IExtendedLedger);
     procedure SetHoldsLedger(Const AValue: IExtendedLedger);
     procedure SetOnPlace(Const AValue: TOrderPlaceEvent);
     procedure SetOnRemove(Const AValue: TOrderRemoveEvent);
@@ -48,9 +57,15 @@ type
     function GetHoldsLedger: IExtendedLedger;
     function GetInventory: Extended;
     function GetInventoryLedger: IExtendedLedger;
+    procedure DoPlace(Const ADetails:IOrderDetails;Const AID:String);
+    procedure DoRemove(Const ADetails:IOrderDetails;Const AID:String);
+    procedure DoStatus(Const ADetails:IOrderDetails;Const AID:String;
+      Const AOldStatus,ANewStatus:TOrderManagerStatus);
   strict protected
     procedure SetState(Const AState:TEngineState);
     procedure QueueTicker(Const ATicker:ITicker);
+    procedure StoreLedgerID(Const AOrderID,ALedgerID:String);
+    procedure CompleteOrder(COnst ADetails:IOrderDetails;Const AID:String);
     function DoStart(Out Error:String):Boolean;virtual;
     function DoStop(Out Error:String):Boolean;virtual;
     function DoFeed(Const ATicker:ITicker;Out Error:string):Boolean;virtual;
@@ -62,12 +77,15 @@ type
     property OrderManager : IOrderManager read GetOrderManager write SetOrderManager;
     property FundsLedger : IExtendedLedger read GetFundsLedger write SetFundsLedger;
     property HoldsLedger : IExtendedLedger read GetHoldsLedger write SetHoldsLedger;
-    property InventoryLedger : IExtendedLedger read GetInventoryLedger write SetHoldsLedger;
+    property InventoryLedger : IExtendedLedger read GetInventoryLedger write SetInventoryLedger;
+    property HoldsInventoryLedger : IExtendedLedger read GetHoldsInventoryLedger write SetHoldsInventoryLedger;
     property Funds : Extended read GetFunds write SetFunds;
     property Compound : Boolean read GetCompound write SetCompound;
     property AvailableFunds : Extended read GetAvailableFunds;
     property Holds : Extended read GetHolds;
     property Inventory : Extended read GetInventory;
+    property AvailableInventory : Extended read GetAvailableInventory;
+    property InventoryHolds : Extended read GetInventoryHolds;
     property EngineState : TEngineState read GetState;
     function Feed(Const ATicker:ITicker;Out Error:string):Boolean;
     function Start(Out Error:String):Boolean;overload;
@@ -82,6 +100,21 @@ implementation
 
 { TDelilahImpl }
 
+procedure TDelilahImpl.SetInventoryLedger(const AValue: IExtendedLedger);
+begin
+  FInvLedger:=AValue;
+end;
+
+function TDelilahImpl.GetAvailableInventory: Extended;
+begin
+  Result:=Inventory - InventoryHolds;
+end;
+
+function TDelilahImpl.GetInventoryHolds: Extended;
+begin
+  Result:=HoldsInventoryLedger.Balance;
+end;
+
 function TDelilahImpl.GetCompound: Boolean;
 begin
   Result:=FCompound;
@@ -90,6 +123,11 @@ end;
 function TDelilahImpl.GetFundsLedger: IExtendedLedger;
 begin
   Result:=FFundsLedger;
+end;
+
+function TDelilahImpl.GetHoldsInventoryLedger: IExtendedLedger;
+begin
+  Result:=FHoldsInvLedger;
 end;
 
 function TDelilahImpl.GetOnPlace: TOrderPlaceEvent;
@@ -122,7 +160,7 @@ begin
   Result:=FStrategies;
 end;
 
-procedure TDelilahImpl.SetCompound(AValue: Boolean);
+procedure TDelilahImpl.SetCompound(const AValue: Boolean);
 begin
   if not (FState=esStopped) then
     raise Exception.Create('engine is running, stop first');
@@ -142,6 +180,14 @@ begin
     raise Exception.Create('engine is running, stop first');
   FFundsLedger:=nil;
   FFundsLedger:=AValue;
+end;
+
+procedure TDelilahImpl.SetHoldsInventoryLedger(const AValue: IExtendedLedger);
+begin
+  if not (FState=esStopped) then
+    raise Exception.Create('engine is running, stop first');
+  FHoldsInvLedger:=nil;
+  FHoldsInvLedger:=AValue;
 end;
 
 procedure TDelilahImpl.SetHoldsLedger(const AValue: IExtendedLedger);
@@ -171,7 +217,22 @@ procedure TDelilahImpl.SetOrderManager(const AValue: IOrderManager);
 begin
   if not (FState=esStopped) then
     raise Exception.Create('engine is running, stop first');
+  FOldStatus:=nil;
+  FOldRemove:=nil;
+  FOldStatus:=nil;
+  FOrderManager:=nil;
   FOrderManager:=AValue;
+  //don't "lose" the events if they were assigned
+  if Assigned(FOrderManager) then
+  begin
+    FOldStatus:=FOrderManager.OnStatus;
+    FOldRemove:=FOrderManager.OnRemove;
+    FOldStatus:=FOrderManager.OnStatus;
+  end;
+  //now redirect the order manager events to the engine
+  FOrderManager.OnStatus:=DoStatus;
+  FOrderManager.OnRemove:=DoRemove;
+  FOrderManager.OnStatus:=DoStatus;
 end;
 
 function TDelilahImpl.GetAvailableFunds: Extended;
@@ -204,6 +265,56 @@ begin
   Result:=FInvLedger;
 end;
 
+procedure TDelilahImpl.DoPlace(const ADetails: IOrderDetails; const AID: String);
+var
+  LID:String;
+  LStatus:TOrderManagerStatus;
+begin
+  //todo - intercept the place and perform proper accounting to ledgers
+
+  LStatus:=FOrderManager.Status[AID];
+  case LStatus of
+    //active orders are considered to be on "hold" until they have been completed
+    omActive:
+      begin
+        //record an entry into the holds ledger
+        FHoldsLedger.RecordEntry(
+          ADetails.Price * ADetails.Size,
+          ADetails.LedgerType,
+          LID
+        );
+        //now store the ledger id associated with this order id
+        StoreLedgerID(AID,LID);
+      end;
+    //when an order has been completed, we need to check that there is no
+    //holds entry, and if so, balance it out with an opposite ledger type,
+    //which complete order will do for us
+    omCompleted: CompleteOrder(ADetails,AID);
+  end;
+end;
+
+procedure TDelilahImpl.DoRemove(const ADetails: IOrderDetails; const AID: String);
+begin
+    //todo - intercept the remove and perform proper accounting to ledgers
+end;
+
+procedure TDelilahImpl.DoStatus(const ADetails: IOrderDetails;
+  const AID: String; const AOldStatus, ANewStatus: TOrderManagerStatus);
+begin
+    //todo - intercept the status and perform proper accounting to ledgers
+    case ANewStatus of
+      //when an order is marked as canceled
+      omCanceled:
+        begin
+
+        end;
+      omCompleted:
+        begin
+
+        end;
+    end;
+end;
+
 procedure TDelilahImpl.SetState(const AState: TEngineState);
 begin
   FState:=AState;
@@ -213,6 +324,17 @@ procedure TDelilahImpl.QueueTicker(const ATicker: ITicker);
 begin
   //todo - thread safe queue of a ticker. could either operate on an event system
   //or a polling mechanism in a separate thread
+end;
+
+procedure TDelilahImpl.StoreLedgerID(const AOrderID, ALedgerID: String);
+begin
+  //todo - store an order id with a string ledger id
+end;
+
+procedure TDelilahImpl.CompleteOrder(const ADetails: IOrderDetails;
+  const AID: String);
+begin
+  //todo - check for holds, balance, record completion to funds ledger
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;
@@ -276,6 +398,9 @@ begin
   FInvLedger:=NewExtendedLedger;
   FState:=TEngineState.esStopped;
   FStrategies:=TStrategies.Create;
+  FOldPlace:=nil;
+  FOldRemove:=nil;
+  FOldStatus:=nil;
 end;
 
 destructor TDelilahImpl.Destroy;

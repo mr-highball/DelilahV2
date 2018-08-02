@@ -16,17 +16,21 @@ type
   *)
   IOrderDetails = interface
     ['{2C57FC56-B252-4B05-9808-C33322970279}']
+
     //property methods
     function GetPrice: Extended;
     function GetSize: Extended;
     function GetType: TLedgerType;
+    procedure SetInvType(Const AValue: TLedgerType);
     procedure SetPrice(Const AValue: Extended);
     procedure SetSize(Const AValue: Extended);
     procedure SetType(Const AValue: TLedgerType);
+    function GetInvType: TLedgerType;
     //properties
     property Size : Extended read GetSize write SetSize;
     property Price : Extended read GetPrice write SetPrice;
     property LedgerType : TLedgerType read GetType write SetType;
+    property InventoryLedgerType : TLedgerType read GetInvType write SetInvType;
   end;
 
   (*
@@ -193,18 +197,23 @@ type
   IDelilah = interface
     ['{1374EC48-BFA4-45E7-AE90-B4576B6A121B}']
     //property methods
+    function GetAvailableInventory: Extended;
     function GetCompound: Boolean;
     function GetFundsLedger: IExtendedLedger;
+    function GetHoldsInventoryLedger: IExtendedLedger;
+    function GetInventoryHolds: Extended;
     function GetOnPlace: TOrderPlaceEvent;
     function GetOnRemove: TOrderRemoveEvent;
     function GetOnStatus: TOrderStatusEvent;
     function GetOrderManager: IOrderManager;
     function GetState: TEngineState;
     function GetStrategies: TStrategies;
-    procedure SetCompound(AValue: Boolean);
+    procedure SetCompound(Const AValue: Boolean);
     procedure SetFunds(Const AValue: Extended);
     procedure SetFundsLedger(Const AValue: IExtendedLedger);
+    procedure SetHoldsInventoryLedger(Const AValue: IExtendedLedger);
     procedure SetHoldsLedger(Const AValue: IExtendedLedger);
+    procedure SetInventoryLedger(Const AValue: IExtendedLedger);
     procedure SetOnPlace(Const AValue: TOrderPlaceEvent);
     procedure SetOnRemove(Const AValue: TOrderRemoveEvent);
     procedure SetOnStatus(Const AValue: TOrderStatusEvent);
@@ -247,7 +256,11 @@ type
     (*
       the inventory ledger contains entries of completed orders Size
     *)
-    property InventoryLedger : IExtendedLedger read GetInventoryLedger write SetHoldsLedger;
+    property InventoryLedger : IExtendedLedger read GetInventoryLedger write SetInventoryLedger;
+    (*
+      like the holds ledger, however for inventory
+    *)
+    property HoldsInventoryLedger : IExtendedLedger read GetHoldsInventoryLedger write SetHoldsInventoryLedger;
     (*
       assign the available Funds that the engine has to work with. orders can
       only be placed if they would not overdraft this amount
@@ -270,6 +283,14 @@ type
       quick access to the balance in the InventoryLedger
     *)
     property Inventory : Extended read GetInventory;
+    (*
+      AvailableInventory = (Inventory - InventoryHolds)
+    *)
+    property AvailableInventory : Extended read GetAvailableInventory;
+    (*
+      quick access to the balance in the inventory holds ledger
+    *)
+    property InventoryHolds : Extended read GetInventoryHolds;
     (*
       the current state of the engine
     *)

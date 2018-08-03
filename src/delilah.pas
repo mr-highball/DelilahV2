@@ -145,7 +145,7 @@ end;
 
 function TDelilahImpl.GetInventoryHolds: Extended;
 begin
-  Result:=HoldsInventoryLedger.Balance;
+  Result:=FHoldsInvLedger.Balance;
 end;
 
 function TDelilahImpl.GetCompound: Boolean;
@@ -204,7 +204,18 @@ procedure TDelilahImpl.SetFunds(const AValue: Extended);
 begin
   if not (FState=esStopped) then
     raise Exception.Create('engine is running, stop first');
+  //balance out what we had for our old funds
+  if FFunds<>0 then
+    FFundsLedger.RecordEntry(
+      FFunds,
+      ltDebit
+    );
   FFunds:=AValue;
+  //record an entry for the new funds
+  FFundsLedger.RecordEntry(
+    FFunds,
+    ltCredit
+  );
 end;
 
 procedure TDelilahImpl.SetFundsLedger(const AValue: IExtendedLedger);
@@ -303,8 +314,6 @@ var
   LID:String;
   LStatus:TOrderManagerStatus;
 begin
-  //todo - intercept the place and perform proper accounting to ledgers
-
   LStatus:=FOrderManager.Status[AID];
   case LStatus of
     //active orders are considered to be on "hold" until they have been completed
@@ -318,6 +327,13 @@ begin
         );
         //now store the ledger id associated with this order id
         StoreLedgerID(AID,LID,lsHold);
+        //record an entry for the holds inventory
+        FHoldsInvLedger.RecordEntry(
+          ADetails.Size,
+          ADetails.InventoryLedgerType,
+          LID
+        );
+        StoreLedgerID(AID,LID,lsInvHold)
       end;
     //when an order has been completed, we need to check that there is no
     //holds entry, and if so, balance it out with an opposite ledger type,
@@ -327,27 +343,35 @@ begin
 end;
 
 procedure TDelilahImpl.DoRemove(const ADetails: IOrderDetails; const AID: String);
+var
+  I:Integer;
 begin
-    //todo - intercept the remove and perform proper accounting to ledgers
+  //on removing, just balance any amounts that may be in hold
+  BalanceOrder(AID,lsHold);
+  BalanceOrder(AID,lsInvHold);
+  //remove the lookup entry as well
+  I:=FOrderLedger.IndexOf(AID);
+  if I>=0 then
+    FOrderLedger.Delete(I);
 end;
 
 procedure TDelilahImpl.DoStatus(const ADetails: IOrderDetails;
   const AID: String; const AOldStatus, ANewStatus: TOrderManagerStatus);
 begin
-    case ANewStatus of
-      //when an order is marked as canceled we need to balance
-      //any holds on the funds and inventory ledger
-      omCanceled:
-        begin
-          BalanceOrder(AID,lsHold);
-          BalanceOrder(AID,lsInvHold);
-        end;
-      //for completed orders, call down to complete order method
-      omCompleted:
-        begin
-          CompleteOrder(ADetails,AID);
-        end;
-    end;
+  case ANewStatus of
+    //when an order is marked as canceled we need to balance
+    //any holds on the funds and inventory ledger
+    omCanceled:
+      begin
+        BalanceOrder(AID,lsHold);
+        BalanceOrder(AID,lsInvHold);
+      end;
+    //for completed orders, call down to complete order method
+    omCompleted:
+      begin
+        CompleteOrder(ADetails,AID);
+      end;
+  end;
 end;
 
 procedure TDelilahImpl.SetState(const AState: TEngineState);
@@ -359,7 +383,7 @@ procedure TDelilahImpl.StoreLedgerID(const AOrderID, ALedgerID: String;
   const ALedgerSource: TLedgerSource);
 var
   I:Integer;
-  LLedger:IDoubleLedger;
+  LLedger:IExtendedLedger;
   LList:TLedgerPairList;
   LEntry:TLedgerPair;
 begin
@@ -395,7 +419,7 @@ var
   LList:TLedgerPairList;
   LIndexes:TArray<Integer>;
   LOwned:TLedgerPairList;
-  LLedger:IDoubleLedger;
+  LLedger:IExtendedLedger;
 begin
   //check to see if we even have this order id recorded, and if not everything
   //should be properly balanced
@@ -472,7 +496,7 @@ begin
   BalanceOrder(AID,lsInvHold);
   //record entries to funds ledger
   FFundsLedger.RecordEntry(
-    ADetails.Price,
+    ADetails.Price * ADetails.Size,
     ADetails.LedgerType,
     LID
   );
@@ -507,7 +531,9 @@ begin
     //simply iterate strategies and attempt to feed, they are responsible
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do
-      if not FStrategies[I].Feed(ATIcker,FOrderManager,Error) then
+      if not FStrategies[I].Feed(ATIcker,FOrderManager,
+        AvailableFunds,AvailableInventory,Error
+      ) then
         Exit;
     Result:=True;
   except on E:Exception do
@@ -569,6 +595,7 @@ begin
   FCompound:=False;
   FFundsLedger:=NewExtendedLedger;
   FHoldsLedger:=NewExtendedLedger;
+  FHoldsInvLedger:=NewExtendedLedger;
   FInvLedger:=NewExtendedLedger;
   FState:=TEngineState.esStopped;
   FStrategies:=TStrategies.Create;
@@ -582,6 +609,7 @@ begin
   FStrategies.Free;
   FInVLedger:=nil;
   FHoldsLedger:=nil;
+  FHoldsInvLedger:=nil;
   FFundsLedger:=nil;
   FOrderLedger.Free;
   inherited Destroy;

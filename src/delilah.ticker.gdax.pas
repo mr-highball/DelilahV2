@@ -38,7 +38,7 @@ type
     procedure DoSetTime(const AValue: TDateTime); override;
   public
     property Ticker : IGDAXTicker read GetTicker write SetTicker;
-    constructor Create(Const ATicker:IGDAXTicker);override;
+    constructor Create(Const ATicker:IGDAXTicker);overload;
     destructor Destroy; override;
   end;
 
@@ -59,28 +59,28 @@ end;
 
 function TGDAXTickerImpl.DoGetPrice: Extended;
 begin
-  if not Assigned(FOrder) then
+  if not Assigned(FTicker) then
     raise Exception.Create('GDAX ticker not assigned in ' + Self.Classname);
   Result:=FTicker.Price;
 end;
 
 function TGDAXTickerImpl.DoGetTime: TDateTime;
 begin
-  if not Assigned(FOrder) then
+  if not Assigned(FTicker) then
     raise Exception.Create('GDAX ticker not assigned in ' + Self.Classname);
   Result:=FTicker.Time;
 end;
 
 procedure TGDAXTickerImpl.DoSetPrice(const AValue: Extended);
 begin
-  if not Assigned(FOrder) then
+  if not Assigned(FTicker) then
     raise Exception.Create('GDAX ticker not assigned in ' + Self.Classname);
   FTicker.Price:=AValue;
 end;
 
 procedure TGDAXTickerImpl.DoSetTime(const AValue: TDateTime);
 begin
-  if not Assigned(FOrder) then
+  if not Assigned(FTicker) then
     raise Exception.Create('GDAX ticker not assigned in ' + Self.Classname);
   FTicker.Time:=AValue;
 end;

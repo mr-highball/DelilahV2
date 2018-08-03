@@ -173,6 +173,11 @@ type
     property Time : TDateTime read GetTime write SetTime;
   end;
 
+  (*
+    list of tickers
+  *)
+  TTickers = TFPGInterfacedObjectList<ITicker>;
+
   { IStrategy }
   (*
     a strategy defines the "how" in trading and is activated by feeding ticker
@@ -181,7 +186,7 @@ type
   IStrategy = interface
     ['{7F3F7AE5-BD9A-45EE-B4E3-6F3E9DC52964}']
     function Feed(Const ATicker : ITicker;Const AManager:IOrderManager;
-      Out Error:String):Boolean;
+      Const AFunds,AInventory:Extended;Out Error:String):Boolean;
   end;
 
   TStrategies = TFPGList<IStrategy>;

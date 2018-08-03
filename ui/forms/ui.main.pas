@@ -9,7 +9,7 @@ uses
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
-  delilah, ui.usercontrol.singleline;
+  ui.usercontrol.singleline, delilah.types;
 
 type
 
@@ -57,6 +57,7 @@ type
     FProductInit : Boolean;
     FFunds : TSingleLine;
     FInit : Boolean;
+    FEngine : IDelilah;
     procedure InitControls;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
@@ -73,6 +74,8 @@ var
   Main: TMain;
 
 implementation
+uses
+  delilah, delilah.strategy.gdax, delilah.ticker.gdax;
 
 {$R *.lfm}
 
@@ -87,7 +90,16 @@ begin
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
+var
+  LError:String;
 begin
+  //create an engine
+  FEngine:=TDelilahImpl.Create;
+  //todo - right now just adding an empty strategy, but need to choose
+  //from the selected strategy in some dropdown
+  FEngine.Strategies.Add(
+    TStrategyGDAXImpl.Create
+  );
   InitControls;
 end;
 
@@ -150,7 +162,7 @@ begin
     ignition_main.OnStop:=StopStrategy;
     ignition_main.Status:='Stopped';
     FFunds:=TSingleLine.Create(Self);
-    FFunds.Parent:=ts_strategy;
+    FFunds.Parent:=scroll_strategy;
     FFunds.Align:=TAlign.alTop;
     FFunds.Options:=FFunds.Options - [ucAuthor];
     FFunds.Title:='Funds';
@@ -210,15 +222,28 @@ begin
 end;
 
 procedure TMain.CheckCanStop(Sender: TObject; var Continue: Boolean);
+var
+  LError:String;
 begin
-  //for now we can always stop
-  Continue:=True;
+  if not FEngine.Stop(LError) then
+  begin
+    Continue:=False;
+    LogError(LError);
+  end
+  else
+    Continue:=True;
 end;
 
 procedure TMain.StartStrategy(Sender: TObject);
+var
+  LError:String;
 begin
   //clear chart source
   chart_source.Clear;
+  //start the engine to accept tickers
+  FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
+  if not FEngine.Start(LError) then
+    LogError(LError);
   //start collecting tickers for the product
   FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
   FProducts.ProductFrame.Running:=True;
@@ -247,6 +272,9 @@ begin
 end;
 
 procedure TMain.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
+var
+  LError:String;
+  LTick:ITicker;
 begin
   LogInfo(
     Format('%s - %s',
@@ -256,6 +284,13 @@ begin
   //add the ticker price
   chart_source.Add(ATick.Time,ATick.Price);
   chart_ticker.Refresh;
+  //feed the engine a tick
+  LTick:=TGDAXTickerImpl.Create(ATick);
+  if not FEngine.Feed(
+    LTick,
+    LError
+  ) then
+    LogError(LError);
   //add any additional info from strategy
   //todo...
 end;

@@ -12,7 +12,7 @@ type
 
   { IStrategyGDAX }
 
-  IStrategyGDAX = interface
+  IStrategyGDAX = interface(IStrategy)
     ['{05FA98EC-1EC2-4FDF-A23E-9B4536E5C7B4}']
   end;
 
@@ -21,8 +21,8 @@ type
   TStrategyGDAXImpl = class(TStrategyImpl,IStrategyGDAX)
   strict private
   strict protected
-    function DoFeed(const ATicker: ITicker; const AManager: IOrderManager; out
-      Error: String): Boolean; override;
+    function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
+      Const AFunds,AInventory:Extended;Out Error: String): Boolean; override;
   public
   end;
 
@@ -32,8 +32,8 @@ uses
 
 { TStrategyGDAXImpl }
 
-function TStrategyGDAXImpl.DoFeed(const ATicker: ITicker;
-  const AManager: IOrderManager; out Error: String): Boolean;
+function TStrategyGDAXImpl.DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
+  Const AFunds,AInventory:Extended;Out Error: String): Boolean;
 begin
   Result:=False;
   //make sure we actually have a valid ticker refernce

@@ -5,7 +5,7 @@ unit delilah;
 interface
 
 uses
-  Classes, SysUtils, delilah.types, ledger, ledger.standard;
+  Classes, SysUtils, delilah.types, ledger, ledger.standard, fgl;
 
 type
 
@@ -14,6 +14,21 @@ type
     base implementation for IDelilah
   *)
   TDelilahImpl = class(TInterfacedObject,IDelilah)
+  strict private
+    type
+      TLedgerSource = (lsHold,lsStd,lsInvHold,lsStdInv);
+
+      { TLedgerPair }
+
+      TLedgerPair = packed record
+      public
+        ID : String;
+        Source : TLedgerSource;
+        class operator Equal(Const A,B:TLedgerPair):Boolean;
+      end;
+
+      TLedgerPairList = TFPGList<TLedgerPair>;
+      TOrderLedgerMap = TFPGMapObject<String,TLedgerPairList>;
   strict private
     FFunds: Extended;
     FCompound: Boolean;
@@ -30,6 +45,7 @@ type
     FOldPlace: TOrderPlaceEvent;
     FOldRemove: TOrderRemoveEvent;
     FOldStatus: TOrderStatusEvent;
+    FOrderLedger: TOrderLedgerMap;
     function GetAvailableInventory: Extended;
     function GetInventoryHolds: Extended;
     procedure SetInventoryLedger(Const AValue: IExtendedLedger);
@@ -63,9 +79,19 @@ type
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
   strict protected
     procedure SetState(Const AState:TEngineState);
-    procedure QueueTicker(Const ATicker:ITicker);
-    procedure StoreLedgerID(Const AOrderID,ALedgerID:String);
-    procedure CompleteOrder(COnst ADetails:IOrderDetails;Const AID:String);
+    (*
+      stores a ledger id and order id pair in order to lookup the source ledger
+    *)
+    procedure StoreLedgerID(Const AOrderID,ALedgerID:String;Const ALedgerSource:TLedgerSource);
+    (*
+      given an order id and a source to balance, this method will automatically
+      record an entry required to balance to zero
+    *)
+    procedure BalanceOrder(Const AOrderID:String;Const ALedgerSource:TLedgerSource);
+    (*
+      performs necessary steps to move an order from active to completed
+    *)
+    procedure CompleteOrder(Const ADetails:IOrderDetails;Const AID:String);
     function DoStart(Out Error:String):Boolean;virtual;
     function DoStop(Out Error:String):Boolean;virtual;
     function DoFeed(Const ATicker:ITicker;Out Error:string):Boolean;virtual;
@@ -97,6 +123,13 @@ type
   end;
 
 implementation
+
+{ TDelilahImpl.TLedgerPair }
+
+class operator TDelilahImpl.TLedgerPair.Equal(const A, B: TLedgerPair): Boolean;
+begin
+  Result:=A.ID=B.ID;
+end;
 
 { TDelilahImpl }
 
@@ -284,7 +317,7 @@ begin
           LID
         );
         //now store the ledger id associated with this order id
-        StoreLedgerID(AID,LID);
+        StoreLedgerID(AID,LID,lsHold);
       end;
     //when an order has been completed, we need to check that there is no
     //holds entry, and if so, balance it out with an opposite ledger type,
@@ -301,16 +334,18 @@ end;
 procedure TDelilahImpl.DoStatus(const ADetails: IOrderDetails;
   const AID: String; const AOldStatus, ANewStatus: TOrderManagerStatus);
 begin
-    //todo - intercept the status and perform proper accounting to ledgers
     case ANewStatus of
-      //when an order is marked as canceled
+      //when an order is marked as canceled we need to balance
+      //any holds on the funds and inventory ledger
       omCanceled:
         begin
-
+          BalanceOrder(AID,lsHold);
+          BalanceOrder(AID,lsInvHold);
         end;
+      //for completed orders, call down to complete order method
       omCompleted:
         begin
-
+          CompleteOrder(ADetails,AID);
         end;
     end;
 end;
@@ -320,40 +355,160 @@ begin
   FState:=AState;
 end;
 
-procedure TDelilahImpl.QueueTicker(const ATicker: ITicker);
+procedure TDelilahImpl.StoreLedgerID(const AOrderID, ALedgerID: String;
+  const ALedgerSource: TLedgerSource);
+var
+  I:Integer;
+  LLedger:IDoubleLedger;
+  LList:TLedgerPairList;
+  LEntry:TLedgerPair;
 begin
-  //todo - thread safe queue of a ticker. could either operate on an event system
-  //or a polling mechanism in a separate thread
+  if FOrderManager.Exists[AOrderID] then
+  begin
+    //depending on source, assign local ledger properly
+    case ALedgerSource of
+      lsHold: LLedger:=FHoldsLedger;
+      lsStd: LLedger:=FFundsLedger;
+      lsInvHold: LLedger:=FHoldsInvLedger;
+      lsStdInv: LLedger:=FInvLedger;
+    end;
+    //check in map to see if we have the pair list for this order
+    I:=FOrderLedger.IndexOf(AOrderID);
+    if I<0 then
+    begin
+      LList:=TLedgerPairList.Create;
+      //the entry below is used as a means of looking up a given order id
+      //and find a corresponding ledger entry that was placed in one of our
+      //ledgers (holds/inv/etc...)
+      LEntry.ID:=ALedgerID;
+      LEntry.Source:=ALedgerSource;
+      //store the lookup entry
+      LList.Add(LEntry);
+    end;
+  end;
 end;
 
-procedure TDelilahImpl.StoreLedgerID(const AOrderID, ALedgerID: String);
+procedure TDelilahImpl.BalanceOrder(const AOrderID: String;
+  const ALedgerSource: TLedgerSource);
+var
+  I:Integer;
+  LList:TLedgerPairList;
+  LIndexes:TArray<Integer>;
+  LOwned:TLedgerPairList;
+  LLedger:IDoubleLedger;
 begin
-  //todo - store an order id with a string ledger id
+  //check to see if we even have this order id recorded, and if not everything
+  //should be properly balanced
+  I:=FOrderLedger.IndexOf(AOrderID);
+  if I<0 then
+    Exit;
+  LOwned:=FOrderLedger.Data[I];
+  //if the owned list contains no pairs, we should also be balanced
+  if LOwned.Count<1 then
+    Exit;
+  //create a local ledger list for adding all pairs for a given source
+  LList:=TLedgerPairList.Create;
+  try
+    for I:=0 to Pred(LOwned.Count) do
+    begin
+      if LOwned[I].Source=ALedgerSource then
+      begin
+        LList.Add(LOwned[I]);
+        //store the index for removal later
+        SetLength(LIndexes,Succ(Length(LIndexes)));
+        LIndexes[High(LIndexes)]:=I;
+      end;
+    end;
+    //no matching ledger pairs for source, safe to exit
+    if LList.Count<0 then
+      Exit;
+    //get a reference to the source ledger
+    case ALedgerSource of
+      lsHold: LLedger:=FHoldsLedger;
+      lsStd: LLedger:=FFundsLedger;
+      lsInvHold: LLedger:=FHoldsInvLedger;
+      lsStdInv: LLedger:=FInvLedger;
+    end;
+    //for each record we need to add a balancing entry to the source
+    for I:=0 to Pred(LList.Count) do
+    begin
+      //below makes the assumption our ledger wasn't flattened or tampered with
+      //by an outside source...
+      try
+        //if we are credit entry, then we need to debit
+        if LLedger[LList[I].ID].LedgerType=ltCredit then
+          LLedger.RecordEntry(
+            LLedger[LList[I].ID].Entry,
+            ltDebit
+          )
+        //otherwise record an opposite debit
+        else
+          LLedger.RecordEntry(
+            LLedger[LList[I].ID].Entry,
+            ltCredit
+          );
+      finally
+        //todo - currently just swallowing any exception which would occur, address
+      end;
+    end;
+    //now for all of the indexes, remove from the lookup list
+    for I:=0 to High(LIndexes) do
+      LOwned.Delete(LIndexes[I]);
+  finally
+    LList.Free;
+  end;
 end;
 
 procedure TDelilahImpl.CompleteOrder(const ADetails: IOrderDetails;
   const AID: String);
+var
+  LID:String;
 begin
-  //todo - check for holds, balance, record completion to funds ledger
+  //nothing to complete if we aren't managing this order
+  if not FOrderManager.Exists[AID] then
+    Exit;
+  //balance the hold ledgers
+  BalanceOrder(AID,lsHold);
+  BalanceOrder(AID,lsInvHold);
+  //record entries to funds ledger
+  FFundsLedger.RecordEntry(
+    ADetails.Price,
+    ADetails.LedgerType,
+    LID
+  );
+  StoreLedgerID(AID,LID,lsStd);
+  //record entries to inventory ledger
+  FFundsLedger.RecordEntry(
+    ADetails.Size,
+    ADetails.LedgerType,
+    LID
+  );
+  StoreLedgerID(AID,LID,lsInvHold);
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;
 begin
-  Result:=False;
-  //todo
+  //base class operates in an evented way only, so no background process to stop
+  Result:=True;
 end;
 
 function TDelilahImpl.DoStop(out Error: String): Boolean;
 begin
-  Result:=False;
-  //todo
+  //base class operates in an evented way only, so no background process to stop
+  Result:=True;
 end;
 
 function TDelilahImpl.DoFeed(const ATicker: ITicker; out Error: string): Boolean;
+var
+  I:Integer;
 begin
   Result:=False;
   try
-    QueueTicker(ATicker);
+    //simply iterate strategies and attempt to feed, they are responsible
+    //for the rest of the logic in our base class engine
+    for I:=0 to Pred(FStrategies.Count) do
+      if not FStrategies[I].Feed(ATIcker,FOrderManager,Error) then
+        Exit;
     Result:=True;
   except on E:Exception do
     Error:=E.Message;
@@ -367,7 +522,16 @@ end;
 
 function TDelilahImpl.Start(out Error: String): Boolean;
 begin
-  Result:=DoStart(Error);
+  Result:=False;
+  try
+    //already running
+    if FState=esStarted then
+      Exit(True);
+    Result:=DoStart(Error);
+    FState:=esStarted;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
 function TDelilahImpl.Start: Boolean;
@@ -379,7 +543,16 @@ end;
 
 function TDelilahImpl.Stop(out Error: String): Boolean;
 begin
-  Result:=DoStop(Error);
+  Result:=False;
+  try
+    //already stopped
+    if FState=esStopped then
+      Exit(true);
+    Result:=DoStop(Error);
+    FState:=esStopped;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
 function TDelilahImpl.Stop: Boolean;
@@ -391,6 +564,7 @@ end;
 
 constructor TDelilahImpl.Create;
 begin
+  FOrderLedger:=TOrderLedgerMap.Create(true);
   FFunds:=0;
   FCompound:=False;
   FFundsLedger:=NewExtendedLedger;
@@ -409,6 +583,7 @@ begin
   FInVLedger:=nil;
   FHoldsLedger:=nil;
   FFundsLedger:=nil;
+  FOrderLedger.Free;
   inherited Destroy;
 end;
 

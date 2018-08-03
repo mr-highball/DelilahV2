@@ -74,6 +74,7 @@ type
     function Details(Const AID:String;Out Details:IOrderDetails;
       Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
+    function ID(Const ADetails:IOrderDetails;Out ID:String):Boolean;
     procedure Clear;
     constructor Create;virtual;
     destructor Destroy; override;
@@ -309,6 +310,17 @@ var
   LError:String;
 begin
   Result:=Self.Details(AID,Details,LError);
+end;
+
+function TOrderManagerImpl.ID(const ADetails: IOrderDetails; out ID: String): Boolean;
+var
+  I:Integer;
+begin
+  Result:=False;
+  I:=FOrders.IndexOfData(ADetails);
+  if I<0 then
+    Exit;
+  ID:=FOrders.Keys[I];
 end;
 
 procedure TOrderManagerImpl.Clear;

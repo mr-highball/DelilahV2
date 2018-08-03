@@ -147,6 +147,10 @@ type
       Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
     (*
+      given an order details output the id, return success found
+    *)
+    function ID(Const ADetails:IOrderDetails;Out ID:String):Boolean;
+    (*
       will attempt to remove all orders. orders unable to be removed will be
       "silently" be skipped over
     *)

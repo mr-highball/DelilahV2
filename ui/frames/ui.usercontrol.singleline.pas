@@ -45,8 +45,8 @@ procedure TSingleLine.DoInitControls;
 begin
   inherited DoInitControls;
   Control.Visible:=True;
-  Control.AnchorSide[akLeft].Side:=asrLeft;
-  Control.AnchorSide[akLeft].Control:=pnl_control;
+  Control.AnchorVerticalCenterTo(pnl_control);
+  Control.AnchorHorizontalCenterTo(pnl_control);
   Control.AnchorSide[akRight].Side:=asrRight;
   Control.AnchorSide[akRight].Control:=pnl_control;
   Control.Anchors:=Control.Anchors + [akLeft,akRight];
@@ -55,8 +55,8 @@ end;
 
 constructor TSingleLine.Create(TheOwner: TComponent);
 begin
-  inherited Create(TheOwner);
   Control:=TEdit.Create(nil);
+  inherited Create(TheOwner);
 end;
 
 end.

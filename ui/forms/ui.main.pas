@@ -7,9 +7,9 @@ interface
 uses
   Classes, SysUtils, FileUtil, TAGraph, TASources, TASeries, TATools,
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
-  StdCtrls, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
+  StdCtrls, Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
-  delilah;
+  delilah, ui.usercontrol.singleline;
 
 type
 
@@ -25,11 +25,22 @@ type
     chart_tickerLineSeries1: TLineSeries;
     ignition_main: TIgnition;
     icons: TImageList;
+    menu: TImageList;
     json_main: TJSONPropStorage;
+    mi_email_setup: TMenuItem;
+    mi_email_enabled: TMenuItem;
+    mi_file_settings: TMenuItem;
+    mi_log_tab: TMenuItem;
+    mi_email: TMenuItem;
+    mi_logging: TMenuItem;
+    mi_auto_start: TMenuItem;
+    mi_configure: TMenuItem;
+    menu_main: TMainMenu;
     memo_licenses: TMemo;
     multi_log: TMultiLine;
     pctrl_main: TPageControl;
     scroll_strategy: TScrollBox;
+    status_main: TStatusBar;
     ts_product: TTabSheet;
     ts_about: TTabSheet;
     ts_chart: TTabSheet;
@@ -44,6 +55,8 @@ type
     FAuth : TAuthenticator;
     FProducts : TProducts;
     FProductInit : Boolean;
+    FFunds : TSingleLine;
+    FInit : Boolean;
     procedure InitControls;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
@@ -70,7 +83,7 @@ const
 
 procedure TMain.json_mainRestoringProperties(Sender: TObject);
 begin
-  //todo
+  //todo - check if a json settings file exists, if so read/assign values
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -78,10 +91,9 @@ begin
   InitControls;
 end;
 
-
 procedure TMain.json_mainSavingProperties(Sender: TObject);
 begin
-  //todo
+  //todo - attempt to save a settings file based on options set
 end;
 
 procedure TMain.pctrl_mainChange(Sender: TObject);
@@ -110,31 +122,44 @@ end;
 
 procedure TMain.InitControls;
 begin
-  //main tab
-  pctrl_main.ActivePage:=ts_auth;
-  //logger
-  multi_log.Options:=multi_log.Options - [ucAuthor];
-  multi_log.Title:='Strategy Logger';
-  multi_log.Description:='logging for the strategy';
-  //authenticator
-  FAuth:=TAuthenticator.Create(Self);
-  FAuth.Parent:=ts_auth;
-  FAuth.AnchorHorizontalCenterTo(ts_auth);
-  FAuth.AnchorVerticalCenterTo(ts_auth);
-  //products
-  FProducts:=TProducts.Create(Self);
-  FProducts.Parent:=ts_product;
-  FProducts.Align:=TAlign.alClient;
-  FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
-  FProducts.ProductFrame.OnError:=ProductError;
-  FProducts.ProductFrame.OnTick:=ProductTick;
-  FProductInit:=False;
-  //strategy
-  ignition_main.OnRequestStart:=CheckCanStart;
-  ignition_main.OnRequestStop:=CheckCanStop;
-  ignition_main.OnStart:=StartStrategy;
-  ignition_main.OnStop:=StopStrategy;
-  ignition_main.Status:='Stopped';
+  if not FInit then
+  begin
+    //main tab
+    pctrl_main.ActivePage:=ts_auth;
+    //logger
+    multi_log.Options:=multi_log.Options - [ucAuthor];
+    multi_log.Title:='Strategy Logger';
+    multi_log.Description:='logging for the strategy';
+    //authenticator
+    FAuth:=TAuthenticator.Create(Self);
+    FAuth.Parent:=ts_auth;
+    FAuth.AnchorHorizontalCenterTo(ts_auth);
+    FAuth.AnchorVerticalCenterTo(ts_auth);
+    //products
+    FProducts:=TProducts.Create(Self);
+    FProducts.Parent:=ts_product;
+    FProducts.Align:=TAlign.alClient;
+    FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
+    FProducts.ProductFrame.OnError:=ProductError;
+    FProducts.ProductFrame.OnTick:=ProductTick;
+    FProductInit:=False;
+    //strategy
+    ignition_main.OnRequestStart:=CheckCanStart;
+    ignition_main.OnRequestStop:=CheckCanStop;
+    ignition_main.OnStart:=StartStrategy;
+    ignition_main.OnStop:=StopStrategy;
+    ignition_main.Status:='Stopped';
+    FFunds:=TSingleLine.Create(Self);
+    FFunds.Parent:=ts_strategy;
+    FFunds.Align:=TAlign.alTop;
+    FFunds.Options:=FFunds.Options - [ucAuthor];
+    FFunds.Title:='Funds';
+    FFunds.Description:='specify "how much" quote currency is available to spend trading';
+    FFunds.Height:=100;
+    FFunds.Control.Constraints.MaxWidth:=200;
+    FFunds.Text:='0.0';
+    FInit:=True;
+  end;
 end;
 
 procedure TMain.CheckCanStart(Sender: TObject; var Continue: Boolean);

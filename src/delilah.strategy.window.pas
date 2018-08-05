@@ -66,7 +66,6 @@ type
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
     function GetCollected: Cardinal;
-    function GetIsReady: Boolean;
     function GetWindowSize: Cardinal;
     procedure SetCleanPerc(Const AValue: Single);
     procedure SetCleanThresh(Const AValue: Single);
@@ -75,6 +74,11 @@ type
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
       const AFunds, AInventory: Extended; out Error: String): Boolean; override;
+    (*
+      virtual in the event children will want to add additional checks to
+      state that a window is "ready"
+    *)
+    function GetIsReady: Boolean;virtual;
   public
     property WindowSizeInMilli : Cardinal read GetWindowSize write SetWindowSize;
     property CollectedSizeInMilli : Cardinal read GetCollected;
@@ -88,7 +92,7 @@ type
 
 implementation
 uses
-  DateUtil;
+  DateUtils;
 
 { TWindowStrategyImpl }
 
@@ -104,7 +108,7 @@ end;
 
 function TWindowStrategyImpl.GetCollected: Cardinal;
 begin
-  if FSize<2 then
+  if FTickers.Count<2 then
     Exit(0);
   Result:=Abs(MilliSecondsBetween(
     FTickers[0].Time,
@@ -152,21 +156,23 @@ var
 begin
   Result:=False;
   try
+    //add the ticker
+    FTickers.Add(ATicker);
     //only check cleanup if we are ready
     if not IsReady then
       Exit(True);
     //below we need to attend to cleaning up tickers to keep the window thresholds
-    LMilli:=FCleanThresh * FSize;
+    LMilli:=Round(FCleanThresh * FSize);
     if CollectedSizeInMilli>=LMilli then
     begin
       //now set milli to the amount we need to satisfy the cleanup
-      LMilli:=FCleanPerc * FSize;
+      LMilli:=Round(FCleanPerc * FSize);
       J:=-1;
       for I:=1 to Pred(FTickers.Count) do
       begin
         if Abs(MilliSecondsBetween(
           FTickers[0].Time,
-          FTicker[I].Time))>=LMilli
+          FTickers[I].Time))>=LMilli
         then
         begin
           J:=I;
@@ -177,6 +183,7 @@ begin
       for I:=0 to J do
         FTickers.Delete(0);
     end;
+    Result:=True;
   except on E:Exception do
     Error:=E.Message;
   end;

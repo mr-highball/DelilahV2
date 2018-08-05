@@ -15,7 +15,14 @@ type
 
 
   { TMain }
-
+  (*
+    this form allows for configuring a IDelilah engine for GDAX and offers
+    some conveniences such as chart, visual logging, etc...
+    not all features of the engine are utilized, and currently this is tailored
+    to GDAX. ultimately this is designed to be a simple wrapper to get someone
+    up and running a strategy with minimal hassle as well as showing a use case
+    for the GDAX api and engine core classes.
+  *)
   TMain = class(TForm)
     chart_tools: TChartToolset;
     chart_toolsDataPointCrosshairTool1: TDataPointCrosshairTool;
@@ -75,7 +82,7 @@ var
 
 implementation
 uses
-  delilah, delilah.strategy.gdax, delilah.ticker.gdax;
+  delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window;
 
 {$R *.lfm}
 
@@ -92,13 +99,16 @@ end;
 procedure TMain.FormCreate(Sender: TObject);
 var
   LError:String;
+  LStrategy:IWindowStrategy;
 begin
   //create an engine
   FEngine:=TDelilahImpl.Create;
   //todo - right now just adding an empty strategy, but need to choose
   //from the selected strategy in some dropdown
+  LStrategy:=TWindowStrategyImpl.Create;
+  LStrategy.WindowSizeInMilli:=3000;
   FEngine.Strategies.Add(
-    TStrategyGDAXImpl.Create
+    LStrategy
   );
   InitControls;
 end;
@@ -276,6 +286,9 @@ var
   LError:String;
   LTick:ITicker;
 begin
+  //only keep so much before purging visual log
+  if multi_log.Lines.Count>5000 then
+    multi_log.Lines.Clear;
   LogInfo(
     Format('%s - %s',
       [ATick.Product.ID,'ticker price:' + FloatToStr(ATick.Price)]

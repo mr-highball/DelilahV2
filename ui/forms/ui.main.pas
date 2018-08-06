@@ -19,7 +19,7 @@ type
     this form allows for configuring a IDelilah engine for GDAX and offers
     some conveniences such as chart, visual logging, etc...
     not all features of the engine are utilized, and currently this is tailored
-    to GDAX. ultimately this is designed to be a simple wrapper to get someone
+    to GDAX. ultimately this is designed to be a simple ui wrapper to get someone
     up and running a strategy with minimal hassle as well as showing a use case
     for the GDAX api and engine core classes.
   *)
@@ -82,7 +82,8 @@ var
 
 implementation
 uses
-  delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window;
+  delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
+  delilah.strategy.gdax.sample;
 
 {$R *.lfm}
 
@@ -99,17 +100,9 @@ end;
 procedure TMain.FormCreate(Sender: TObject);
 var
   LError:String;
-  LStrategy:IWindowStrategy;
 begin
   //create an engine
   FEngine:=TDelilahImpl.Create;
-  //todo - right now just adding an empty strategy, but need to choose
-  //from the selected strategy in some dropdown
-  LStrategy:=TWindowStrategyImpl.Create;
-  LStrategy.WindowSizeInMilli:=3000;
-  FEngine.Strategies.Add(
-    LStrategy
-  );
   InitControls;
 end;
 
@@ -164,6 +157,7 @@ begin
     FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
     FProducts.ProductFrame.OnError:=ProductError;
     FProducts.ProductFrame.OnTick:=ProductTick;
+    FProducts.ProductFrame.TickerInterval:=1500;
     FProductInit:=False;
     //strategy
     ignition_main.OnRequestStart:=CheckCanStart;
@@ -247,9 +241,17 @@ end;
 procedure TMain.StartStrategy(Sender: TObject);
 var
   LError:String;
+  LStrategy:ISampleGDAX;
 begin
   //clear chart source
   chart_source.Clear;
+  //todo - right now just adding an empty strategy, but need to choose
+  //from the selected strategy in some dropdown
+  LStrategy:=TSampleGDAXImpl.Create;
+  LStrategy.WindowSizeInMilli:=30000;
+  FEngine.Strategies.Add(
+    LStrategy
+  );
   //start the engine to accept tickers
   FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
   if not FEngine.Start(LError) then
@@ -269,6 +271,8 @@ procedure TMain.StopStrategy(Sender: TObject);
 begin
   //stop the ticker collection
   FProducts.ProductFrame.Running:=False;
+  //for now clear the strategy from the engine
+  FEngine.Strategies.Clear;
   //update status and re-enable controls
   ignition_main.Status:='Stopped';
   FAuth.Enabled:=True;
@@ -296,7 +300,6 @@ begin
   );
   //add the ticker price
   chart_source.Add(ATick.Time,ATick.Price);
-  chart_ticker.Refresh;
   //feed the engine a tick
   LTick:=TGDAXTickerImpl.Create(ATick);
   if not FEngine.Feed(
@@ -305,7 +308,10 @@ begin
   ) then
     LogError(LError);
   //add any additional info from strategy
-  //todo...
+  //todo - let strategy draw on the chart in some way (channels etc...)
+
+  //refresh the chart
+  chart_ticker.Refresh;
 end;
 
 procedure TMain.LogError(const AMessage: String);

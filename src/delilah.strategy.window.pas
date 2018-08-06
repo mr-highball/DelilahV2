@@ -12,7 +12,7 @@ type
   { IWindowStrategy }
   (*
     IWindowStrategy's specialize in working on a set of tickers in some
-    defined "window" of time
+    defined "window" of time. also provides some useful math helper methods
   *)
   IWindowStrategy = interface(IStrategy)
     ['{535CAC6E-19BA-4C2D-975B-EA3C737C6A75}']
@@ -20,7 +20,10 @@ type
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
     function GetCollected: Cardinal;
+    function GetHighest: Extended;
     function GetIsReady: Boolean;
+    function GetLowest: Extended;
+    function GetStdDev: Single;
     function GetWindowSize: Cardinal;
     procedure SetCleanPerc(Const AValue: Single);
     procedure SetCleanThresh(Const AValue: Single);
@@ -49,6 +52,18 @@ type
     *)
     property CleanupThreshold : Single read GetCleanThresh write SetCleanThresh;
     (*
+      the standard deviation for the current windows' tickers
+    *)
+    property StdDev : Single read GetStdDev;
+    (*
+      current highest price found in the window
+    *)
+    property HighestPrice : Extended read GetHighest;
+    (*
+      current lowest price found in the window
+    *)
+    property LowestPrice : Extended read GetLowest;
+    (*
       returns true when the length of time from the first ticker stored
       and the last ticker stored is at or above the window size
     *)
@@ -66,6 +81,9 @@ type
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
     function GetCollected: Cardinal;
+    function GetHighest: Extended;
+    function GetLowest: Extended;
+    function GetStdDev: Single;
     function GetWindowSize: Cardinal;
     procedure SetCleanPerc(Const AValue: Single);
     procedure SetCleanThresh(Const AValue: Single);
@@ -85,6 +103,9 @@ type
     property Tickers : TTickers read GetTickers;
     property CleanupPercentage : Single read GetCleanPerc write SetCleanPerc;
     property CleanupThreshold : Single read GetCleanThresh write SetCleanThresh;
+    property StdDev : Single read GetStdDev;
+    property LowestPrice : Extended read GetLowest;
+    property HighestPrice : Extended read GetHighest;
     property IsReady : Boolean read GetIsReady;
     constructor Create; override;
     destructor Destroy; override;
@@ -92,7 +113,7 @@ type
 
 implementation
 uses
-  DateUtils;
+  DateUtils, Math;
 
 { TWindowStrategyImpl }
 
@@ -114,6 +135,48 @@ begin
     FTickers[0].Time,
     FTickers[Pred(FTickers.Count)].Time
   ));
+end;
+
+function TWindowStrategyImpl.GetHighest: Extended;
+var
+  I:Integer;
+  LArr:TArray<Extended>;
+begin
+  Result:=0;
+  if FTickers.Count<1 then
+    Exit;
+  SetLength(LArr,FTickers.Count);
+  for I:=0 to Pred(FTickers.Count) do
+    LArr[I]:=FTickers[I].Price;
+  Result:=Math.maxvalue(PExtended(@LArr[0]),Length(LArr));
+end;
+
+function TWindowStrategyImpl.GetLowest: Extended;
+var
+  I:Integer;
+  LArr:TArray<Extended>;
+begin
+  Result:=0;
+  if FTickers.Count<1 then
+    Exit;
+  SetLength(LArr,FTickers.Count);
+  for I:=0 to Pred(FTickers.Count) do
+    LArr[I]:=FTickers[I].Price;
+  Result:=Math.minvalue(PExtended(@LArr[0]),Length(LArr));
+end;
+
+function TWindowStrategyImpl.GetStdDev: Single;
+var
+  I:Integer;
+  LArr:TArray<Extended>;
+begin
+  Result:=0;
+  if FTickers.Count<1 then
+    Exit;
+  SetLength(LArr,FTickers.Count);
+  for I:=0 to Pred(FTickers.Count) do
+    LArr[I]:=FTickers[I].Price;
+  Result:=Math.stddev(PExtended(@LArr[0]),Length(LArr));
 end;
 
 function TWindowStrategyImpl.GetIsReady: Boolean;

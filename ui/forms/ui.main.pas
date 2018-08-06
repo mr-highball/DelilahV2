@@ -83,7 +83,7 @@ var
 implementation
 uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
-  delilah.strategy.gdax.sample;
+  delilah.strategy.gdax.sample, delilah.manager.gdax;
 
 {$R *.lfm}
 
@@ -100,9 +100,14 @@ end;
 procedure TMain.FormCreate(Sender: TObject);
 var
   LError:String;
+  LManager:IGDAXOrderManager;
 begin
   //create an engine
   FEngine:=TDelilahImpl.Create;
+  //since we are dealing with GDAX assign the order manager
+  LManager:=TGDAXOrderManagerImpl.Create;
+  FEngine.OrderManager:=LManager;
+
   InitControls;
 end;
 
@@ -245,13 +250,18 @@ var
 begin
   //clear chart source
   chart_source.Clear;
-  //todo - right now just adding an empty strategy, but need to choose
-  //from the selected strategy in some dropdown
+  //todo - right now just adding an sample strategy, but need to choose
+  //from the selected strategy in some dropdown once fully implemented.
+  //also allow easy ui binding, and registering...
   LStrategy:=TSampleGDAXImpl.Create;
-  LStrategy.WindowSizeInMilli:=30000;
+  //during testing don't require a size, but this is where we would
+  //put for example, 1hr worth of time, or a min.. or whatever.
+  LStrategy.WindowSizeInMilli:=0;
   FEngine.Strategies.Add(
     LStrategy
   );
+  //also assign the authenticator
+  (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
   //start the engine to accept tickers
   FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
   if not FEngine.Start(LError) then

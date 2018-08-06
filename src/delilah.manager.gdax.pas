@@ -59,7 +59,7 @@ end;
 
 procedure TGDAXOrderManagerImpl.SetAuth(const AValue: IGDAXAuthenticator);
 begin
-  FAuth:=nil
+  FAuth:=nil;
   FAuth:=AValue;
 end;
 
@@ -84,6 +84,7 @@ begin
     Error:='gdax not assigned in order details';
     Exit;
   end;
+  Result:=True;
 end;
 
 function TGDAXOrderManagerImpl.GDAXStatusToEngineStatus(
@@ -102,6 +103,7 @@ function TGDAXOrderManagerImpl.DoPlace(const ADetails: IOrderDetails;
   out Error: String): Boolean;
 var
   LDetails:IGDAXOrderDetails;
+  LContent:String;
 begin
   Result:=False;
   try
@@ -109,9 +111,15 @@ begin
     if not GDAXDetailsValid(ADetails,Error) then
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
+    LDetails.Order.Authenticator:=Authenticator;
     //attempt to post the order assuming strategy has filled it out correctly
-    if LDetails.Order.Post(LContent,Error) then
+    if not LDetails.Order.Post(LContent,Error) then
       Exit;
+    if LDetails.Order.OrderStatus in [stCancelled,stUnknown,stRejected] then
+    begin
+      Error:=LDetails.Order.RejectReason;
+      Exit;
+    end;
     Result:=True;
   except on E:Exception do
     Error:=E.Message;
@@ -122,6 +130,7 @@ function TGDAXOrderManagerImpl.DoCancel(const ADetails: IOrderDetails;
   out Error: String): Boolean;
 var
   LDetails:IGDAXOrderDetails;
+  LContent:String;
 begin
   Result:=False;
   try
@@ -129,8 +138,9 @@ begin
     if not GDAXDetailsValid(ADetails,Error) then
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
+    LDetails.Order.Authenticator:=Authenticator;
     //attempt to post the order assuming strategy has filled it out correctly
-    if LDetails.Order.Delete(LContent,Error) then
+    if not LDetails.Order.Delete(LContent,Error) then
       Exit;
     Result:=True;
   except on E:Exception do
@@ -141,33 +151,37 @@ end;
 function TGDAXOrderManagerImpl.DoGetStatus(const ADetails: IOrderDetails): TOrderManagerStatus;
 var
   LDetails:IGDAXOrderDetails;
-  LOldStatus,
-  LNewStatus:TOrderManagerStatus;
+  LOldStatus:TOrderManagerStatus;
   LID:String;
+  LContent:String;
+  LError:String;
 begin
-  Result:=False;
+  Result:=omCanceled;
   try
+    //todo - probably add out error parameter to DoGetStatus, right now
+    //they are just unhandled
+
     //will check everything needed for continuing
-    if not GDAXDetailsValid(ADetails,Error) then
+    if not GDAXDetailsValid(ADetails,LError) then
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
     LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
+    LDetails.Order.Authenticator:=Authenticator;
     //attempt to post the order assuming strategy has filled it out correctly
-    if LDetails.Order.Get(LContent,Error) then
+    if not LDetails.Order.Get(LContent,LError) then
       Exit;
     if not ID(ADetails,LID) then
     begin
-      Error:='unable to fetch id for order details in ' + Self.Classname;
+      LError:='unable to fetch id for order details in ' + Self.Classname;
       Exit;
     end;
-    LNewStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
+    Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     //notify listeners since base class does not handle status changes when
     //fetching statuses (handles cancel, remove, place automatically)
-    if LOldStatus<>LNewStatus then
-      DoOnStatus(LDetails,LID,LOldStatus,LNewStatus);
-    Result:=True;
+    if LOldStatus<>Result then
+      DoOnStatus(LDetails,LID,LOldStatus,Result);
   except on E:Exception do
-    Error:=E.Message;
+    LError:=E.Message;
   end;
 end;
 

@@ -195,12 +195,12 @@ begin
     DoOnBeforePlace(ADetails,LAllow,Error);
     if not LAllow then
       Exit;
-    //generate a guid and store the reference
-    ID:=TGuid.NewGuid.ToString();
-    FOrders.Add(ID,ADetails);
     //call down to children to see if placing the order was successful
     if not DoPlace(ADetails,Error) then
       Exit;
+    //generate a guid and store the reference
+    ID:=TGuid.NewGuid.ToString();
+    FOrders.Add(ID,ADetails);
     //notify order place
     DoOnPlace(ADetails,ID);
     //success
@@ -321,16 +321,18 @@ begin
   if I<0 then
     Exit;
   ID:=FOrders.Keys[I];
+  Result:=True;
 end;
 
 procedure TOrderManagerImpl.Clear;
 var
+  I:Integer;
   LIDS:TArray<String>;
 begin
   SetLength(LIDS,FOrders.Count);
   //get all of the ids
   for I:=0 to Pred(FOrders.Count) do
-    LIDS[I]:=FOrders[I];
+    LIDS[I]:=FOrders.Keys[I];
   //silently fail if delete fails
   for I:=0 to High(LIDS) do
     Delete(LIDS[I]);

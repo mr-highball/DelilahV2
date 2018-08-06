@@ -15,7 +15,8 @@ type
   ISampleGDAX = interface(IWindowStrategy)
     ['{0BC943DB-FA2F-4C42-BF55-83C22C82123D}']
     //here we would add any additional properties or method
-    //that pertain to your strategy
+    //that pertain to your strategy, such as IWindowStrategy if
+    //we didn't want to go the delegate route
   end;
 
   { TSampleGDAXImpl }
@@ -30,6 +31,23 @@ type
     FWindow: IWindowStrategy;
     FID: String;
     function GetWindow: IWindowStrategy;
+    //methods delegates by window, compiler yells if not present.
+    //alternatively we could've just added the Window property to ISampleGDAX
+    //and use it, but is slightly inconvenient when have to call
+    //Strategy.Window.Size vs Strategy.Size, also I already started to
+    //do it this way...
+    function GetCleanPerc: Single;
+    function GetCleanThresh: Single;
+    function GetCollected: Cardinal;
+    function GetHighest: Extended;
+    function GetIsReady: Boolean;
+    function GetLowest: Extended;
+    function GetStdDev: Single;
+    function GetWindowSize: Cardinal;
+    procedure SetCleanPerc(Const AValue: Single);
+    procedure SetCleanThresh(Const AValue: Single);
+    procedure SetWindowSize(Const AValue: Cardinal);
+    function GetTickers: TTickers;
   strict protected
     (*
       this method is the primary method used to operate on "the tick" and
@@ -45,6 +63,7 @@ type
 
 implementation
 uses
+  delilah.ticker.gdax,//gdax ticker for engine
   delilah.order.gdax,//order detail implementation for engine
   gdax.api.types,//contains common types associated to GDAX
   gdax.api.orders,//contains implementation of order specific stuff
@@ -57,13 +76,73 @@ begin
   Result:=FWindow;
 end;
 
+function TSampleGDAXImpl.GetCleanPerc: Single;
+begin
+  Result:=FWindow.CleanupPercentage;
+end;
+
+function TSampleGDAXImpl.GetCleanThresh: Single;
+begin
+  Result:=FWindow.CleanupThreshold;
+end;
+
+function TSampleGDAXImpl.GetCollected: Cardinal;
+begin
+  Result:=FWindow.CollectedSizeInMilli;
+end;
+
+function TSampleGDAXImpl.GetHighest: Extended;
+begin
+  Result:=FWindow.HighestPrice;
+end;
+
+function TSampleGDAXImpl.GetIsReady: Boolean;
+begin
+  Result:=FWindow.IsReady;
+end;
+
+function TSampleGDAXImpl.GetLowest: Extended;
+begin
+  Result:=FWindow.LowestPrice;
+end;
+
+function TSampleGDAXImpl.GetStdDev: Single;
+begin
+  Result:=FWindow.StdDev;
+end;
+
+function TSampleGDAXImpl.GetWindowSize: Cardinal;
+begin
+  Result:=FWindow.WindowSizeInMilli;
+end;
+
+procedure TSampleGDAXImpl.SetCleanPerc(const AValue: Single);
+begin
+  FWindow.CleanupPercentage:=AValue;
+end;
+
+procedure TSampleGDAXImpl.SetCleanThresh(const AValue: Single);
+begin
+  FWindow.CleanupThreshold:=AValue;
+end;
+
+procedure TSampleGDAXImpl.SetWindowSize(const AValue: Cardinal);
+begin
+  FWindow.WindowSizeInMilli:=AValue;
+end;
+
+function TSampleGDAXImpl.GetTickers: TTickers;
+begin
+  Result:=FWindow.Tickers;
+end;
+
 function TSampleGDAXImpl.DoFeed(const ATicker: ITicker;
   const AManager: IOrderManager; const AFunds, AInventory: Extended; out
   Error: String): Boolean;
 var
   LGDAXOrder:IGDAXOrder;
   LDetails:IGDAXOrderDetails;
-  LTicker:IGDAXTicker;
+  LTicker:ITickerGDAX;
 begin
   //****************************************************************************
   //below we are broken into two main sections, the "house keeping" stuff
@@ -91,7 +170,7 @@ begin
   //cast the incoming ticker to a gdax ticker for more useful information
   //(we can do this, because we inherit from the GDAX implementation which
   //guarantees we are provided this before continuing)
-  LTicker:=ATicker as IGDAXTicker;
+  LTicker:=ATicker as ITickerGDAX;
 
   //window strategies have a "ready" property to specify that enough ticker
   //data has been collected, so lets check before we do any real work.
@@ -102,7 +181,7 @@ begin
 
   //another simple check is to make sure we have enough funds to even place
   //the size order (again just soft exit unless an error is what we want)
-  if AFunds<(LTicker.Product.BaseMinSize * LTicker.Ask) then
+  if AFunds<(LTicker.Ticker.Product.BaseMinSize * LTicker.Ticker.Bid) then
     Exit(True);
 
   //****************************************************************************
@@ -138,11 +217,14 @@ begin
     //create a gdax order
     LGDAXOrder:=TGDAXOrderImpl.Create;
 
+    //next set the product we are operating with from the ticker
+    LGDAXOrder.Product:=LTicker.Ticker.Product;
+
     //set to the minimum size allowed for the product
-    LGDAXOrder.Size:=LTicker.Product.BaseMinSize;
+    LGDAXOrder.Size:=LTicker.Ticker.Product.BaseMinSize;
 
     //use the "ask" price to determine the current quickest likely
-    LGDAXOrder.Price:=LTicker.Ask;
+    LGDAXOrder.Price:=LTicker.Ticker.Bid;
 
     //set the order to a "limit" type which on GDAX currently has no fees
     LGDAXOrder.OrderType:=TOrderType.otLimit;

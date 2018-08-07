@@ -339,7 +339,7 @@ begin
         //record an entry into the holds ledger
         FHoldsLedger.RecordEntry(
           ADetails.Price * ADetails.Size,
-          LType,
+          ADetails.LedgerType,
           LID
         );
         //now store the ledger id associated with this order id
@@ -347,7 +347,7 @@ begin
         //record an entry for the holds inventory
         FHoldsInvLedger.RecordEntry(
           ADetails.Size,
-          LType,
+          ADetails.InventoryLedgerType,
           LID
         );
         StoreLedgerID(AID,LID,lsInvHold)

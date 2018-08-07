@@ -278,7 +278,7 @@ procedure TDelilahImpl.SetOrderManager(const AValue: IOrderManager);
 begin
   if not (FState=esStopped) then
     raise Exception.Create('engine is running, stop first');
-  FOldStatus:=nil;
+  FOldPlace:=nil;
   FOldRemove:=nil;
   FOldStatus:=nil;
   FOrderManager:=nil;
@@ -286,12 +286,12 @@ begin
   //don't "lose" the events if they were assigned
   if Assigned(FOrderManager) then
   begin
-    FOldStatus:=FOrderManager.OnStatus;
+    FOldPlace:=FOrderManager.OnPlace;
     FOldRemove:=FOrderManager.OnRemove;
     FOldStatus:=FOrderManager.OnStatus;
   end;
   //now redirect the order manager events to the engine
-  FOrderManager.OnStatus:=DoStatus;
+  FOrderManager.OnPlace:=DoPlace;
   FOrderManager.OnRemove:=DoRemove;
   FOrderManager.OnStatus:=DoStatus;
 end;
@@ -339,7 +339,7 @@ begin
         //record an entry into the holds ledger
         FHoldsLedger.RecordEntry(
           ADetails.Price * ADetails.Size,
-          ADetails.LedgerType,
+          LType,
           LID
         );
         //now store the ledger id associated with this order id
@@ -347,7 +347,7 @@ begin
         //record an entry for the holds inventory
         FHoldsInvLedger.RecordEntry(
           ADetails.Size,
-          ADetails.InventoryLedgerType,
+          LType,
           LID
         );
         StoreLedgerID(AID,LID,lsInvHold)
@@ -357,6 +357,8 @@ begin
     //which complete order will do for us
     omCompleted: CompleteOrder(ADetails,AID);
   end;
+  if Assigned(FOldPlace) then
+    FOldPlace(ADetails,AID);
   if Assigned(FOnPlace) then
     FOnPlace(ADetails,AID);
 end;
@@ -372,6 +374,8 @@ begin
   I:=FOrderLedger.IndexOf(AID);
   if I>=0 then
     FOrderLedger.Delete(I);
+  if Assigned(FOldRemove) then
+    FOldRemove(ADetails,AID);
   if Assigned(FOnRemove) then
     FOnRemove(ADetails,AID);
 end;
@@ -393,6 +397,8 @@ begin
         CompleteOrder(ADetails,AID);
       end;
   end;
+  if Assigned(FOldStatus) then
+    FOldStatus(ADetails,AID,AOldStatus,ANewStatus);
   if Assigned(FOnStatus) then
     FOnStatus(ADetails,AID,AOldStatus,ANewStatus);
 end;

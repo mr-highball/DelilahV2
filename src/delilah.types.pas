@@ -186,7 +186,7 @@ type
   IStrategy = interface
     ['{7F3F7AE5-BD9A-45EE-B4E3-6F3E9DC52964}']
     function Feed(Const ATicker : ITicker;Const AManager:IOrderManager;
-      Const AFunds,AInventory:Extended;Out Error:String):Boolean;
+      Const AFunds,AInventory,AAAC:Extended;Out Error:String):Boolean;
   end;
 
   TStrategies = TFPGList<IStrategy>;
@@ -206,6 +206,7 @@ type
   IDelilah = interface
     ['{1374EC48-BFA4-45E7-AE90-B4576B6A121B}']
     //property methods
+    function GetAAC: Extended;
     function GetAvailableInventory: Extended;
     function GetCompound: Boolean;
     function GetFundsLedger: IExtendedLedger;
@@ -217,6 +218,7 @@ type
     function GetOrderManager: IOrderManager;
     function GetState: TEngineState;
     function GetStrategies: TStrategies;
+    procedure SetAAC(Const AValue: Extended);
     procedure SetCompound(Const AValue: Boolean);
     procedure SetFunds(Const AValue: Extended);
     procedure SetFundsLedger(Const AValue: IExtendedLedger);
@@ -275,6 +277,11 @@ type
       only be placed if they would not overdraft this amount
     *)
     property Funds : Extended read GetFunds write SetFunds;
+    (*
+      AAC = average aquisition cost, basically the average cost it took
+      to purchase all of the current inventory on hand
+    *)
+    property AAC : Extended read GetAAC write SetAAC;
     (*
       when compound is true, the engine is allowed to re-invest profits earned,
       essentially, (TradeStack = Funds + Profit) otherwise Funds is a hard cap

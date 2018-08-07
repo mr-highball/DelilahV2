@@ -93,7 +93,7 @@ begin
   Result:=omCanceled;
   //map the gdax status as best we can to the engine statuses
   case AStatus of
-    stActive,stPending: Result:=omActive;
+    stActive,stPending,stOpen: Result:=omActive;
     stCancelled,stRejected,stUnknown: Result:=omCanceled;
     stSettled,stDone: Result:=omCompleted;
   end;

@@ -17,10 +17,10 @@ type
   strict private
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
-      Const AFunds,AInventory:Extended;Out Error: String):Boolean;virtual;abstract;
+      Const AFunds,AInventory,AAAC:Extended;Out Error: String):Boolean;virtual;abstract;
   public
     function Feed(Const ATicker : ITicker;Const AManager:IOrderManager;
-      Const AFunds,AInventory:Extended;Out Error:String):Boolean;
+      Const AFunds,AInventory,AAAC:Extended;Out Error:String):Boolean;
     constructor Create;virtual;overload;
   end;
 
@@ -29,10 +29,10 @@ implementation
 { TStrategyImpl }
 
 function TStrategyImpl.Feed(const ATicker: ITicker;
-  const AManager: IOrderManager; Const AFunds,AInventory:Extended;
+  const AManager: IOrderManager; Const AFunds,AInventory,AAAC:Extended;
   out Error: String): Boolean;
 begin
-  Result:=DoFeed(ATicker,AManager,AFunds,AInventory,Error);
+  Result:=DoFeed(ATicker,AManager,AFunds,AInventory,AAAC,Error);
 end;
 
 constructor TStrategyImpl.Create;

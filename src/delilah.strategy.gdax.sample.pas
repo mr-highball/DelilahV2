@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, delilah.types, delilah.strategy.gdax,
-  delilah.strategy.window;
+  delilah.strategy.window, DateUtils;
 
 type
 
@@ -30,6 +30,7 @@ type
   strict private
     FWindow: IWindowStrategy;
     FID: String;
+    FTime: TDateTime;
     function GetWindow: IWindowStrategy;
     //methods delegates by window, compiler yells if not present.
     //alternatively we could've just added the Window property to ISampleGDAX
@@ -54,7 +55,7 @@ type
       where most logic will be implemented (or called via other methods)
     *)
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
-      const AFunds, AInventory: Extended; out Error: String): Boolean; override;
+      const AFunds, AInventory, AAAC: Extended; out Error: String): Boolean; override;
   public
     property Window : IWindowStrategy read GetWindow implements IWindowStrategy;
     constructor Create; override;
@@ -137,12 +138,14 @@ begin
 end;
 
 function TSampleGDAXImpl.DoFeed(const ATicker: ITicker;
-  const AManager: IOrderManager; const AFunds, AInventory: Extended; out
+  const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
 var
   LGDAXOrder:IGDAXOrder;
   LDetails:IGDAXOrderDetails;
   LTicker:ITickerGDAX;
+  LPriceDiff:Single;
+  LSecondsBetween: Integer;
 begin
   //****************************************************************************
   //below we are broken into two main sections, the "house keeping" stuff
@@ -152,7 +155,7 @@ begin
 
   //make a call to our parent and check the result to make sure everything
   //is fine to move ahead with
-  Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, Error);
+  Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, AAAC, Error);
 
   //if not, we'll terminate
   if not Result then
@@ -164,7 +167,7 @@ begin
   //because we are using delegation we need to also "feed" our delegate
   //strategy in order for it's "plumbing" to work. for custom solution
   //or strategies not relying on other base classes, this step in not necessary
-  if not FWindow.Feed(ATicker,AManager,AFunds,AInventory,Error) then
+  if not FWindow.Feed(ATicker,AManager,AFunds,AInventory,AAAC,Error) then
     Exit;
 
   //cast the incoming ticker to a gdax ticker for more useful information
@@ -187,19 +190,33 @@ begin
   //****************************************************************************
   //our simple example simply attempts to place an order for the smallest
   //amount of base currency and then cancel
-  //after a certain amount of time if not filled, then repeat the process
+  //after a certain amount of time if not filled, then repeat the process.
+  //if the AAC is lower then the current ticker price, then the strategy will
+  //prioritize a sell instead for the same minimum amount allowed.
   //****************************************************************************
 
   //check to see if we have placed an order with the manager by using it's
   //count property
   if (AManager.Count>0) and (AManager.Exists[FID]) then
   begin
+    if not AManager.Details(FID,IOrderDetails(LDetails),Error) then
+      Exit;
     case AManager.Status[FID] of
       //in our sample, we simply attempt to cancel the order
       omActive:
         begin
-          if not AManager.Cancel(FID,IOrderDetails(LDetails),Error) then
-            Exit;
+          //simple calculation to see if we should canncel and try to purchase
+          //for a price which will lead to a quicker order (expanded for easy
+          //debugging values)
+          LPriceDiff:=LTicker.Price - LDetails.Price;
+          LSecondsBetween:=SecondsBetween(Now,FTime);
+
+          //see if the ticker price is different and that some time
+          //has elapsed since we created before cancelling (this could be
+          //a property of the sample strategy, but for now, simply hardcode)
+          if (LPriceDiff<>0) and (LSecondsBetween>30) then
+            if not AManager.Cancel(FID,IOrderDetails(LDetails),Error) then
+              Exit;
         end;
       //on cancel order or completed, just remove so we can purchase more
       //orders during the next tick
@@ -223,22 +240,61 @@ begin
     //set to the minimum size allowed for the product
     LGDAXOrder.Size:=LTicker.Ticker.Product.BaseMinSize;
 
-    //use the "ask" price to determine the current quickest likely
-    LGDAXOrder.Price:=LTicker.Ticker.Bid;
+    //below we are going to show how we can use the average cost
+    //and our current inventory to setup a sell or a buy. in the
+    //case the current ticker is greater than the cost of goods,
+    //we can put up a sell order utilizing the side of the GDAX order.
+    if (LTicker.Ticker.Ask > AAAC) and (AInventory > LGDAXOrder.Size) then
+    begin
+      //see buy else statement for comments on properties
+      LGDAXOrder.Price:=LTicker.Ticker.Ask;
+      LGDAXOrder.OrderType:=TOrderType.otLimit;
+      LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
+      LDetails.Order.Side:=osSell;
 
-    //set the order to a "limit" type which on GDAX currently has no fees
-    LGDAXOrder.OrderType:=TOrderType.otLimit;
+      if not AManager.Place(
+        LDetails,
+        FID,
+        Error
+      ) then
+        Exit;
+    end
+    //otherwise, we will just continue trying to buy
+    else
+    begin
+      //here is a simple check to make sure we always buy lower than cost
+      //in order to achieve a simple dollar cost averaging mechanism
+      if (LTicker.Ticker.Bid >= AAAC) and (AInventory > LGDAXOrder.Size) then
+        Exit(True);
 
-    //now create the details for the order manager to work with
-    LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
+      //use the "bid" price to determine the current quickest likely buy in price
+      //(if we were attempting to sell using the order side prop osSell, then
+      //we would want to use the "ask" for the best price)
+      LGDAXOrder.Price:=LTicker.Ticker.Bid;
 
-    //attempt to place the order with the manager
-    if not AManager.Place(
-      LDetails,
-      FID,
-      Error
-    ) then
-      Exit;
+      //set the order to a "limit" type which on GDAX currently has no fees
+      LGDAXOrder.OrderType:=TOrderType.otLimit;
+
+      //now create the details for the order manager to work with
+      LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
+
+      //we will specify the side of the order to "buy" here even though
+      //it is the default in the GDAX api (because it may change in the future).
+      //for selling, just switch the side to osSell (see above)
+      LDetails.Order.Side:=osBuy;
+
+      //attempt to place the order with the manager
+      if not AManager.Place(
+        LDetails,
+        FID,
+        Error
+      ) then
+        Exit;
+    end;
+
+    //store the time we placed to avoid any mismatch we may have from
+    //comparing local to UTC time (GDAX works with UTC)
+    FTime:=Now;
   end;
 
   //lastly, since everything was performed successfully, exit as true

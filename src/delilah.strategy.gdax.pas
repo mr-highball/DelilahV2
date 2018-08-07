@@ -22,7 +22,7 @@ type
   strict private
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
-      Const AFunds,AInventory:Extended;Out Error: String): Boolean; override;
+      Const AFunds,AInventory,AAAC:Extended;Out Error: String): Boolean; override;
   public
   end;
 
@@ -33,7 +33,7 @@ uses
 { TStrategyGDAXImpl }
 
 function TStrategyGDAXImpl.DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
-  Const AFunds,AInventory:Extended;Out Error: String): Boolean;
+  Const AFunds,AInventory,AAAC:Extended;Out Error: String): Boolean;
 begin
   Result:=False;
   //make sure we actually have a valid ticker refernce

@@ -46,8 +46,11 @@ type
     FOldRemove: TOrderRemoveEvent;
     FOldStatus: TOrderStatusEvent;
     FOrderLedger: TOrderLedgerMap;
+    FAAC: Extended;
+    function GetAAC: Extended;
     function GetAvailableInventory: Extended;
     function GetInventoryHolds: Extended;
+    procedure SetAAC(Const AValue: Extended);
     procedure SetInventoryLedger(Const AValue: IExtendedLedger);
     function GetCompound: Boolean;
     function GetFundsLedger: IExtendedLedger;
@@ -106,6 +109,7 @@ type
     property InventoryLedger : IExtendedLedger read GetInventoryLedger write SetInventoryLedger;
     property HoldsInventoryLedger : IExtendedLedger read GetHoldsInventoryLedger write SetHoldsInventoryLedger;
     property Funds : Extended read GetFunds write SetFunds;
+    property AAC : Extended read GetAAC write SetAAC;
     property Compound : Boolean read GetCompound write SetCompound;
     property AvailableFunds : Extended read GetAvailableFunds;
     property Holds : Extended read GetHolds;
@@ -135,6 +139,9 @@ end;
 
 procedure TDelilahImpl.SetInventoryLedger(const AValue: IExtendedLedger);
 begin
+  FInvLedger:=nil;
+  //reset aquisition cost since our inventory ledger is being reset
+  FAAC:=0;
   FInvLedger:=AValue;
 end;
 
@@ -143,9 +150,19 @@ begin
   Result:=Inventory - InventoryHolds;
 end;
 
+function TDelilahImpl.GetAAC: Extended;
+begin
+  Result:=FAAC;
+end;
+
 function TDelilahImpl.GetInventoryHolds: Extended;
 begin
   Result:=FHoldsInvLedger.Balance;
+end;
+
+procedure TDelilahImpl.SetAAC(Const AValue: Extended);
+begin
+  FAAC:=AValue;
 end;
 
 function TDelilahImpl.GetCompound: Boolean;
@@ -420,6 +437,7 @@ var
   LIndexes:TArray<Integer>;
   LOwned:TLedgerPairList;
   LLedger:IExtendedLedger;
+  LType:TLedgerType;
 begin
   //check to see if we even have this order id recorded, and if not everything
   //should be properly balanced
@@ -487,6 +505,7 @@ procedure TDelilahImpl.CompleteOrder(const ADetails: IOrderDetails;
   const AID: String);
 var
   LID:String;
+  LOldInv:Extended;
 begin
   //nothing to complete if we aren't managing this order
   if not FOrderManager.Exists[AID] then
@@ -501,13 +520,20 @@ begin
     LID
   );
   StoreLedgerID(AID,LID,lsStd);
+  LOldInv:=FInvLedger.Balance;
   //record entries to inventory ledger
-  FFundsLedger.RecordEntry(
+  FInvLedger.RecordEntry(
     ADetails.Size,
-    ADetails.LedgerType,
+    ADetails.InventoryLedgerType,
     LID
   );
-  StoreLedgerID(AID,LID,lsInvHold);
+  StoreLedgerID(AID,LID,lsStdInv);
+  //now update the average aquisition cost for our inventory
+  if FInvLedger.Balance=0 then
+    FAAC:=0
+  //only update the aquistion cost if the balance has increased
+  else if LOldInv<FInvLedger.Balance then
+    FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (FInvLedger.Balance);
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;
@@ -532,7 +558,7 @@ begin
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do
       if not FStrategies[I].Feed(ATIcker,FOrderManager,
-        AvailableFunds,AvailableInventory,Error
+        AvailableFunds,AvailableInventory,FAAC,Error
       ) then
         Exit;
     Result:=True;
@@ -592,6 +618,7 @@ constructor TDelilahImpl.Create;
 begin
   FOrderLedger:=TOrderLedgerMap.Create(true);
   FFunds:=0;
+  FAAC:=0;
   FCompound:=False;
   FFundsLedger:=NewExtendedLedger;
   FHoldsLedger:=NewExtendedLedger;

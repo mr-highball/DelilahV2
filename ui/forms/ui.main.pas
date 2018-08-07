@@ -95,6 +95,12 @@ const
 procedure TMain.json_mainRestoringProperties(Sender: TObject);
 begin
   //todo - check if a json settings file exists, if so read/assign values
+  if not FInit then
+    Exit;
+  FAuth.Secret:=json_main.ReadString('secret','');
+  FAuth.Key:=json_main.ReadString('key','');
+  FAuth.Passphrase:=json_main.ReadString('pass','');;
+  FFunds.Text:=json_main.ReadString('funds','0.0');;
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -114,6 +120,10 @@ end;
 procedure TMain.json_mainSavingProperties(Sender: TObject);
 begin
   //todo - attempt to save a settings file based on options set
+  json_main.WriteString('secret',FAuth.Secret);
+  json_main.WriteString('key',FAuth.Key);
+  json_main.WriteString('pass',FAuth.Passphrase);
+  json_main.WriteString('funds',FloatToStr(StrToFloatDef(FFunds.Text,0)));
 end;
 
 procedure TMain.pctrl_mainChange(Sender: TObject);
@@ -144,6 +154,7 @@ procedure TMain.InitControls;
 begin
   if not FInit then
   begin
+    json_main.Restore;
     //main tab
     pctrl_main.ActivePage:=ts_auth;
     //logger
@@ -178,7 +189,7 @@ begin
     FFunds.Description:='specify "how much" quote currency is available to spend trading';
     FFunds.Height:=100;
     FFunds.Control.Constraints.MaxWidth:=200;
-    FFunds.Text:='0.0';
+    //FFunds.Text:='0.0';
     FInit:=True;
   end;
 end;
@@ -322,6 +333,12 @@ begin
 
   //refresh the chart
   chart_ticker.Refresh;
+
+  //update status panels
+  status_main.Panels[0].Text:='Funds ' + FloatToStr(FEngine.AvailableFunds);
+  status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.AvailableInventory);
+  status_main.Panels[2].Text:='AAC ' + FloatToStr(FEngine.AAC);
+  status_main.Panels[3].Text:='Profit ' + FloatToStr((FEngine.Funds - (FEngine.AvailableFunds + (FEngine.AvailableInventory * FEngine.AAC))) * -1);
 end;
 
 procedure TMain.LogError(const AMessage: String);

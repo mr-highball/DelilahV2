@@ -194,7 +194,24 @@ object Main: TMain
     Height = 23
     Top = 460
     Width = 578
-    Panels = <>
+    Panels = <    
+      item
+        Text = 'Funds'
+        Width = 125
+      end    
+      item
+        Text = 'Inventory'
+        Width = 125
+      end    
+      item
+        Text = 'AAC'
+        Width = 125
+      end    
+      item
+        Text = 'Profit'
+        Width = 125
+      end>
+    SimplePanel = False
   end
   object json_main: TJSONPropStorage
     StoredValues = <>

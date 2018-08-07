@@ -91,7 +91,7 @@ type
     function GetTickers: TTickers;
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
-      const AFunds, AInventory: Extended; out Error: String): Boolean; override;
+      const AFunds, AInventory,AAAC: Extended; out Error: String): Boolean; override;
     (*
       virtual in the event children will want to add additional checks to
       state that a window is "ready"
@@ -211,7 +211,7 @@ begin
 end;
 
 function TWindowStrategyImpl.DoFeed(const ATicker: ITicker;
-  const AManager: IOrderManager; const AFunds, AInventory: Extended; out
+  const AManager: IOrderManager; const AFunds, AInventory,AAAC: Extended; out
   Error: String): Boolean;
 var
   LMilli:Cardinal;

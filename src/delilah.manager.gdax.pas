@@ -130,7 +130,8 @@ function TGDAXOrderManagerImpl.DoCancel(const ADetails: IOrderDetails;
   out Error: String): Boolean;
 var
   LDetails:IGDAXOrderDetails;
-  LContent:String;
+  LContent,
+  LID:String;
 begin
   Result:=False;
   try
@@ -147,8 +148,12 @@ begin
     //partial fills, set the order as completed and attempt to place, then
     //remove for the id
     if LDetails.Order.FilledSized>0 then
+    begin
+      LDetails.Order.OrderStatus:=stSettled;
       if not Place(ADetails,LID) then
         Exit;
+      Self.Delete(LID);
+    end;
     Result:=True;
   except on E:Exception do
     Error:=E.Message;
@@ -174,22 +179,28 @@ begin
     LDetails:=ADetails as IGDAXOrderDetails;
     LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     LDetails.Order.Authenticator:=Authenticator;
-    //attempt to post the order assuming strategy has filled it out correctly
-    if not LDetails.Order.Get(LContent,LError) then
-      Exit;
-    if not ID(ADetails,LID) then
+    //avoid a web call when we already have a settled order
+    if not (LDetails.Order.OrderStatus=stSettled) then
     begin
-      LError:='unable to fetch id for order details in ' + Self.Classname;
-      Exit;
-    end;
-    Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
-    //during the GDAX order life-cycle, there is a small window of time
-    //before the order is marked as done, and finally marked as settled.
-    //this check is in place to account for that, so we don't mark an order
-    //complete prematurely
-    if Result=omCompleted then
-      if not LDetails.Order.Settled then
-        Result:=omActive;
+      //attempt to post the order assuming strategy has filled it out correctly
+      if not LDetails.Order.Get(LContent,LError) then
+        Exit;
+      if not ID(ADetails,LID) then
+      begin
+        LError:='unable to fetch id for order details in ' + Self.Classname;
+        Exit;
+      end;
+      Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
+      //during the GDAX order life-cycle, there is a small window of time
+      //before the order is marked as done, and finally marked as settled.
+      //this check is in place to account for that, so we don't mark an order
+      //complete prematurely
+      if Result=omCompleted then
+        if not LDetails.Order.Settled then
+          Result:=omActive;
+    end
+    else
+      Result:=omCompleted;
     //notify listeners since base class does not handle status changes when
     //fetching statuses (handles cancel, remove, place automatically)
     if LOldStatus<>Result then

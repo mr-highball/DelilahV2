@@ -65,6 +65,7 @@ type
     FFunds : TSingleLine;
     FInit : Boolean;
     FEngine : IDelilah;
+    FCompletedOrders : Cardinal;
     procedure InitControls;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
@@ -72,6 +73,8 @@ type
     procedure StopStrategy(Sender:TObject);
     procedure ProductError(Const AProductID:String;Const AError:String);
     procedure ProductTick(Sender : TObject; Const ATick : IGDAXTicker);
+    procedure EngineStatus(Const ADetails:IOrderDetails;Const AID:String;
+      Const AOldStatus,ANewStatus:TOrderManagerStatus);
     procedure LogError(Const AMessage:String);
     procedure LogInfo(Const AMessage:String);
   public
@@ -83,7 +86,7 @@ var
 implementation
 uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
-  delilah.strategy.gdax.sample, delilah.manager.gdax;
+  delilah.strategy.gdax.sample, delilah.manager.gdax, ledger;
 
 {$R *.lfm}
 
@@ -101,6 +104,19 @@ begin
   FAuth.Key:=json_main.ReadString('key','');
   FAuth.Passphrase:=json_main.ReadString('pass','');;
   FFunds.Text:=json_main.ReadString('funds','0.0');;
+  FAuth.IsSanboxMode:=json_main.ReadBoolean('sandbox_mode',True);
+  FEngine.AAC:=StrToFloatDef(json_main.ReadString('aac','0.0'),0);
+  FEngine.InventoryLedger.Clear;
+  FEngine.FundsLedger.Clear;
+  FEngine.InventoryLedger.RecordEntry(
+    StrToFloatDef(json_main.ReadString('inventory','0.0'),0),
+    ltCredit
+  );
+  FEngine.FundsLedger.RecordEntry(
+    StrToFloatDef(json_main.ReadString('funds_ledger','0.0'),0),
+    ltDebit
+  );
+  FCompletedOrders:=json_main.ReadInteger('completed_orders',0);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -108,11 +124,13 @@ var
   LError:String;
   LManager:IGDAXOrderManager;
 begin
+  FCompletedOrders:=0;
   //create an engine
   FEngine:=TDelilahImpl.Create;
   //since we are dealing with GDAX assign the order manager
   LManager:=TGDAXOrderManagerImpl.Create;
   FEngine.OrderManager:=LManager;
+  FEngine.OnStatus:=EngineStatus;
 
   InitControls;
 end;
@@ -124,6 +142,11 @@ begin
   json_main.WriteString('key',FAuth.Key);
   json_main.WriteString('pass',FAuth.Passphrase);
   json_main.WriteString('funds',FloatToStr(StrToFloatDef(FFunds.Text,0)));
+  json_main.WriteBoolean('sandbox_mode',FAuth.IsSanboxMode);
+  json_main.WriteString('aac',FloatToStr(FEngine.AAC));
+  json_main.WriteString('inventory',FloatToStr(FEngine.AvailableInventory));
+  json_main.WriteInteger('completed_orders',FCompletedOrders);
+  json_main.WriteString('funds_ledger',FloatToStr(FEngine.Funds - FEngine.AvailableFunds));
 end;
 
 procedure TMain.pctrl_mainChange(Sender: TObject);
@@ -339,6 +362,17 @@ begin
   status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.AvailableInventory);
   status_main.Panels[2].Text:='AAC ' + FloatToStr(FEngine.AAC);
   status_main.Panels[3].Text:='Profit ' + FloatToStr((FEngine.Funds - (FEngine.AvailableFunds + (FEngine.AvailableInventory * FEngine.AAC))) * -1);
+  status_main.Panels[4].Text:='Completed ' + IntToStr(FCompletedOrders);
+end;
+
+procedure TMain.EngineStatus(const ADetails: IOrderDetails; const AID: String;
+  const AOldStatus, ANewStatus: TOrderManagerStatus);
+begin
+  if ANewStatus=omCompleted then
+  begin
+    Inc(FCompletedOrders);
+    json_main.Save;
+  end;
 end;
 
 procedure TMain.LogError(const AMessage: String);

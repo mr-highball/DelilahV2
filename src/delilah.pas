@@ -357,6 +357,8 @@ begin
     //which complete order will do for us
     omCompleted: CompleteOrder(ADetails,AID);
   end;
+  if Assigned(FOnPlace) then
+    FOnPlace(ADetails,AID);
 end;
 
 procedure TDelilahImpl.DoRemove(const ADetails: IOrderDetails; const AID: String);
@@ -370,6 +372,8 @@ begin
   I:=FOrderLedger.IndexOf(AID);
   if I>=0 then
     FOrderLedger.Delete(I);
+  if Assigned(FOnRemove) then
+    FOnRemove(ADetails,AID);
 end;
 
 procedure TDelilahImpl.DoStatus(const ADetails: IOrderDetails;
@@ -389,6 +393,8 @@ begin
         CompleteOrder(ADetails,AID);
       end;
   end;
+  if Assigned(FOnStatus) then
+    FOnStatus(ADetails,AID,AOldStatus,ANewStatus);
 end;
 
 procedure TDelilahImpl.SetState(const AState: TEngineState);

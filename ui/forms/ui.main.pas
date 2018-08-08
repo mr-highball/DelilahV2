@@ -96,6 +96,8 @@ const
 { TMain }
 
 procedure TMain.json_mainRestoringProperties(Sender: TObject);
+var
+  LBal:Extended;
 begin
   //todo - check if a json settings file exists, if so read/assign values
   if not FInit then
@@ -106,16 +108,28 @@ begin
   FFunds.Text:=json_main.ReadString('funds','0.0');;
   FAuth.IsSanboxMode:=json_main.ReadBoolean('sandbox_mode',True);
   FEngine.AAC:=StrToFloatDef(json_main.ReadString('aac','0.0'),0);
+  //get our ledgers setup correctly
   FEngine.InventoryLedger.Clear;
   FEngine.FundsLedger.Clear;
-  FEngine.InventoryLedger.RecordEntry(
-    StrToFloatDef(json_main.ReadString('inventory','0.0'),0),
-    ltCredit
-  );
-  FEngine.FundsLedger.RecordEntry(
+  FEngine.HoldsLedger.Clear;
+  FEngine.HoldsInventoryLedger.Clear;
+  LBal:=FEngine.FundsLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('funds_ledger','0.0'),0),
+    ltCredit
+  ).Balance;
+  LBal:=FEngine.FundsLedger.RecordEntry(
+    StrToFloatDef(json_main.ReadString('holds_ledger','0.0'),0),
     ltDebit
-  );
+  ).Balance;
+  LBal:=FEngine.FundsLedger.RecordEntry(
+    StrToFloatDef(json_main.ReadString('inventory_ledger','0.0'),0),
+    ltCredit
+  ).Balance;
+  LBal:=FEngine.FundsLedger.RecordEntry(
+    StrToFloatDef(json_main.ReadString('inventory_holds_ledger','0.0'),0),
+    ltDebit
+  ).Balance;
+  //simple counter for completed orders
   FCompletedOrders:=json_main.ReadInteger('completed_orders',0);
 end;
 
@@ -144,9 +158,11 @@ begin
   json_main.WriteString('funds',FloatToStr(StrToFloatDef(FFunds.Text,0)));
   json_main.WriteBoolean('sandbox_mode',FAuth.IsSanboxMode);
   json_main.WriteString('aac',FloatToStr(FEngine.AAC));
-  json_main.WriteString('inventory',FloatToStr(FEngine.AvailableInventory));
   json_main.WriteInteger('completed_orders',FCompletedOrders);
-  json_main.WriteString('funds_ledger',FloatToStr(FEngine.Funds - FEngine.AvailableFunds));
+  json_main.WriteString('funds_ledger',FloatToStr(FEngine.FundsLedger.Balance));
+  json_main.WriteString('holds_ledger',FloatToStr(FEngine.HoldsLedger.Balance));
+  json_main.WriteString('inventory_ledger',FloatToStr(FEngine.InventoryLedger.Balance));
+  json_main.WriteString('inventory_holds_ledger',FloatToStr(FEngine.HoldsInventoryLedger.Balance));
 end;
 
 procedure TMain.pctrl_mainChange(Sender: TObject);
@@ -359,7 +375,7 @@ begin
 
   //update status panels
   status_main.Panels[0].Text:='Funds ' + FloatToStr(FEngine.AvailableFunds);
-  status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.AvailableInventory);
+  status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.Inventory);
   status_main.Panels[2].Text:='AAC ' + FloatToStr(FEngine.AAC);
   status_main.Panels[3].Text:='Profit ' + FloatToStr((FEngine.Funds - (FEngine.AvailableFunds + (FEngine.AvailableInventory * FEngine.AAC))) * -1);
   status_main.Panels[4].Text:='Completed ' + IntToStr(FCompletedOrders);

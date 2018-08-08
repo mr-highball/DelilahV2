@@ -25,6 +25,8 @@ type
         ID : String;
         Source : TLedgerSource;
         class operator Equal(Const A,B:TLedgerPair):Boolean;
+        class operator GreaterThan(A,B: TLedgerPair):Boolean;
+        class operator LessThan(A,B: TLedgerPair):Boolean;
       end;
 
       TLedgerPairList = TFPGList<TLedgerPair>;
@@ -135,6 +137,16 @@ begin
   Result:=A.ID=B.ID;
 end;
 
+class operator TDelilahImpl.TLedgerPair.GreaterThan(A, B: TLedgerPair): Boolean;
+begin
+  Result:=Ord(A.Source)>Ord(B.Source);
+end;
+
+class operator TDelilahImpl.TLedgerPair.LessThan(A, B: TLedgerPair): Boolean;
+begin
+  Result:=Ord(A.Source)<Ord(B.Source);
+end;
+
 { TDelilahImpl }
 
 procedure TDelilahImpl.SetInventoryLedger(const AValue: IExtendedLedger);
@@ -147,7 +159,8 @@ end;
 
 function TDelilahImpl.GetAvailableInventory: Extended;
 begin
-  Result:=Inventory - InventoryHolds;
+  //use addition here, because holds are going to be a series of credits (negative)
+  Result:=Inventory + InventoryHolds;
 end;
 
 function TDelilahImpl.GetAAC: Extended;
@@ -298,7 +311,8 @@ end;
 
 function TDelilahImpl.GetAvailableFunds: Extended;
 begin
-  Result:=FFundsLedger.Balance - FHoldsLedger.Balance;
+  //use addition here, because holds are going to be a series of credits (negative)
+  Result:=FFundsLedger.Balance + FHoldsLedger.Balance;
 end;
 
 function TDelilahImpl.GetFunds: Extended;
@@ -330,6 +344,7 @@ procedure TDelilahImpl.DoPlace(const ADetails: IOrderDetails; const AID: String)
 var
   LID:String;
   LStatus:TOrderManagerStatus;
+  LBal:Extended;
 begin
   LStatus:=FOrderManager.Status[AID];
   case LStatus of
@@ -337,19 +352,19 @@ begin
     omActive:
       begin
         //record an entry into the holds ledger
-        FHoldsLedger.RecordEntry(
+        LBal:=FHoldsLedger.RecordEntry(
           ADetails.Price * ADetails.Size,
           ADetails.LedgerType,
           LID
-        );
+        ).Balance;
         //now store the ledger id associated with this order id
         StoreLedgerID(AID,LID,lsHold);
         //record an entry for the holds inventory
-        FHoldsInvLedger.RecordEntry(
+        LBal:=FHoldsInvLedger.RecordEntry(
           ADetails.Size,
           ADetails.InventoryLedgerType,
           LID
-        );
+        ).Balance;
         StoreLedgerID(AID,LID,lsInvHold)
       end;
     //when an order has been completed, we need to check that there is no
@@ -436,6 +451,14 @@ begin
       LEntry.ID:=ALedgerID;
       LEntry.Source:=ALedgerSource;
       //store the lookup entry
+      LList.Add(LEntry);
+      FOrderLedger.Add(AOrderID,LList);
+    end
+    else
+    begin
+      LList:=FOrderLedger.Data[I];
+      LEntry.ID:=ALedgerID;
+      LEntry.Source:=ALedgerSource;
       LList.Add(LEntry);
     end;
   end;
@@ -570,7 +593,7 @@ begin
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do
       if not FStrategies[I].Feed(ATIcker,FOrderManager,
-        AvailableFunds,AvailableInventory,FAAC,Error
+        AvailableFunds,Inventory,FAAC,Error
       ) then
         Exit;
     Result:=True;

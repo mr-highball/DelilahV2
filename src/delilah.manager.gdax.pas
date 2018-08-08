@@ -140,7 +140,7 @@ begin
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
-    //attempt to post the order assuming strategy has filled it out correctly
+    //attempt to delete the order assuming strategy has filled it out correctly
     if not LDetails.Order.Delete(LContent,Error) then
       Exit;
     //there is a chance for partial filling of orders, which our parent

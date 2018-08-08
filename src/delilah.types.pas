@@ -288,7 +288,8 @@ type
     *)
     property Compound : Boolean read GetCompound write SetCompound;
     (*
-      AvailableFunds = FundsLedger - HoldsLedger
+      AvailableFunds = FundsLedger + HoldsLedger, where HoldsLedger contains
+      a negative balance
     *)
     property AvailableFunds : Extended read GetAvailableFunds;
     (*
@@ -300,7 +301,8 @@ type
     *)
     property Inventory : Extended read GetInventory;
     (*
-      AvailableInventory = (Inventory - InventoryHolds)
+      AvailableInventory = (Inventory + InventoryHolds) where holds contains
+      a negative balance
     *)
     property AvailableInventory : Extended read GetAvailableInventory;
     (*

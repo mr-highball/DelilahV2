@@ -160,7 +160,10 @@ end;
 function TDelilahImpl.GetAvailableInventory: Extended;
 begin
   //use addition here, because holds are going to be a series of credits (negative)
-  Result:=Inventory + InventoryHolds;
+  if InventoryHolds>0 then
+    Result:=Inventory
+  else
+    Result:=Inventory + InventoryHolds;
 end;
 
 function TDelilahImpl.GetAAC: Extended;
@@ -311,8 +314,13 @@ end;
 
 function TDelilahImpl.GetAvailableFunds: Extended;
 begin
+  //holds ledger should not be added if positive (ie. in the event a sell is on
+  //the book but being held)
+  if Holds>0 then
+    Result:=FFundsLedger.Balance
   //use addition here, because holds are going to be a series of credits (negative)
-  Result:=FFundsLedger.Balance + FHoldsLedger.Balance;
+  else
+    Result:=FundsLedger.Balance + Holds;
 end;
 
 function TDelilahImpl.GetFunds: Extended;

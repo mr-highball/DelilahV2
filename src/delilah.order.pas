@@ -15,39 +15,29 @@ type
   *)
   TOrderDetailsImpl = class(TInterfacedObject,IOrderDetails)
   strict private
-    function GetInvType: TLedgerType;
     function GetPrice: Extended;
     function GetSize: Extended;
-    function GetType: TLedgerType;
-    procedure SetInvType(Const AValue: TLedgerType);
+    function GetType: TOrderDetailsType;
     procedure SetPrice(Const AValue: Extended);
     procedure SetSize(Const AValue: Extended);
-    procedure SetType(Const AValue: TLedgerType);
+    procedure SetType(Const AValue: TOrderDetailsType);
   strict protected
     function DoGetPrice: Extended;virtual;abstract;
     function DoGetSize: Extended;virtual;abstract;
-    function DoGetType: TLedgerType;virtual;abstract;
-    function DoGetInvType: TLedgerType;virtual;abstract;
+    function DoGetType: TOrderDetailsType;virtual;abstract;
     procedure DoSetPrice(Const AValue: Extended);virtual;abstract;
     procedure DoSetSize(Const AValue: Extended);virtual;abstract;
-    procedure DoSetType(Const AValue: TLedgerType);virtual;abstract;
-    procedure DoSetInvType(Const AValue: TLedgerType);virtual;abstract;
+    procedure DoSetType(Const AValue: TOrderDetailsType);virtual;abstract;
   public
     property Size : Extended read GetSize write SetSize;
     property Price : Extended read GetPrice write SetPrice;
-    property LedgerType : TLedgerType read GetType write SetType;
-    property InventoryLedgerType : TLedgerType read GetInvType write SetInvType;
+    property OrderType : TOrderDetailsType read GetType write SetType;
     constructor Create;virtual;overload;
   end;
 
 implementation
 
 { TOrderDetailsImpl }
-
-function TOrderDetailsImpl.GetInvType: TLedgerType;
-begin
-  Result:=DoGetInvType;
-end;
 
 function TOrderDetailsImpl.GetPrice: Extended;
 begin
@@ -59,14 +49,9 @@ begin
   Result:=DoGetSize;
 end;
 
-function TOrderDetailsImpl.GetType: TLedgerType;
+function TOrderDetailsImpl.GetType: TOrderDetailsType;
 begin
   Result:=DoGetType;
-end;
-
-procedure TOrderDetailsImpl.SetInvType(Const AValue: TLedgerType);
-begin
-  DoSetInvType(AValue);
 end;
 
 procedure TOrderDetailsImpl.SetPrice(const AValue: Extended);
@@ -79,7 +64,7 @@ begin
   DoSetSize(AValue);
 end;
 
-procedure TOrderDetailsImpl.SetType(const AValue: TLedgerType);
+procedure TOrderDetailsImpl.SetType(const AValue: TOrderDetailsType);
 begin
   DoSetType(AValue);
 end;

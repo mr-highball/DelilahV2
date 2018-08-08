@@ -360,19 +360,33 @@ begin
     omActive:
       begin
         //record an entry into the holds ledger
-        LBal:=FHoldsLedger.RecordEntry(
-          ADetails.Price * ADetails.Size,
-          ADetails.LedgerType,
-          LID
-        ).Balance;
+        if ADetails.OrderType=odBuy then
+          LBal:=FHoldsLedger.RecordEntry(
+            ADetails.Price * ADetails.Size,
+            ltDebit,
+            LID
+          ).Balance
+        else
+          LBal:=FHoldsLedger.RecordEntry(
+            ADetails.Price * ADetails.Size,
+            ltCredit,
+            LID
+          ).Balance;
         //now store the ledger id associated with this order id
         StoreLedgerID(AID,LID,lsHold);
         //record an entry for the holds inventory
-        LBal:=FHoldsInvLedger.RecordEntry(
-          ADetails.Size,
-          ADetails.InventoryLedgerType,
-          LID
-        ).Balance;
+        if ADetails.OrderType=odBuy then
+          LBal:=FHoldsInvLedger.RecordEntry(
+            ADetails.Size,
+            ltCredit,
+            LID
+          ).Balance
+        else
+          LBal:=FHoldsInvLedger.RecordEntry(
+            ADetails.Size,
+            ltDebit,
+            LID
+          ).Balance;
         StoreLedgerID(AID,LID,lsInvHold)
       end;
     //when an order has been completed, we need to check that there is no
@@ -557,19 +571,33 @@ begin
   BalanceOrder(AID,lsHold);
   BalanceOrder(AID,lsInvHold);
   //record entries to funds ledger
-  FFundsLedger.RecordEntry(
-    ADetails.Price * ADetails.Size,
-    ADetails.LedgerType,
-    LID
-  );
+  if ADetails.OrderType=odBuy then
+    FFundsLedger.RecordEntry(
+      ADetails.Price * ADetails.Size,
+      ltDebit,
+      LID
+    )
+  else
+    FFundsLedger.RecordEntry(
+      ADetails.Price * ADetails.Size,
+      ltCredit,
+      LID
+    );
   StoreLedgerID(AID,LID,lsStd);
   LOldInv:=FInvLedger.Balance;
   //record entries to inventory ledger
-  FInvLedger.RecordEntry(
-    ADetails.Size,
-    ADetails.InventoryLedgerType,
-    LID
-  );
+  if ADetails.OrderType=odBuy then
+    FInvLedger.RecordEntry(
+      ADetails.Size,
+      ltCredit,
+      LID
+    )
+  else
+    FInvLedger.RecordEntry(
+      ADetails.Size,
+      ltDebit,
+      LID
+    );
   StoreLedgerID(AID,LID,lsStdInv);
   //now update the average aquisition cost for our inventory
   if FInvLedger.Balance=0 then
@@ -600,8 +628,13 @@ begin
     //simply iterate strategies and attempt to feed, they are responsible
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do
-      if not FStrategies[I].Feed(ATIcker,FOrderManager,
-        AvailableFunds,Inventory,FAAC,Error
+      if not FStrategies[I].Feed(
+        ATicker,
+        FOrderManager,
+        AvailableFunds,
+        Inventory,
+        FAAC,
+        Error
       ) then
         Exit;
     Result:=True;

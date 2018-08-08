@@ -349,6 +349,11 @@ procedure TMain.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
 var
   LError:String;
   LTick:ITicker;
+  LFunds,
+  LInventory,
+  LTickPrice,
+  LAAC,
+  LFundsLed:Extended;
 begin
   //only keep so much before purging visual log
   if multi_log.Lines.Count>5000 then
@@ -373,11 +378,23 @@ begin
   //refresh the chart
   chart_ticker.Refresh;
 
+  //for debugging assign local variables
+  LFunds:=FEngine.Funds;
+  LInventory:=FEngine.Inventory;
+  LTickPrice:=LTick.Price;
+  LAAC:=FEngine.AAC;
+  LFundsLed:=FEngine.FundsLedger.Balance;
+
   //update status panels
   status_main.Panels[0].Text:='Funds ' + FloatToStr(FEngine.AvailableFunds);
   status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.Inventory);
   status_main.Panels[2].Text:='AAC ' + FloatToStr(FEngine.AAC);
-  status_main.Panels[3].Text:='Profit ' + FloatToStr((FEngine.Funds - (FEngine.AvailableFunds + (FEngine.AvailableInventory * FEngine.AAC))) * -1);
+  status_main.Panels[3].Text:='Profit ' + FloatToStr(
+    (
+      (LFundsLed + (LAAC * LInventory)) +
+      LInventory * (LTickPrice - LAAC)
+    ) - LFunds
+  );
   status_main.Panels[4].Text:='Completed ' + IntToStr(FCompletedOrders);
 end;
 

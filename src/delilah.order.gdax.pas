@@ -33,14 +33,10 @@ type
   strict protected
     function DoGetPrice: Extended; override;
     function DoGetSize: Extended; override;
-    function DoGetType: TLedgerType; override;
-    function DoGetInvType: TLedgerType; override;
+    function DoGetType: TOrderDetailsType; override;
     procedure DoSetPrice(const AValue: Extended); override;
     procedure DoSetSize(const AValue: Extended); override;
-    procedure DoSetType(const AValue: TLedgerType); override;
-    procedure DoSetInvType(const AValue: TLedgerType); override;
-    function LedgerTypeForOrder:TLedgerType;
-    function InvLedgerTypeForOrder:TLedgerType;
+    procedure DoSetType(const AValue: TOrderDetailsType); override;
   public
     property Order : IGDAXOrder read GetOrder write SetOrder;
     constructor Create(Const AOrder:IGDAXOrder); overload;
@@ -66,8 +62,12 @@ function TGDAXOrderDetailsImpl.DoGetPrice: Extended;
 begin
   if not Assigned(FOrder) then
     Exit(0);
-  //price needs to add any fees associated
-  Result:=FOrder.Price + Abs(FOrder.FillFees);
+  //price needs to add any fees associated and can be calculated a bit
+  //simpler with limit orders
+  if FOrder.OrderType=otLimit then
+    Result:=FOrder.Price + Abs(FOrder.FillFees)
+  else
+    Result:=(FOrder.ExecutedValue / FOrder.FilledSized) + Abs(FOrder.FillFees);
 end;
 
 function TGDAXOrderDetailsImpl.DoGetSize: Extended;
@@ -83,14 +83,14 @@ begin
     Result:=FOrder.Size;
 end;
 
-function TGDAXOrderDetailsImpl.DoGetType: TLedgerType;
+function TGDAXOrderDetailsImpl.DoGetType: TOrderDetailsType;
 begin
-  Result:=LedgerTypeForOrder;
-end;
-
-function TGDAXOrderDetailsImpl.DoGetInvType: TLedgerType;
-begin
-  Result:=InvLedgerTypeForOrder;
+  if not Assigned(FOrder) then
+    raise Exception.Create('GDAX order not assigned in ' + Self.Classname);
+  if FOrder.Side=osBuy then
+    Result:=odBuy
+  else
+    Result:=odSell;
 end;
 
 procedure TGDAXOrderDetailsImpl.DoSetPrice(const AValue: Extended);
@@ -107,45 +107,16 @@ begin
   FOrder.Size:=AValue;
 end;
 
-procedure TGDAXOrderDetailsImpl.DoSetType(const AValue: TLedgerType);
+procedure TGDAXOrderDetailsImpl.DoSetType(const AValue: TOrderDetailsType);
 begin
-  raise Exception.Create('setting ledger type not supported in ' + Self.Classname);
-end;
-
-procedure TGDAXOrderDetailsImpl.DoSetInvType(const AValue: TLedgerType);
-begin
-  raise Exception.Create('setting inventory ledger type not supported in ' + Self.Classname);
-end;
-
-function TGDAXOrderDetailsImpl.LedgerTypeForOrder: TLedgerType;
-begin
-  Result:=ltDebit;
   if not Assigned(FOrder) then
-    Exit(ltDebit);
-  //on a buy, we debit funds
-  if FOrder.Side=osBuy then
-    Exit(ltDebit)
-  //on a sell, we credit funds
-  else if FOrder.Side=osSell then
-    Exit(ltCredit)
+    raise Exception.Create('GDAX order not assigned in ' + Self.Classname);
+  if AValue=odBuy then
+    FOrder.Side:=osBuy
   else
-    Exit(ltDebit);
+    FOrder.Side:=osSell;
 end;
 
-function TGDAXOrderDetailsImpl.InvLedgerTypeForOrder: TLedgerType;
-begin
-  Result:=ltDebit;
-  if not Assigned(FOrder) then
-    Exit(ltDebit);
-  //on a buy we credit inventory
-  if FOrder.Side=osBuy then
-    Exit(ltCredit)
-  //on a sell we debit inventory
-  else if FOrder.Side=osSell then
-    Exit(ltDebit)
-  else
-    Exit(ltDebit);
-end;
 
 constructor TGDAXOrderDetailsImpl.Create(const AOrder: IGDAXOrder);
 begin

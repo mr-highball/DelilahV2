@@ -9,6 +9,8 @@ uses
 
 type
 
+  TOrderDetailsType = (odBuy,odSell);
+
   { IOrderDetails }
   (*
     base interface for details about an order containing only minimum
@@ -16,21 +18,17 @@ type
   *)
   IOrderDetails = interface
     ['{2C57FC56-B252-4B05-9808-C33322970279}']
-
     //property methods
     function GetPrice: Extended;
     function GetSize: Extended;
-    function GetType: TLedgerType;
-    procedure SetInvType(Const AValue: TLedgerType);
+    function GetType: TOrderDetailsType;
     procedure SetPrice(Const AValue: Extended);
     procedure SetSize(Const AValue: Extended);
-    procedure SetType(Const AValue: TLedgerType);
-    function GetInvType: TLedgerType;
+    procedure SetType(Const AValue: TOrderDetailsType);
     //properties
     property Size : Extended read GetSize write SetSize;
     property Price : Extended read GetPrice write SetPrice;
-    property LedgerType : TLedgerType read GetType write SetType;
-    property InventoryLedgerType : TLedgerType read GetInvType write SetInvType;
+    property OrderType : TOrderDetailsType read GetType write SetType;
   end;
 
   (*

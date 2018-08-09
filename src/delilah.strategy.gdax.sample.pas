@@ -248,7 +248,7 @@ begin
     begin
       //see buy else statement for comments on properties
       LGDAXOrder.Price:=LTicker.Ticker.Ask;
-      LGDAXOrder.OrderType:=TOrderType.otMarket;
+      LGDAXOrder.OrderType:=TOrderType.otLimit;
       LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
       LDetails.Order.Side:=osSell;
 
@@ -273,7 +273,7 @@ begin
       LGDAXOrder.Price:=LTicker.Ticker.Bid;
 
       //set the order to a "limit" type which on GDAX currently has no fees
-      LGDAXOrder.OrderType:=TOrderType.otMarket;
+      LGDAXOrder.OrderType:=TOrderType.otLimit;
 
       //now create the details for the order manager to work with
       LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);

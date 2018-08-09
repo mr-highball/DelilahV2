@@ -487,8 +487,9 @@ procedure TDelilahImpl.BalanceOrder(const AOrderID: String;
   const ALedgerSource: TLedgerSource);
 var
   I:Integer;
-  LList:TLedgerPairList;
   LIndexes:TArray<Integer>;
+  LPair:TLedgerPair;
+  LList:TLedgerPairList;
   LOwned:TLedgerPairList;
   LLedger:IExtendedLedger;
   LType:TLedgerType;
@@ -508,9 +509,10 @@ begin
   try
     for I:=0 to Pred(LOwned.Count) do
     begin
-      if LOwned[I].Source=ALedgerSource then
+      LPair:=LOwned[I];
+      if LPair.Source=ALedgerSource then
       begin
-        LList.Add(LOwned[I]);
+        LList.Add(LPair);
         //store the index for removal later
         SetLength(LIndexes,Succ(Length(LIndexes)));
         LIndexes[High(LIndexes)]:=I;
@@ -532,16 +534,17 @@ begin
       //below makes the assumption our ledger wasn't flattened or tampered with
       //by an outside source...
       try
+        LPair:=LList[I];
         //if we are credit entry, then we need to debit
-        if LLedger[LList[I].ID].LedgerType=ltCredit then
+        if LLedger[LPair.ID].LedgerType=ltCredit then
           LBal:=LLedger.RecordEntry(
-            LLedger[LList[I].ID].Entry,
+            LLedger[LPair.ID].Entry,
             ltDebit
           ).Balance
         //otherwise record a credit
         else
           LBal:=LLedger.RecordEntry(
-            LLedger[LList[I].ID].Entry,
+            LLedger[LPair.ID].Entry,
             ltCredit
           ).Balance;
       finally

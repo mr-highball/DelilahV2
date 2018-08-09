@@ -86,7 +86,8 @@ var
 implementation
 uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
-  delilah.strategy.gdax.sample, delilah.manager.gdax, ledger;
+  delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
+  delilah.strategy.gdax.sample.extended;
 
 {$R *.lfm}
 
@@ -318,10 +319,10 @@ begin
   //todo - right now just adding an sample strategy, but need to choose
   //from the selected strategy in some dropdown once fully implemented.
   //also allow easy ui binding, and registering...
-  LStrategy:=TSampleGDAXImpl.Create;
-  //during testing don't require a size, but this is where we would
-  //put for example, 1hr worth of time, or a min.. or whatever.
-  LStrategy.WindowSizeInMilli:=0;
+  LStrategy:=TSampleGDAXExtImpl.Create;
+  //during testing only require a small size, but this is where we would
+  //put for example, 1hr worth of time, or a day.. or whatever.
+  LStrategy.WindowSizeInMilli:=3 * 60 * 1000;
   FEngine.Strategies.Add(
     LStrategy
   );
@@ -377,7 +378,10 @@ begin
     multi_log.Lines.Clear;
   LogInfo(
     Format('%s - %s',
-      [ATick.Product.ID,'ticker price:' + FloatToStr(ATick.Price)]
+      [
+        ATick.Product.ID,'ticker price:' + FloatToStr(ATick.Price) +
+        ' ticker time: ' + DateTimeToStr(ATick.Time)
+      ]
     )
   );
   //add the ticker price

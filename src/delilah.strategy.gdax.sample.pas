@@ -56,6 +56,16 @@ type
     *)
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
       const AFunds, AInventory, AAAC: Extended; out Error: String): Boolean; override;
+
+    (*
+      below are two virtual methods we introduce in this class to further
+      extend functionality of the sample strategy. since we've written
+      a lot of boiler plate safety checking code, we want to avoid duplicating
+      it as much as possible and reuse any niceties that we introduced in
+      our base sample strategy
+    *)
+    function DoAllowBuy(Const AFunds,AInventory,AAC,ATickerPrice:Extended):Boolean;virtual;
+    function DoAllowSell(Const AFunds,AInventory,AAC,ATickerPrice:Extended):Boolean;virtual;
   public
     property Window : IWindowStrategy read GetWindow implements IWindowStrategy;
     constructor Create; override;
@@ -244,13 +254,18 @@ begin
     //and our current inventory to setup a sell or a buy. in the
     //case the current ticker is greater than the cost of goods,
     //we can put up a sell order utilizing the side of the GDAX order.
-    if (LTicker.Ticker.Ask > AAAC) and (AInventory > LGDAXOrder.Size) then
+    if (LTicker.Ticker.Ask > AAAC) and (AInventory >= LGDAXOrder.Size) then
     begin
       //see buy else statement for comments on properties
       LGDAXOrder.Price:=LTicker.Ticker.Ask;
       LGDAXOrder.OrderType:=TOrderType.otLimit;
       LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
       LDetails.Order.Side:=osSell;
+
+      //before placing the order, call down to our allow sell method
+      //and exit silently if not
+      if not DoAllowSEll(AFunds,AInventory,AAAC,LTicker.Ticker.Ask) then
+        Exit(True);
 
       if not AManager.Place(
         LDetails,
@@ -283,6 +298,11 @@ begin
       //for selling, just switch the side to osSell (see above)
       LDetails.Order.Side:=osBuy;
 
+      //before placing the order, call down to our allow buy method
+      //and exit silently if not
+      if not DoAllowBuy(AFunds,AInventory,AAAC,LTicker.Ticker.Bid) then
+        Exit(True);
+
       //attempt to place the order with the manager
       if not AManager.Place(
         LDetails,
@@ -298,6 +318,18 @@ begin
   end;
 
   //lastly, since everything was performed successfully, exit as true
+  Result:=True;
+end;
+
+function TSampleGDAXImpl.DoAllowBuy(const AFunds, AInventory, AAC,
+  ATickerPrice: Extended): Boolean;
+begin
+  Result:=True;
+end;
+
+function TSampleGDAXImpl.DoAllowSell(const AFunds, AInventory, AAC,
+  ATickerPrice: Extended): Boolean;
+begin
   Result:=True;
 end;
 

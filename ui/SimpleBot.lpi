@@ -43,8 +43,6 @@
           </CodeGeneration>
           <Linking>
             <Debugging>
-              <DebugInfoType Value="dsDwarf2Set"/>
-              <UseHeaptrc Value="True"/>
               <TrashVariables Value="True"/>
               <UseExternalDbgSyms Value="True"/>
             </Debugging>
@@ -110,7 +108,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="23">
+    <Units Count="24">
       <Unit0>
         <Filename Value="SimpleBot.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -233,6 +231,10 @@
         <Filename Value="..\src\delilah.manager.gdax.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit22>
+      <Unit23>
+        <Filename Value="..\src\delilah.strategy.gdax.sample.extended.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit23>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -251,15 +253,7 @@
         <SyntaxMode Value="Delphi"/>
       </SyntaxOptions>
     </Parsing>
-    <CodeGeneration>
-      <Optimizations>
-        <OptimizationLevel Value="0"/>
-      </Optimizations>
-    </CodeGeneration>
     <Linking>
-      <Debugging>
-        <UseExternalDbgSyms Value="True"/>
-      </Debugging>
       <Options>
         <Win32>
           <GraphicApplication Value="True"/>

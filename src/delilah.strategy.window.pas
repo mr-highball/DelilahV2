@@ -128,13 +128,21 @@ begin
 end;
 
 function TWindowStrategyImpl.GetCollected: Cardinal;
+var
+  LFirst,
+  LLast:TDateTime;
 begin
   if FTickers.Count<2 then
     Exit(0);
-  Result:=Abs(MilliSecondsBetween(
-    FTickers[0].Time,
-    FTickers[Pred(FTickers.Count)].Time
-  ));
+  //local vars for debugging
+  LFirst:=FTickers.First.Time;
+  LLast:=FTickers.Last.Time;
+  Result:=Abs(
+    MilliSecondsBetween(
+      LFirst,
+      LLast
+    )
+  );
 end;
 
 function TWindowStrategyImpl.GetHighest: Extended;
@@ -256,9 +264,9 @@ constructor TWindowStrategyImpl.Create;
 begin
   inherited Create;
   FTickers:=TTickers.Create;
-  //default to cleaning 10% once we reach 110% past the window size
+  //default to cleaning 10% once we reach 150% past the window size
   FCleanPerc:=0.10;
-  FCleanThresh:=1.10
+  FCleanThresh:=1.5
 end;
 
 destructor TWindowStrategyImpl.Destroy;

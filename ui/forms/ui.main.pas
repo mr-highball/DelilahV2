@@ -102,30 +102,45 @@ begin
   //todo - check if a json settings file exists, if so read/assign values
   if not FInit then
     Exit;
-  FAuth.Secret:=json_main.ReadString('secret','');
-  FAuth.Key:=json_main.ReadString('key','');
-  FAuth.Passphrase:=json_main.ReadString('pass','');;
-  FFunds.Text:=json_main.ReadString('funds','0.0');;
-  FAuth.IsSanboxMode:=json_main.ReadBoolean('sandbox_mode',True);
-  FEngine.AAC:=StrToFloatDef(json_main.ReadString('aac','0.0'),0);
-  //get our ledgers setup correctly
+   //get our ledgers setup correctly
   FEngine.InventoryLedger.Clear;
   FEngine.FundsLedger.Clear;
   FEngine.HoldsLedger.Clear;
   FEngine.HoldsInventoryLedger.Clear;
-  LBal:=FEngine.FundsLedger.RecordEntry(
-    StrToFloatDef(json_main.ReadString('funds_ledger','0.0'),0),
-    ltCredit
-  ).Balance;
-  LBal:=FEngine.FundsLedger.RecordEntry(
+
+  //now read from our json file
+  FAuth.Secret:=json_main.ReadString('secret','');
+  FAuth.Key:=json_main.ReadString('key','');
+  FAuth.Passphrase:=json_main.ReadString('pass','');;
+  FFunds.Text:=json_main.ReadString('funds','0.0');
+  FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
+  FAuth.IsSanboxMode:=json_main.ReadBoolean('sandbox_mode',True);
+  FEngine.AAC:=StrToFloatDef(json_main.ReadString('aac','0.0'),0);
+
+  //restoring funds requires us to see what was recorded in the ledger
+  //as the balance, then subtract (balance - start funds) and then
+  //credit by this amount (could be negative credit)
+  LBal:=StrToFloatDef(json_main.ReadString('funds_ledger','0.0'),0);
+  if LBal>0 then
+    LBal:=LBal - FEngine.Funds;
+  //record to funds
+  if LBal<>0 then
+    LBal:=FEngine.FundsLedger.RecordEntry(
+      LBal,
+      ltCredit
+    ).Balance;
+  //record to holds
+  LBal:=FEngine.HoldsLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('holds_ledger','0.0'),0),
     ltDebit
   ).Balance;
-  LBal:=FEngine.FundsLedger.RecordEntry(
+  //record to inventory
+  LBal:=FEngine.InventoryLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('inventory_ledger','0.0'),0),
     ltCredit
   ).Balance;
-  LBal:=FEngine.FundsLedger.RecordEntry(
+  //record to holds inventory
+  LBal:=FEngine.HoldsInventoryLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('inventory_holds_ledger','0.0'),0),
     ltDebit
   ).Balance;
@@ -312,8 +327,10 @@ begin
   );
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
+  //if the funds has changed since the last time this was run, reset it
+  if FEngine.Funds<>StrToFloatDef(FFunds.Text,0) then
+    FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
   //start the engine to accept tickers
-  FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
   if not FEngine.Start(LError) then
     LogError(LError);
   //start collecting tickers for the product

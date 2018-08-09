@@ -237,10 +237,10 @@ procedure TDelilahImpl.SetFunds(const AValue: Extended);
 begin
   if not (FState=esStopped) then
     raise Exception.Create('engine is running, stop first');
-  //balance out what we had for our old funds
-  if FFunds<>0 then
+  //if the funds is changing, re-balance the ledger
+  if (FFunds<>AValue) then
     FFundsLedger.RecordEntry(
-      FFunds,
+      FFundsLedger.Balance,
       ltDebit
     );
   FFunds:=AValue;
@@ -354,6 +354,7 @@ var
   LStatus:TOrderManagerStatus;
   LBal:Extended;
 begin
+  LBal:=0;
   LStatus:=FOrderManager.Status[AID];
   case LStatus of
     //active orders are considered to be on "hold" until they have been completed
@@ -389,10 +390,6 @@ begin
           ).Balance;
         StoreLedgerID(AID,LID,lsInvHold)
       end;
-    //when an order has been completed, we need to check that there is no
-    //holds entry, and if so, balance it out with an opposite ledger type,
-    //which complete order will do for us
-    omCompleted: CompleteOrder(ADetails,AID);
   end;
   if Assigned(FOldPlace) then
     FOldPlace(ADetails,AID);
@@ -495,6 +492,7 @@ var
   LOwned:TLedgerPairList;
   LLedger:IExtendedLedger;
   LType:TLedgerType;
+  LBal:Extended;
 begin
   //check to see if we even have this order id recorded, and if not everything
   //should be properly balanced
@@ -536,16 +534,16 @@ begin
       try
         //if we are credit entry, then we need to debit
         if LLedger[LList[I].ID].LedgerType=ltCredit then
-          LLedger.RecordEntry(
+          LBal:=LLedger.RecordEntry(
             LLedger[LList[I].ID].Entry,
             ltDebit
-          )
-        //otherwise record an opposite debit
+          ).Balance
+        //otherwise record a credit
         else
-          LLedger.RecordEntry(
+          LBal:=LLedger.RecordEntry(
             LLedger[LList[I].ID].Entry,
             ltCredit
-          );
+          ).Balance;
       finally
         //todo - currently just swallowing any exception which would occur, address
       end;
@@ -563,7 +561,9 @@ procedure TDelilahImpl.CompleteOrder(const ADetails: IOrderDetails;
 var
   LID:String;
   LOldInv:Extended;
+  LBal:Extended;
 begin
+  LBal:=0;
   //nothing to complete if we aren't managing this order
   if not FOrderManager.Exists[AID] then
     Exit;
@@ -572,32 +572,32 @@ begin
   BalanceOrder(AID,lsInvHold);
   //record entries to funds ledger
   if ADetails.OrderType=odBuy then
-    FFundsLedger.RecordEntry(
+    LBal:=FFundsLedger.RecordEntry(
       ADetails.Price * ADetails.Size,
       ltDebit,
       LID
-    )
+    ).Balance
   else
-    FFundsLedger.RecordEntry(
+    LBal:=FFundsLedger.RecordEntry(
       ADetails.Price * ADetails.Size,
       ltCredit,
       LID
-    );
+    ).Balance;
   StoreLedgerID(AID,LID,lsStd);
   LOldInv:=FInvLedger.Balance;
   //record entries to inventory ledger
   if ADetails.OrderType=odBuy then
-    FInvLedger.RecordEntry(
+    LBal:=FInvLedger.RecordEntry(
       ADetails.Size,
       ltCredit,
       LID
-    )
+    ).Balance
   else
-    FInvLedger.RecordEntry(
+    LBal:=FInvLedger.RecordEntry(
       ADetails.Size,
       ltDebit,
       LID
-    );
+    ).Balance;
   StoreLedgerID(AID,LID,lsStdInv);
   //now update the average aquisition cost for our inventory
   if FInvLedger.Balance=0 then

@@ -264,7 +264,7 @@ begin
     begin
       //here is a simple check to make sure we always buy lower than cost
       //in order to achieve a simple dollar cost averaging mechanism
-      if (LTicker.Ticker.Bid >= AAAC) and (AInventory > LGDAXOrder.Size) then
+      if (LTicker.Ticker.Bid >= AAAC) and (AInventory >= LGDAXOrder.Size) then
         Exit(True);
 
       //use the "bid" price to determine the current quickest likely buy in price

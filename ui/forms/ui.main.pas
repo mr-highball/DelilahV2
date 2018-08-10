@@ -319,7 +319,7 @@ begin
   //todo - right now just adding an sample strategy, but need to choose
   //from the selected strategy in some dropdown once fully implemented.
   //also allow easy ui binding, and registering...
-  LStrategy:=TSampleGDAXExtImpl.Create;
+  LStrategy:=TSampleGDAXExtImpl.Create(LogInfo,LogError,LogInfo);
   //during testing only require a small size, but this is where we would
   //put for example, 1hr worth of time, or a day.. or whatever.
   LStrategy.WindowSizeInMilli:=20 * 60 * 1000;

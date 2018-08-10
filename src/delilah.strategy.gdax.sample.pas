@@ -64,8 +64,8 @@ type
       it as much as possible and reuse any niceties that we introduced in
       our base sample strategy
     *)
-    function DoAllowBuy(Const AFunds,AInventory,AAC,ATickerPrice:Extended):Boolean;virtual;
-    function DoAllowSell(Const AFunds,AInventory,AAC,ATickerPrice:Extended):Boolean;virtual;
+    function DoAllowBuy(Const AFunds,AInventory,AAC,ATickerPrice:Extended;Out Reason:String):Boolean;virtual;
+    function DoAllowSell(Const AFunds,AInventory,AAC,ATickerPrice:Extended;Out Reason:String):Boolean;virtual;
   public
     property Window : IWindowStrategy read GetWindow implements IWindowStrategy;
     constructor Create; override;
@@ -156,6 +156,7 @@ var
   LTicker:ITickerGDAX;
   LPriceDiff:Single;
   LSecondsBetween: Integer;
+  LReason:String;
 begin
   //****************************************************************************
   //below we are broken into two main sections, the "house keeping" stuff
@@ -190,12 +191,34 @@ begin
   //exit "true" here because a failure didn't actually happen, just postponing
   //the work for later
   if not FWindow.IsReady then
+  begin
+    LogInfo(
+      Format(
+        'window is not ready [size]:%d [collected]:%d',
+        [
+          FWindow.WindowSizeInMilli,
+          FWindow.CollectedSizeInMilli
+        ]
+      )
+    );
     Exit(True);
+  end;
 
   //another simple check is to make sure we have enough funds to even place
   //the size order (again just soft exit unless an error is what we want)
   if AFunds<(LTicker.Ticker.Product.BaseMinSize * LTicker.Ticker.Bid) then
+  begin
+    LogInfo(
+      Format(
+        'not enough funds [available]:%f [required]:%f',
+        [
+          AFunds,
+          LTicker.Ticker.Product.BaseMinSize * LTicker.Ticker.Bid
+        ]
+      )
+    );
     Exit(True);
+  end;
 
   //****************************************************************************
   //our simple example simply attempts to place an order for the smallest
@@ -209,6 +232,7 @@ begin
   //count property
   if (AManager.Count>0) and (AManager.Exists[FID]) then
   begin
+    LogInfo('order id exists and we have an open order');
     if not AManager.Details(FID,IOrderDetails(LDetails),Error) then
       Exit;
     case AManager.Status[FID] of
@@ -225,13 +249,18 @@ begin
           //has elapsed since we created before cancelling (this could be
           //a property of the sample strategy, but for now, simply hardcode)
           if (LPriceDiff<>0) and (LSecondsBetween>30) then
+          begin
+            LogInfo('attempting to cancel order');
             if not AManager.Cancel(FID,IOrderDetails(LDetails),Error) then
               Exit;
+            LogInfo('order cancelled');
+          end;
         end;
       //on cancel order or completed, just remove so we can purchase more
       //orders during the next tick
       omCanceled,omCompleted:
         begin
+          LogInfo('order completed or cancelled, removing from manager');
           if not AManager.Delete(FID,Error) then
             Exit;
         end;
@@ -241,6 +270,8 @@ begin
   //by the manager for later use
   else
   begin
+    LogInfo('looking to see if we should place an order');
+
     //create a gdax order
     LGDAXOrder:=TGDAXOrderImpl.Create;
 
@@ -256,6 +287,8 @@ begin
     //we can put up a sell order utilizing the side of the GDAX order.
     if (LTicker.Ticker.Ask > AAAC) and (AInventory >= LGDAXOrder.Size) then
     begin
+      LogInfo('ticker/aac/inventory look right for a sell order');
+
       //see buy else statement for comments on properties
       LGDAXOrder.Price:=LTicker.Ticker.Ask;
       LGDAXOrder.OrderType:=TOrderType.otLimit;
@@ -264,9 +297,13 @@ begin
 
       //before placing the order, call down to our allow sell method
       //and exit silently if not
-      if not DoAllowSEll(AFunds,AInventory,AAAC,LTicker.Ticker.Ask) then
+      if not DoAllowSell(AFunds,AInventory,AAAC,LTicker.Ticker.Ask,LReason) then
+      begin
+        LogInfo(Format('DoAllowSell returned false with [reason]:%s',[LReason]));
         Exit(True);
+      end;
 
+      LogInfo('attempting to place sell order');
       if not AManager.Place(
         LDetails,
         FID,
@@ -277,10 +314,15 @@ begin
     //otherwise, we will just continue trying to buy
     else
     begin
+      LogInfo('ticker/aac/inventory look right for a buy order');
+
       //here is a simple check to make sure we always buy lower than cost
       //in order to achieve a simple dollar cost averaging mechanism
       if (LTicker.Ticker.Bid >= AAAC) and (AInventory >= LGDAXOrder.Size) then
+      begin
+        LogInfo('conditions not right for a buy order');
         Exit(True);
+      end;
 
       //use the "bid" price to determine the current quickest likely buy in price
       //(if we were attempting to sell using the order side prop osSell, then
@@ -300,10 +342,14 @@ begin
 
       //before placing the order, call down to our allow buy method
       //and exit silently if not
-      if not DoAllowBuy(AFunds,AInventory,AAAC,LTicker.Ticker.Bid) then
+      if not DoAllowBuy(AFunds,AInventory,AAAC,LTicker.Ticker.Bid,LReason) then
+      begin
+        LogInfo(Format('DoAllowBuy returned false with [reason]:%s',[LReason]));
         Exit(True);
+      end;
 
       //attempt to place the order with the manager
+      LogInfo('attempting to place buy order');
       if not AManager.Place(
         LDetails,
         FID,
@@ -322,13 +368,13 @@ begin
 end;
 
 function TSampleGDAXImpl.DoAllowBuy(const AFunds, AInventory, AAC,
-  ATickerPrice: Extended): Boolean;
+  ATickerPrice: Extended;Out Reason:String): Boolean;
 begin
   Result:=True;
 end;
 
 function TSampleGDAXImpl.DoAllowSell(const AFunds, AInventory, AAC,
-  ATickerPrice: Extended): Boolean;
+  ATickerPrice: Extended;Out Reason:String): Boolean;
 begin
   Result:=True;
 end;

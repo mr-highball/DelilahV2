@@ -365,6 +365,7 @@ end;
 
 procedure TMain.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
 var
+  I:Integer;
   LError:String;
   LTick:ITicker;
   LFunds,
@@ -376,6 +377,10 @@ begin
   //only keep so much before purging visual log
   if multi_log.Lines.Count>5000 then
     multi_log.Lines.Clear;
+  //purge chart old entries after 10k
+  if chart_source.Count>10000 then
+    for I:=0 to 1000 do
+      chart_source.Delete(0);
   LogInfo(
     Format('%s - %s',
       [

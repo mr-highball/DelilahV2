@@ -322,7 +322,7 @@ begin
   LStrategy:=TSampleGDAXExtImpl.Create;
   //during testing only require a small size, but this is where we would
   //put for example, 1hr worth of time, or a day.. or whatever.
-  LStrategy.WindowSizeInMilli:=3 * 60 * 1000;
+  LStrategy.WindowSizeInMilli:=20 * 60 * 1000;
   FEngine.Strategies.Add(
     LStrategy
   );

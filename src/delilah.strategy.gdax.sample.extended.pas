@@ -55,9 +55,9 @@ begin
 
   //simple check to make sure there is somewhat of a "spread" between
   //buys, by looking at the percentage difference from AAC and ticker.
-  //in this case, we are hard coding .3% but this could be a property
+  //in this case, we are hard coding .5% but this could be a property
   if AAC > 0 then
-    if not (Abs(1 - (ATickerPrice / AAC)) > 0.003) then
+    if not (Abs(1 - (ATickerPrice / AAC)) > 0.005) then
       Exit;
 
   //this is a method utilizing the parent's window to only buy below

@@ -323,6 +323,8 @@ begin
   //during testing only require a small size, but this is where we would
   //put for example, 1hr worth of time, or a day.. or whatever.
   LStrategy.WindowSizeInMilli:=25 * 60 * 1000;
+  //set a multiplier of 3, which will increase the size of buy orders
+  LStrategy.Multiplier:=3;
   FEngine.Strategies.Add(
     LStrategy
   );

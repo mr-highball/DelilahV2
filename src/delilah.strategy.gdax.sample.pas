@@ -10,13 +10,20 @@ uses
 
 type
 
+  //here we would add any additional properties or method
+  //that pertain to your strategy, such as IWindowStrategy if
+  //we didn't want to go the delegate route
+
   { ISampleGDAX }
 
   ISampleGDAX = interface(IWindowStrategy)
     ['{0BC943DB-FA2F-4C42-BF55-83C22C82123D}']
-    //here we would add any additional properties or method
-    //that pertain to your strategy, such as IWindowStrategy if
-    //we didn't want to go the delegate route
+    //property methods
+    function GetMultiplier: Cardinal;
+    procedure SetMultiplier(Const AValue: Cardinal);
+
+    //properties
+    property Multiplier : Cardinal read GetMultiplier write SetMultiplier;
   end;
 
   { TSampleGDAXImpl }
@@ -31,6 +38,8 @@ type
     FWindow: IWindowStrategy;
     FID: String;
     FTime: TDateTime;
+    FMultiplier: Cardinal;
+    function GetMultiplier: Cardinal;
     function GetWindow: IWindowStrategy;
     //methods delegates by window, compiler yells if not present.
     //alternatively we could've just added the Window property to ISampleGDAX
@@ -47,6 +56,7 @@ type
     function GetWindowSize: Cardinal;
     procedure SetCleanPerc(Const AValue: Single);
     procedure SetCleanThresh(Const AValue: Single);
+    procedure SetMultiplier(Const AValue: Cardinal);
     procedure SetWindowSize(Const AValue: Cardinal);
     function GetTickers: TTickers;
   strict protected
@@ -68,6 +78,7 @@ type
     function DoAllowSell(Const AFunds,AInventory,AAC,ATickerPrice:Extended;Out Reason:String):Boolean;virtual;
   public
     property Window : IWindowStrategy read GetWindow implements IWindowStrategy;
+    property Multiplier : Cardinal read GetMultiplier write SetMultiplier;
     constructor Create; override;
     destructor Destroy; override;
   end;
@@ -86,6 +97,11 @@ uses
 function TSampleGDAXImpl.GetWindow: IWindowStrategy;
 begin
   Result:=FWindow;
+end;
+
+function TSampleGDAXImpl.GetMultiplier: Cardinal;
+begin
+  Result:=FMultiplier;
 end;
 
 function TSampleGDAXImpl.GetCleanPerc: Single;
@@ -138,6 +154,11 @@ begin
   FWindow.CleanupThreshold:=AValue;
 end;
 
+procedure TSampleGDAXImpl.SetMultiplier(Const AValue: Cardinal);
+begin
+  FMultiplier:=AValue;
+end;
+
 procedure TSampleGDAXImpl.SetWindowSize(const AValue: Cardinal);
 begin
   FWindow.WindowSizeInMilli:=AValue;
@@ -157,6 +178,7 @@ var
   LTicker:ITickerGDAX;
   LPriceDiff:Single;
   LPrice,
+  LFunds,
   LMin,
   LInv:Extended;
   LSecondsBetween: Integer;
@@ -246,7 +268,10 @@ begin
           //simple calculation to see if we should cancel and try to purchase
           //for a price which will lead to a quicker order (expanded for easy
           //debugging values)
-          LPriceDiff:=LTicker.Price - LDetails.Price;
+          if LDetails.Order.Side=osBuy then
+            LPriceDiff:=RoundTo(LTicker.Ticker.Bid,-8) - RoundTo(LDetails.Price,-8)
+          else
+            LPriceDiff:=RoundTo(LTicker.Ticker.Ask,-8) - RoundTo(LDetails.Price,-8);
           LSecondsBetween:=SecondsBetween(Now,FTime);
 
           //see if the ticker price is different and that some time
@@ -288,9 +313,19 @@ begin
     LMin:=RoundTo(LTicker.Ticker.Product.BaseMinSize,-8);
     LInv:=RoundTo(AInventory,-8);
     LPrice:=RoundTo(LTicker.Ticker.Ask,-8);
+    LFunds:=RoundTo(AFunds,-8);
 
+    //see if we have a multiplier specified, and enough funds to cover it
+    if FMultiplier > 1 then
+    begin
+      if (LFunds / (LMin * LPrice)) >= FMultiplier then
+        LGDAXOrder.Size:=LMin * FMultiplier
+      else
+        LGDAXOrder.Size:=LMin;
+    end
     //set to the minimum size allowed for the product
-    LGDAXOrder.Size:=LMin;
+    else
+      LGDAXOrder.Size:=LMin;
 
     //below we are going to show how we can use the average cost
     //and our current inventory to setup a sell or a buy. in the
@@ -338,7 +373,8 @@ begin
       //use the "bid" price to determine the current quickest likely buy in price
       //(if we were attempting to sell using the order side prop osSell, then
       //we would want to use the "ask" for the best price)
-      LGDAXOrder.Price:=LTicker.Ticker.Bid;
+      LPrice:=LTicker.Ticker.Bid;
+      LGDAXOrder.Price:=LPrice;
 
       //set the order to a "limit" type which on GDAX currently has no fees
       LGDAXOrder.OrderType:=TOrderType.otLimit;
@@ -379,13 +415,13 @@ begin
 end;
 
 function TSampleGDAXImpl.DoAllowBuy(const AFunds, AInventory, AAC,
-  ATickerPrice: Extended;Out Reason:String): Boolean;
+  ATickerPrice: Extended; out Reason: String): Boolean;
 begin
   Result:=True;
 end;
 
 function TSampleGDAXImpl.DoAllowSell(const AFunds, AInventory, AAC,
-  ATickerPrice: Extended;Out Reason:String): Boolean;
+  ATickerPrice: Extended; out Reason: String): Boolean;
 begin
   Result:=True;
 end;

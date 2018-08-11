@@ -74,6 +74,7 @@ type
 
 implementation
 uses
+  Math,
   delilah.ticker.gdax,//gdax ticker for engine
   delilah.order.gdax,//order detail implementation for engine
   gdax.api.types,//contains common types associated to GDAX
@@ -155,6 +156,9 @@ var
   LDetails:IGDAXOrderDetails;
   LTicker:ITickerGDAX;
   LPriceDiff:Single;
+  LPrice,
+  LMin,
+  LInv:Extended;
   LSecondsBetween: Integer;
   LReason:String;
 begin
@@ -239,7 +243,7 @@ begin
       //in our sample, we simply attempt to cancel the order
       omActive:
         begin
-          //simple calculation to see if we should canncel and try to purchase
+          //simple calculation to see if we should cancel and try to purchase
           //for a price which will lead to a quicker order (expanded for easy
           //debugging values)
           LPriceDiff:=LTicker.Price - LDetails.Price;
@@ -278,14 +282,21 @@ begin
     //next set the product we are operating with from the ticker
     LGDAXOrder.Product:=LTicker.Ticker.Product;
 
+    //set these for easy debug. rounding here, because engine
+    //may provide too precise measurements for simple equality checks when
+    //working with "dust" (very small amounts after trading)
+    LMin:=RoundTo(LTicker.Ticker.Product.BaseMinSize,-8);
+    LInv:=RoundTo(AInventory,-8);
+    LPrice:=RoundTo(LTicker.Ticker.Ask,-8);
+
     //set to the minimum size allowed for the product
-    LGDAXOrder.Size:=LTicker.Ticker.Product.BaseMinSize;
+    LGDAXOrder.Size:=LMin;
 
     //below we are going to show how we can use the average cost
     //and our current inventory to setup a sell or a buy. in the
     //case the current ticker is greater than the cost of goods,
     //we can put up a sell order utilizing the side of the GDAX order.
-    if (LTicker.Ticker.Ask > AAAC) and (AInventory >= LGDAXOrder.Size) then
+    if (LPrice > AAAC) and (LInv >= LMin) then
     begin
       LogInfo('ticker/aac/inventory look right for a sell order');
 

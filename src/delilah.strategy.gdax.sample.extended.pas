@@ -60,7 +60,7 @@ begin
   if AAC > 0 then
     if not (Abs(1 - (ATickerPrice / AAC)) > 0.0035) then
     begin
-      Reason:=' condition not met [Abs(1 - (ATickerPrice / AAC)) > 0.005]';
+      Reason:=' condition not met [Abs(1 - (ATickerPrice / AAC)) > 0.0035]';
       Exit;
     end;
 

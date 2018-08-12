@@ -602,6 +602,29 @@ begin
       LID
     ).Balance;
   StoreLedgerID(AID,LID,lsStdInv);
+
+  //todo - look at this, and figure out why we could have negative, this
+  //was a semi-drunken solution to a problem
+
+  //at the moment not really sure why this would happen, perhaps with profit?
+  //anyways.. bandaid
+  if FInvLedger.Balance<0 then
+  begin
+    LBal:=FInvLedger.Balance;
+    //first settle the inventory with a negative debit
+    FInvLedger.RecordEntry(
+      LBal,
+      ltDebit
+    );
+    //now address the imbalance that negative inventory would cause to
+    //the standard funds ledger. in the case of negative inventory, we
+    //would report more funds than we actually have, so we need to debit
+    //those funds by the amount of negative inventory, time the aac
+    FFundsLedger.RecordEntry(
+      Abs(LBal * FAAC),
+      ltDebit
+    );
+  end;
   //now update the average aquisition cost for our inventory
   if FInvLedger.Balance=0 then
     FAAC:=0

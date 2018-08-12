@@ -38,7 +38,8 @@ type
     FWindow: IWindowStrategy;
     FID: String;
     FTime: TDateTime;
-    FMultiplier: Cardinal;
+    FMultiplier,
+    FAccumulate: Cardinal;
     function GetMultiplier: Cardinal;
     function GetWindow: IWindowStrategy;
     //methods delegates by window, compiler yells if not present.
@@ -392,7 +393,13 @@ begin
       if not DoAllowBuy(AFunds,AInventory,AAAC,LTicker.Ticker.Bid,LReason) then
       begin
         LogInfo(Format('DoAllowBuy returned false with [reason]:%s',[LReason]));
-        Exit(True);
+        if not (MilliSecondsBetween(Now,FTime) >= FAccumulate) then
+          Exit(True)
+        else
+        begin
+          LogInfo('waited in channel long enough... going to accumulate for min size');
+          LDetails.Order.Size:=LMin;
+        end;
       end;
 
       //attempt to place the order with the manager
@@ -435,6 +442,8 @@ begin
   //but thought it may be useful to demonstrate how to save a lot of time
   //utilizing base classes not related to a particular crypto exchange
   FWindow:=TWindowStrategyImpl.Create;
+  //accumulate min size if we wait in a channel for this long
+  FAccumulate:=5 * 60 * 1000;
 end;
 
 destructor TSampleGDAXImpl.Destroy;

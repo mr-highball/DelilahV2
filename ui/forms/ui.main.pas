@@ -9,7 +9,7 @@ uses
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
-  ui.usercontrol.singleline, delilah.types;
+  ui.usercontrol.singleline, delilah.types, ui.email;
 
 type
 
@@ -57,8 +57,11 @@ type
     procedure FormCreate(Sender: TObject);
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
+    procedure mi_auto_startClick(Sender: TObject);
     procedure mi_email_enabledClick(Sender: TObject);
     procedure mi_email_setupClick(Sender: TObject);
+    procedure mi_file_settingsClick(Sender: TObject);
+    procedure mi_log_tabClick(Sender: TObject);
     procedure pctrl_mainChange(Sender: TObject);
   private
     FAuth : TAuthenticator;
@@ -70,7 +73,10 @@ type
     FCompletedOrders : Cardinal;
     procedure SetupEmail;
     procedure EnableEmail;
+    procedure SetupLogFile;
+    procedure SetupLogTab;
     procedure InitControls;
+    procedure EnableAutoStart;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
     procedure StartStrategy(Sender:TObject);
@@ -185,6 +191,11 @@ begin
   json_main.WriteString('inventory_holds_ledger',FloatToStr(FEngine.HoldsInventoryLedger.Balance));
 end;
 
+procedure TMain.mi_auto_startClick(Sender: TObject);
+begin
+  EnableAutoStart;
+end;
+
 procedure TMain.mi_email_enabledClick(Sender: TObject);
 begin
   EnableEmail;
@@ -193,6 +204,16 @@ end;
 procedure TMain.mi_email_setupClick(Sender: TObject);
 begin
   SetupEmail;
+end;
+
+procedure TMain.mi_file_settingsClick(Sender: TObject);
+begin
+  SetupLogFile;
+end;
+
+procedure TMain.mi_log_tabClick(Sender: TObject);
+begin
+  SetupLogTab;
 end;
 
 procedure TMain.pctrl_mainChange(Sender: TObject);
@@ -220,11 +241,29 @@ begin
 end;
 
 procedure TMain.SetupEmail;
+var
+  LEmail:TEmailSetup;
+begin
+  //ShowMessage('not implemented');
+  LEmail:=TEmailSetup.Create(nil);
+  try
+    LEmail.ShowModal;
+  finally
+    LEmail.Free;
+  end;
+end;
+
+procedure TMain.EnableEmail;
 begin
   ShowMessage('not implemented');
 end;
 
-procedure TMain.EnableEmail;
+procedure TMain.SetupLogFile;
+begin
+  ShowMessage('not implemented');
+end;
+
+procedure TMain.SetupLogTab;
 begin
   ShowMessage('not implemented');
 end;
@@ -271,6 +310,11 @@ begin
     //FFunds.Text:='0.0';
     FInit:=True;
   end;
+end;
+
+procedure TMain.EnableAutoStart;
+begin
+  ShowMessage('not implemented');
 end;
 
 procedure TMain.CheckCanStart(Sender: TObject; var Continue: Boolean);

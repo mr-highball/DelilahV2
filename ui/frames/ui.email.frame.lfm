@@ -1,0 +1,12 @@
+object EmailSetupFrame: TEmailSetupFrame
+  Left = 0
+  Height = 240
+  Top = 0
+  Width = 320
+  HorzScrollBar.Page = 1
+  VertScrollBar.Page = 1
+  AutoScroll = True
+  TabOrder = 0
+  DesignLeft = 542
+  DesignTop = 199
+end

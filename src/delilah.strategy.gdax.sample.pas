@@ -23,6 +23,12 @@ type
     procedure SetMultiplier(Const AValue: Cardinal);
 
     //properties
+    (*
+      demonstrating adding a new property.
+      the multiplier will attempt to "multiply" the base minimum size
+      of a given product for buy orders where funds will permit, otherwise
+      the minimum size will be used
+    *)
     property Multiplier : Cardinal read GetMultiplier write SetMultiplier;
   end;
 
@@ -95,6 +101,7 @@ uses
 
 { TSampleGDAXImpl }
 
+{%region Window-Boilerplate}
 function TSampleGDAXImpl.GetWindow: IWindowStrategy;
 begin
   Result:=FWindow;
@@ -169,6 +176,7 @@ function TSampleGDAXImpl.GetTickers: TTickers;
 begin
   Result:=FWindow.Tickers;
 end;
+{%endregion}
 
 function TSampleGDAXImpl.DoFeed(const ATicker: ITicker;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
@@ -182,7 +190,8 @@ var
   LFunds,
   LMin,
   LInv,
-  LSize:Extended;
+  LSize,
+  LAAC:Extended;
   LSecondsBetween: Integer;
   LReason:String;
 begin
@@ -305,6 +314,13 @@ begin
     LPrice:=RoundTo(LTicker.Ticker.Price,-8);
     LFunds:=RoundTo(AFunds,-8);
 
+    //if the inventory is less than the minimum amount, just show
+    //a zero aquisition cost to allow for buys when there is "dust"
+    if LInv < LMin then
+      LAAC:=0
+    else
+      LAAC:=RoundTo(AAAC,-8);
+
     //below we are going to show how we can use the average cost
     //and our current inventory to setup a sell or a buy. in the
     //case the current ticker is greater than the cost of goods,
@@ -324,7 +340,7 @@ begin
 
       //before placing the order, call down to our allow sell method
       //and exit silently if not
-      if not DoAllowSell(LFunds,LInv,AAAC,LPrice,LReason) then
+      if not DoAllowSell(LFunds,LInv,LAAC,LPrice,LReason) then
       begin
         LogInfo(Format('DoAllowSell returned false with [reason]:%s',[LReason]));
         Exit(True);
@@ -378,7 +394,7 @@ begin
 
       //before placing the order, call down to our allow buy method
       //and exit silently if not
-      if not DoAllowBuy(LFunds,LInv,AAAC,LPrice,LReason) then
+      if not DoAllowBuy(LFunds,LInv,LAAC,LPrice,LReason) then
       begin
         LogInfo(Format('DoAllowBuy returned false with [reason]:%s',[LReason]));
         if not (MilliSecondsBetween(Now,FTime) >= FAccumulate) then

@@ -5,6 +5,7 @@ object UserControl: TUserControl
   Width = 320
   ClientHeight = 240
   ClientWidth = 320
+  LCLVersion = '1.8.2.0'
   TabOrder = 0
   DesignLeft = 630
   DesignTop = 307

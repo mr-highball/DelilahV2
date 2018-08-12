@@ -67,7 +67,7 @@ begin
   //this is a method utilizing the parent's window to only buy below
   //the current average
   LAvg:=GetAverage(ATickerPrice);
-  LogInfo(Format('DoAllowSell [average]:%f',[LAvg]));
+  LogInfo(Format('DoAllowBuy [average]:%f',[LAvg]));
   if not (ATickerPrice < LAvg) then
   begin
     Reason:='ticker price is not less than average';

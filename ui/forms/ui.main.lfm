@@ -1155,9 +1155,11 @@ object Main: TMain
         ImageIndex = 0
         object mi_file_settings: TMenuItem
           Caption = 'File Settings...'
+          OnClick = mi_file_settingsClick
         end
         object mi_log_tab: TMenuItem
           Caption = 'Logging Tab...'
+          OnClick = mi_log_tabClick
         end
       end
       object mi_auto_start: TMenuItem
@@ -1200,6 +1202,7 @@ object Main: TMain
           0000000000000000000000000000000000000000000000000000
         }
         ImageIndex = 2
+        OnClick = mi_auto_startClick
       end
     end
   end

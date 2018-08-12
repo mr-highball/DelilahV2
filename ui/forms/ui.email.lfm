@@ -1,0 +1,71 @@
+object EmailSetup: TEmailSetup
+  Left = 479
+  Height = 350
+  Top = 219
+  Width = 438
+  Caption = 'Email Setup'
+  ClientHeight = 350
+  ClientWidth = 438
+  OnClose = FormClose
+  OnCreate = FormCreate
+  LCLVersion = '1.8.2.0'
+  object pnl_ctrls: TPanel
+    Left = 5
+    Height = 290
+    Top = 5
+    Width = 428
+    Align = alClient
+    BorderSpacing.Around = 5
+    BevelColor = clNone
+    BevelOuter = bvNone
+    Color = clWhite
+    ParentColor = False
+    TabOrder = 0
+  end
+  object pnl_btns: TPanel
+    Left = 5
+    Height = 50
+    Top = 300
+    Width = 428
+    Align = alBottom
+    BorderSpacing.Left = 5
+    BorderSpacing.Right = 5
+    BevelColor = clNone
+    BevelOuter = bvNone
+    ClientHeight = 50
+    ClientWidth = 428
+    TabOrder = 1
+    object btn_save: TButton
+      AnchorSideTop.Control = pnl_btns
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = pnl_btns
+      AnchorSideRight.Side = asrBottom
+      Left = 353
+      Height = 25
+      Top = 13
+      Width = 75
+      Anchors = [akTop, akRight]
+      Caption = '&Save'
+      TabOrder = 0
+    end
+    object btn_cancel: TButton
+      AnchorSideTop.Control = btn_save
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = btn_save
+      Left = 273
+      Height = 25
+      Top = 13
+      Width = 75
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 5
+      Caption = '&Cancel'
+      TabOrder = 1
+    end
+  end
+  object json_email: TJSONPropStorage
+    StoredValues = <>
+    Formatted = True
+    left = 368
+    top = 240
+  end
+end

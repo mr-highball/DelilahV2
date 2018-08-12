@@ -136,14 +136,14 @@ object Main: TMain
     end
     object ts_about: TTabSheet
       Caption = 'About'
-      ClientHeight = 324
-      ClientWidth = 537
+      ClientHeight = 333
+      ClientWidth = 628
       ImageIndex = 4
       object memo_licenses: TMemo
         Left = 0
-        Height = 319
+        Height = 328
         Top = 0
-        Width = 500
+        Width = 628
         Align = alClient
         BorderSpacing.Bottom = 5
         Lines.Strings = (
@@ -162,6 +162,8 @@ object Main: TMain
           ' - mORMot: https://github.com/synopse/mORMot'
           ''
           'ledger: https://github.com/mr-highball/ledger'
+          ''
+          'AraratSynapse: https://github.com/svn2github/AraratSynapse.git'
         )
         ReadOnly = True
         TabOrder = 0
@@ -1104,10 +1106,12 @@ object Main: TMain
         ImageIndex = 1
         object mi_email_setup: TMenuItem
           Caption = 'Setup...'
+          OnClick = mi_email_setupClick
         end
         object mi_email_enabled: TMenuItem
           AutoCheck = True
           Caption = 'Enabled'
+          OnClick = mi_email_enabledClick
         end
       end
       object mi_logging: TMenuItem

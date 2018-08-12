@@ -181,7 +181,8 @@ var
   LPrice,
   LFunds,
   LMin,
-  LInv:Extended;
+  LInv,
+  LSize:Extended;
   LSecondsBetween: Integer;
   LReason:String;
 begin
@@ -191,6 +192,7 @@ begin
   //and of course the main logic
   //****************************************************************************
 
+  {%region Pre-Checks}
   //make a call to our parent and check the result to make sure everything
   //is fine to move ahead with
   Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, AAAC, Error);
@@ -230,23 +232,7 @@ begin
     );
     Exit(True);
   end;
-
-  //another simple check is to make sure we have enough funds to even place
-  //the size order (again just soft exit unless an error is what we want)
-  if AFunds<(LTicker.Ticker.Product.BaseMinSize * LTicker.Ticker.Bid) then
-  begin
-    LogInfo(
-      Format(
-        'not enough funds [available]:%f [required]:%f',
-        [
-          AFunds,
-          LTicker.Ticker.Product.BaseMinSize * LTicker.Ticker.Bid
-        ]
-      )
-    );
-    Exit(True);
-  end;
-
+  {%endregion}
   //****************************************************************************
   //our simple example simply attempts to place an order for the smallest
   //amount of base currency and then cancel
@@ -257,6 +243,7 @@ begin
 
   //check to see if we have placed an order with the manager by using it's
   //count property
+  {%region Monitor-Order}
   if (AManager.Count>0) and (AManager.Exists[FID]) then
   begin
     LogInfo('order id exists and we have an open order');
@@ -296,6 +283,7 @@ begin
         end;
     end;
   end
+  {%endregion}
   //otherwise we should try and place an order, then record the ID generated
   //by the manager for later use
   else
@@ -312,39 +300,31 @@ begin
     //may provide too precise measurements for simple equality checks when
     //working with "dust" (very small amounts after trading)
     LMin:=RoundTo(LTicker.Ticker.Product.BaseMinSize,-8);
+    LSize:=LMin;
     LInv:=RoundTo(AInventory,-8);
-    LPrice:=RoundTo(LTicker.Ticker.Ask,-8);
+    LPrice:=RoundTo(LTicker.Ticker.Price,-8);
     LFunds:=RoundTo(AFunds,-8);
-
-    //see if we have a multiplier specified, and enough funds to cover it
-    if FMultiplier > 1 then
-    begin
-      if (LFunds / (LMin * LPrice)) >= FMultiplier then
-        LGDAXOrder.Size:=LMin * FMultiplier
-      else
-        LGDAXOrder.Size:=LMin;
-    end
-    //set to the minimum size allowed for the product
-    else
-      LGDAXOrder.Size:=LMin;
 
     //below we are going to show how we can use the average cost
     //and our current inventory to setup a sell or a buy. in the
     //case the current ticker is greater than the cost of goods,
     //we can put up a sell order utilizing the side of the GDAX order.
-    if (LPrice > AAAC) and (LInv >= LMin) then
+    {%region Sell-Logic}
+    if (LPrice > AAAC) and (LInv >= LSize) then
     begin
       LogInfo('ticker/aac/inventory look right for a sell order');
+      LPrice:=LTicker.Ticker.Ask;
 
       //see buy else statement for comments on properties
-      LGDAXOrder.Price:=LTicker.Ticker.Ask;
+      LGDAXOrder.Price:=LPrice;
+      LGDAXOrder.Size:=LSize;
       LGDAXOrder.OrderType:=TOrderType.otLimit;
       LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
       LDetails.Order.Side:=osSell;
 
       //before placing the order, call down to our allow sell method
       //and exit silently if not
-      if not DoAllowSell(AFunds,AInventory,AAAC,LTicker.Ticker.Ask,LReason) then
+      if not DoAllowSell(LFunds,LInv,AAAC,LPrice,LReason) then
       begin
         LogInfo(Format('DoAllowSell returned false with [reason]:%s',[LReason]));
         Exit(True);
@@ -358,39 +338,47 @@ begin
       ) then
         Exit;
     end
+    {%endregion}
     //otherwise, we will just continue trying to buy
+    {%region Buy-Logic}
     else
     begin
       LogInfo('ticker/aac/inventory look right for a buy order');
-
-      //here is a simple check to make sure we always buy lower than cost
-      //in order to achieve a simple dollar cost averaging mechanism
-      if (LTicker.Ticker.Bid >= AAAC) and (AInventory >= LGDAXOrder.Size) then
-      begin
-        LogInfo('conditions not right for a buy order');
-        Exit(True);
-      end;
 
       //use the "bid" price to determine the current quickest likely buy in price
       //(if we were attempting to sell using the order side prop osSell, then
       //we would want to use the "ask" for the best price)
       LPrice:=LTicker.Ticker.Bid;
-      LGDAXOrder.Price:=LPrice;
+
+      //see if we have a multiplier specified, and enough funds to cover it
+      if FMultiplier > 1 then
+      begin
+        if (LFunds / (LMin * LPrice)) >= FMultiplier then
+          LSize:=LMin * FMultiplier
+        else
+          LSize:=LMin;
+      end
+      //set to the minimum size allowed for the product
+      else
+        LSize:=LMin;
+
+      //here is a simple check to make sure we always buy lower than cost
+      //in order to achieve a simple dollar cost averaging mechanism
+      if (LPrice >= AAAC) and (LInv >= LMin) then
+      begin
+        LogInfo('conditions not right for a buy order');
+        Exit(True);
+      end;
 
       //set the order to a "limit" type which on GDAX currently has no fees
       LGDAXOrder.OrderType:=TOrderType.otLimit;
-
-      //now create the details for the order manager to work with
-      LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
-
-      //we will specify the side of the order to "buy" here even though
-      //it is the default in the GDAX api (because it may change in the future).
-      //for selling, just switch the side to osSell (see above)
-      LDetails.Order.Side:=osBuy;
+      LGDAXOrder.Price:=LPrice;
+      LGDAXOrder.Size:=LSize;
+      LGDAXOrder.Side:=osBuy;
 
       //before placing the order, call down to our allow buy method
       //and exit silently if not
-      if not DoAllowBuy(AFunds,AInventory,AAAC,LTicker.Ticker.Bid,LReason) then
+      if not DoAllowBuy(LFunds,LInv,AAAC,LPrice,LReason) then
       begin
         LogInfo(Format('DoAllowBuy returned false with [reason]:%s',[LReason]));
         if not (MilliSecondsBetween(Now,FTime) >= FAccumulate) then
@@ -398,9 +386,29 @@ begin
         else
         begin
           LogInfo('waited in channel long enough... going to accumulate for min size');
-          LDetails.Order.Size:=LMin;
+          LSize:=LMin;
+          LGDAXOrder.Size:=LSize;
         end;
       end;
+
+      //another simple check is to make sure we have enough funds to even place
+      //the size order (again just soft exit unless an error is what we want)
+      if LFunds < (LSize * LPrice) then
+      begin
+        LogInfo(
+          Format(
+            'not enough funds [available]:%f [required]:%f',
+            [
+              LFunds,
+              LSize * LPrice
+            ]
+          )
+        );
+        Exit(True);
+      end;
+
+      //now create the details for the order manager to work with
+      LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
 
       //attempt to place the order with the manager
       LogInfo('attempting to place buy order');
@@ -416,6 +424,7 @@ begin
     //comparing local to UTC time (GDAX works with UTC)
     FTime:=Now;
   end;
+  {%endregion}
 
   //lastly, since everything was performed successfully, exit as true
   Result:=True;

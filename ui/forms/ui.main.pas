@@ -57,6 +57,8 @@ type
     procedure FormCreate(Sender: TObject);
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
+    procedure mi_email_enabledClick(Sender: TObject);
+    procedure mi_email_setupClick(Sender: TObject);
     procedure pctrl_mainChange(Sender: TObject);
   private
     FAuth : TAuthenticator;
@@ -66,6 +68,8 @@ type
     FInit : Boolean;
     FEngine : IDelilah;
     FCompletedOrders : Cardinal;
+    procedure SetupEmail;
+    procedure EnableEmail;
     procedure InitControls;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
@@ -181,6 +185,16 @@ begin
   json_main.WriteString('inventory_holds_ledger',FloatToStr(FEngine.HoldsInventoryLedger.Balance));
 end;
 
+procedure TMain.mi_email_enabledClick(Sender: TObject);
+begin
+  EnableEmail;
+end;
+
+procedure TMain.mi_email_setupClick(Sender: TObject);
+begin
+  SetupEmail;
+end;
+
 procedure TMain.pctrl_mainChange(Sender: TObject);
 begin
   if pctrl_main.ActivePage=ts_product then
@@ -203,6 +217,16 @@ begin
         ''
       );
     end;
+end;
+
+procedure TMain.SetupEmail;
+begin
+  ShowMessage('not implemented');
+end;
+
+procedure TMain.EnableEmail;
+begin
+  ShowMessage('not implemented');
 end;
 
 procedure TMain.InitControls;

@@ -83,6 +83,7 @@ var
   LAvg:Extended;
   LReason:String;
 begin
+  Reason:='base class says failed';
   Result:=inherited DoAllowSell(AFunds, AInventory, AAC, ATickerPrice, LReason);
   if not Result then
     Exit;
@@ -94,9 +95,9 @@ begin
   LogInfo(Format('DoAllowSell [average]:%f',[LAvg]));
   if ATickerPrice > LAvg then
   begin
-    Reason:='ticker price is not greater than average';
     Result:=True;
   end;
+  Reason:='ticker price is not greater than average';
 end;
 
 end.

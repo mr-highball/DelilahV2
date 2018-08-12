@@ -7,3 +7,6 @@
 [submodule "src/ledger"]
 	path = src/ledger
 	url = https://github.com/mr-highball/ledger.git
+[submodule "src/AraratSynapse"]
+	path = src/AraratSynapse
+	url = https://github.com/svn2github/AraratSynapse.git

@@ -121,20 +121,20 @@ type
   IChannelStrategy = interface(IWindowStrategy)
     ['{427C0FB3-0941-4C26-B8F1-E9C0980C2E93}']
     //property methods
-    function GetByIndex(const I: Cardinal): IChannel;
+    function GetByIndex(const I: Integer): IChannel;
     function GetByName(const AName: String): IChannel;
     function GetCount: Cardinal;
 
     //properties
     property ByName[Const AName:String] : IChannel read GetByName;default;
-    property ByIndex[Const I:Cardinal] : IChannel read GetByIndex;
+    property ByIndex[Const I:Integer] : IChannel read GetByIndex;
     property Count : Cardinal read GetCount;
 
     //methods
     function Add(Const AName:String;Const AUpperStdDev,ALowerStdDev:Single):IChannelStrategy;
-    function IndexOf(Const AName:String;Out Index:Cardinal):IChannelStrategy;
+    function IndexOf(Const AName:String;Out Index:Integer):IChannelStrategy;
     function Remove(Const AName:String):IChannelStrategy;overload;
-    function Remove(Const AIndex:Cardinal):IChannelStrategy;overload;
+    function Remove(Const AIndex:Integer):IChannelStrategy;overload;
   end;
 
   { TChannelImpl }
@@ -203,7 +203,182 @@ type
   *)
   TChannelImplClass = class of TChannelImpl;
 
+  (*
+    base implementation for IChannelStrategy
+  *)
+
+  { TChannelStrategyImpl }
+
+  TChannelStrategyImpl = class(TWindowStrategyImpl,IChannelStrategy)
+  strict private
+    FMap: TChannelMap;
+    function GetByIndex(const I: Integer): IChannel;
+    function GetByName(const AName: String): IChannel;
+    function GetCount: Cardinal;
+  strict protected
+    function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
+      const AFunds, AInventory, AAAC: Extended; out Error: String): Boolean;override;
+    function DoCalcAnchorPrice:Single;virtual;
+    function DoGetChannelClass:TChannelImplClass;virtual;
+  public
+    //properties
+    property ByName[Const AName:String] : IChannel read GetByName;default;
+    property ByIndex[Const I:Integer] : IChannel read GetByIndex;
+    property Count : Cardinal read GetCount;
+
+    //methods
+    function Add(Const AName:String;Const AUpperStdDev,ALowerStdDev:Single):IChannelStrategy;
+    function IndexOf(Const AName:String;Out Index:Integer):IChannelStrategy;
+    function Remove(Const AName:String):IChannelStrategy;overload;
+    function Remove(Const AIndex:Integer):IChannelStrategy;overload;
+    constructor Create; override; overload;
+    destructor Destroy; override;
+  end;
+
 implementation
+
+{ TChannelStrategyImpl }
+
+function TChannelStrategyImpl.GetByIndex(const I: Integer): IChannel;
+begin
+  Result:=nil;
+  if I<=Pred(FMap.Count) then
+    Result:=FMap.Data[I];
+end;
+
+function TChannelStrategyImpl.GetByName(const AName: String): IChannel;
+var
+  I:Integer;
+begin
+  Result:=nil;
+  I:=FMap.IndexOf(AName);
+  if I>=0 then
+    Result:=FMap.Data[I];
+end;
+
+function TChannelStrategyImpl.GetCount: Cardinal;
+begin
+  Result:=FMap.Count;
+end;
+
+function TChannelStrategyImpl.DoFeed(const ATicker: ITicker;
+  const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended;
+  out Error: String): Boolean;
+var
+  I:Integer;
+  LAnch:Single;
+begin
+  //call to parent first
+  Result:=inherited;
+  //if not successful, exit
+  if not Result then
+    Exit;
+  try
+    //if the window is ready we can attempt to update and check the
+    //price for each of our channels
+    if IsReady then
+    begin
+      //fetch the anchor price
+      LAnch:=DoCalcAnchorPrice;
+      for I:=0 to Pred(FMap.Count) do
+        FMap.Data[I]
+          .Update(StdDev,LAnch)
+          .CheckPrice(ATicker.Price);
+      //as long as the above succeded, return true
+      Result:=True;
+    end
+    //otherwise, don't raise an error, exit true
+    else
+      Exit(True);
+  except on E:Exception do
+    Error:=E.Message;
+  end;
+end;
+
+function TChannelStrategyImpl.DoCalcAnchorPrice: Single;
+begin
+  //calculate a simple average for the anchor price
+  //(this may change in the future, but children can override)
+  Result:=(LowestPrice + HighestPrice + Tickers.Last.Price) / 3;
+end;
+
+function TChannelStrategyImpl.DoGetChannelClass: TChannelImplClass;
+begin
+  //base class returns the base channel class
+  Result:=TChannelImpl;
+end;
+
+function TChannelStrategyImpl.Add(const AName: String; const AUpperStdDev,
+  ALowerStdDev: Single): IChannelStrategy;
+var
+  LChannel:IChannel;
+begin
+  Result:=Self as IChannelStrategy;
+  try
+    LogInfo('Add::' + 'about to add ' + AName);
+    //remove name if it exists
+    Remove(AName);
+
+    //create a channel with virtual method
+    LChannel:=DoGetChannelClass.Create;
+
+    //assign channel properties
+    LChannel
+      .Update(0,0,AUpperStdDev,ALowerStdDev)
+      .Name:=AName;
+    LChannel.Parent:=Self as IChannelStrategy;
+
+    //add the channel to the map
+    FMap.Add(AName,LChannel);
+  except on E:Exception do
+    LogError('Add::' + E.Message);
+  end;
+end;
+
+function TChannelStrategyImpl.IndexOf(const AName: String; out Index: Integer): IChannelStrategy;
+begin
+  Result:=Self as IChannelStrategy;
+  Index:=FMap.IndexOf(AName);
+end;
+
+function TChannelStrategyImpl.Remove(const AName: String): IChannelStrategy;
+var
+  I:Integer;
+begin
+  Result:=Self as IChannelStrategy;
+  IndexOf(AName,I).Remove(I);
+end;
+
+function TChannelStrategyImpl.Remove(const AIndex: Integer): IChannelStrategy;
+begin
+  Result:=Self as IChannelStrategy;
+  if (AIndex<0) or (AIndex>Pred(FMap.Count)) then
+    Exit;
+  FMap.Delete(AIndex);
+end;
+
+constructor TChannelStrategyImpl.Create;
+begin
+  inherited Create;
+  FMap:=TChannelMap.Create;
+end;
+
+destructor TChannelStrategyImpl.Destroy;
+var
+  I:Integer;
+begin
+  //orphan all children to kill the reference to this object
+  try
+    for I:=0 to Pred(FMap.Count) do
+      FMap.Data[I].Orphan;
+  except on E:Exception do
+    LogError('Destroy::' + E.Message);
+  end;
+
+  //free map
+  FMap.Free;
+  inherited Destroy;
+end;
 
 { TChannelImpl }
 
@@ -286,8 +461,6 @@ end;
 
 procedure TChannelImpl.SetParent(AValue: IChannelStrategy);
 begin
-  if Assigned(FParent) then
-    FParent.Remove(FName);
   FParent:=nil;
   FParent:=AValue;
 end;

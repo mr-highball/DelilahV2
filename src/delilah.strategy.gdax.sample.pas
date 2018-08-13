@@ -468,7 +468,7 @@ begin
   //utilizing base classes not related to a particular crypto exchange
   FWindow:=TWindowStrategyImpl.Create;
   //accumulate min size if we wait in a channel for this long
-  FAccumulate:=5 * 60 * 1000;
+  FAccumulate:=15 * 60 * 1000;
 end;
 
 destructor TSampleGDAXImpl.Destroy;

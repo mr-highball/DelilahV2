@@ -108,7 +108,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="26">
+    <Units Count="27">
       <Unit0>
         <Filename Value="SimpleBot.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -247,6 +247,10 @@
         <ComponentName Value="EmailSetupFrame"/>
         <ResourceBaseClass Value="Frame"/>
       </Unit25>
+      <Unit26>
+        <Filename Value="..\src\delilah.strategy.channels.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit26>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -58,9 +58,9 @@ begin
   //buys, by looking at the percentage difference from AAC and ticker.
   //in this case, we are hard coding .35% but this could be a property
   if AAC > 0 then
-    if not (Abs(1 - (ATickerPrice / AAC)) > 0.0035) then
+    if not (Abs(1 - (ATickerPrice / AAC)) > 0.005) then
     begin
-      Reason:=' condition not met [Abs(1 - (ATickerPrice / AAC)) > 0.0035]';
+      Reason:=' condition not met [Abs(1 - (ATickerPrice / AAC)) > 0.005]';
       Exit;
     end;
 

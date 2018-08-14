@@ -281,9 +281,16 @@ begin
       //fetch the anchor price
       LAnch:=DoCalcAnchorPrice;
       for I:=0 to Pred(FMap.Count) do
-        FMap.Data[I]
-          .Update(StdDev,LAnch)
-          .CheckPrice(ATicker.Price);
+      begin
+        LogInfo(
+          Format('DoFeed::updating channel ' + FMap.Data[I]
+            .Update(StdDev,LAnch)
+            .CheckPrice(ATicker.Price)
+            .Name + ' with [StdDev]:%f [Anchor]:%f [Price]:%f',
+            [StdDev,LAnch,ATicker.Price]
+          )
+        );
+      end;
       //as long as the above succeded, return true
       Result:=True;
     end
@@ -306,6 +313,7 @@ function TChannelStrategyImpl.DoGetChannelClass: TChannelImplClass;
 begin
   //base class returns the base channel class
   Result:=TChannelImpl;
+  LogInfo('DoGetChannelClass::' + Result.ClassName);
 end;
 
 function TChannelStrategyImpl.Add(const AName: String; const AUpperStdDev,

@@ -451,6 +451,10 @@ begin
   if chart_source.Count>10000 then
     for I:=0 to 1000 do
       chart_source.Delete(0);
+  //sandbox mode apparently is reporting incorrect times from GDAX...
+  //for everything to work as production does, assign the time manually
+  if FAuth.IsSanboxMode then
+    ATick.Time:=Now;
   LogInfo(
     Format('%s - %s',
       [

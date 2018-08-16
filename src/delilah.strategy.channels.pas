@@ -258,7 +258,10 @@ end;
 
 function TChannelStrategyImpl.GetCount: Cardinal;
 begin
-  Result:=FMap.Count;
+  if FMap.Count < 0 then
+    Exit(0)
+  else;
+    Result:=FMap.Count;
 end;
 
 function TChannelStrategyImpl.DoFeed(const ATicker: ITicker;
@@ -397,7 +400,7 @@ end;
 
 function TChannelImpl.GetLower: Single;
 begin
-  Result:=FAnchor - (FLowerStd * FStd);
+  Result:=FAnchor + (FLowerStd * FStd);
 end;
 
 function TChannelImpl.GetLowerStd: Single;

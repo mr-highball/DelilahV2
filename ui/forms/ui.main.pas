@@ -97,7 +97,8 @@ implementation
 uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
-  delilah.strategy.gdax.sample.extended, delilah.strategy.channels;
+  delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
+  delilah.strategy.gdax.tiers;
 
 {$R *.lfm}
 
@@ -380,19 +381,20 @@ end;
 procedure TMain.StartStrategy(Sender: TObject);
 var
   LError:String;
-  LStrategy:ISampleGDAX;
+  LStrategy:ITierStrategyGDAX;
 begin
   //clear chart source
   chart_source.Clear;
   //todo - right now just adding an sample strategy, but need to choose
   //from the selected strategy in some dropdown once fully implemented.
   //also allow easy ui binding, and registering...
-  LStrategy:=TSampleGDAXExtImpl.Create(LogInfo,LogError,LogInfo);
+  LStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   //during testing only require a small size, but this is where we would
   //put for example, 1hr worth of time, or a day.. or whatever.
-  LStrategy.WindowSizeInMilli:=25 * 60 * 1000;
+  LStrategy.ChannelStrategy.WindowSizeInMilli:=30000;//25 * 60 * 1000;
   //set a multiplier of 3, which will increase the size of buy orders
-  LStrategy.Multiplier:=3;
+  (*
+  LStrategy.Multiplier:=3;*)
   FEngine.Strategies.Add(
     LStrategy
   );

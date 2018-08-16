@@ -36,8 +36,10 @@ type
     function GetOnlyProfit: Boolean;
     function GetSmallPerc: Single;
     function GetUseMarketBuy: Boolean;
+    function GetUseMarketSell: Boolean;
     procedure SetLargePerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
+    procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
     procedure SetOnlyLower(Const AValue: Boolean);
     procedure SetOnlyProfit(Const AValue: Boolean);
@@ -105,13 +107,20 @@ type
     FMidPerc,
     FMarketFee,
     FLargePerc: Single;
+    FDontBuy,
+    FSellItAllNow,
+    FLargeBuy,
+    FSmallBuy,
+    FLargeSell,
+    FMidSell,
+    FSmallSell: Boolean;
     function GetChannel: IChannelStrategy;
     function GetLargePerc: Single;
     function GetMarketFee: Single;
     function GetMidPerc: Single;
     function GetOnlyLower: Boolean;
     function GetOnlyProfit: Boolean;
-    function GetSmallPerce: Single;
+    function GetSmallPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
     procedure SetLargePerc(Const AValue: Single);
@@ -123,9 +132,35 @@ type
     procedure SetSmallPerc(Const AValue: Single);
     procedure SetUseMarketBuy(Const AValue: Boolean);
     procedure InitChannel;
+    procedure GTFOUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure GTFOLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure LargeBuyUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure LargeBuyLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure SmallBuyUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure SmallBuyLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure SmallSellUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure SmallSellLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure LargeSellUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    procedure LargeSellLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
+  strict protected
+    const
+      GTFO = 'gtfo';
+      LARGE_BUY = 'large-buy';
+      SMALL_BUY = 'small-buy';
+      SMALL_SELL = 'small-sell';
+      LARGE_SELL = 'large-sell';
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
       const AFunds, AInventory, AAAC: Extended; out Error: String): Boolean;override;
+    (*
+      returns true if we should take a particular position
+    *)
+    function GetPosition(Out Size:TPositionSize;Out Percentage:Single;Out Sell:Boolean):Boolean;
+    (*
+      after a call is made to GetPosition, call this method to report that
+      we were successful placing to the order manager
+    *)
+    procedure PositionSuccess(Const ASize:TPositionSize;Const ASell:Boolean);
   public
     property ChannelStrategy : IChannelStrategy read GetChannel;
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
@@ -133,7 +168,7 @@ type
     property UseMarketBuy : Boolean read GetUseMarketBuy write SetUseMarketBuy;
     property UseMarketSell : Boolean read GetUseMarketSell write SetMarketSell;
     property MarketFee : Single read GetMarketFee write SetMarketFee;
-    property SmallTierPer : Single read GetSmallPerce write SetSmallPerc;
+    property SmallTierPer : Single read GetSmallPerc write SetSmallPerc;
     property MidTierPerc : Single read GetMidPerc write SetMidPerc;
     property LargeTierPerc : Single read GetLargePerc write SetLargePerc;
     constructor Create; override; overload;
@@ -141,6 +176,11 @@ type
   end;
 
 implementation
+uses
+  gdax.api.consts,
+  gdax.api.types,
+  gdax.api.orders,
+  delilah.ticker.gdax;
 
 { TTierStrategyGDAXImpl }
 
@@ -174,7 +214,7 @@ begin
   Result:=FOnlyProfit;
 end;
 
-function TTierStrategyGDAXImpl.GetSmallPerce: Single;
+function TTierStrategyGDAXImpl.GetSmallPerc: Single;
 begin
   Result:=FSmallPerc;
 end;
@@ -239,16 +279,162 @@ begin
 end;
 
 procedure TTierStrategyGDAXImpl.InitChannel;
+var
+  LGTFO,
+  LLargeBuy,
+  LSmallBuy,
+  LSmallSell,
+  LLargeSell:IChannel;
 begin
-  //todo - init the channel with all "channels" that we will be using, as
-  //well as wiring up any events to those channels
+  LGTFO:=FChannel.Add(GTFO,-2.5,-3.5)[GTFO];
+  LGTFO.OnLower:=GTFOLow;
+  LGTFO.OnUpper:=GTFOUp;
+
+  LLargeBuy:=FChannel.Add(LARGE_BUY,-1,-2)[LARGE_BUY];
+  LLargeBuy.OnLower:=LargeBuyUp;
+  LLargeBuy.OnUpper:=LargeBuyLow;
+
+  LSmallBuy:=FChannel.Add(SMALL_BUY,0,-1)[SMALL_BUY];
+  LSmallBuy.OnUpper:=SmallBuyUp;
+  LSmallBuy.OnLower:=SmallBuyLow;
+
+  LSmallSell:=FChannel.Add(SMALL_SELL,1,0)[SMALL_SELL];
+  LSmallSell.OnUpper:=SmallSellUp;
+  LSmallSell.OnLower:=SmallSellLow;
+
+  LLargeSell:=FChannel.Add(LARGE_SELL,3,2)[LARGE_SELL];
+  LLargeSell.OnUpper:=LargeSellUp;
+  LLargeSell.OnLower:=LargeSellLow;
+end;
+
+procedure TTierStrategyGDAXImpl.GTFOUp(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('GTFOUp::direction is ' + IntToStr(Ord(ADirection)));
+  //entering or exiting this channel from the upper bounds puts us in a
+  //"watch" mode for GTFO by toggling the "dont buy" flag
+  case ADirection of
+   cdEnter: FDontBuy:=True;
+   cdExit: FDontBuy:=False;
+ end;
+end;
+
+procedure TTierStrategyGDAXImpl.GTFOLow(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('GTFOLow::direction is ' + IntToStr(Ord(ADirection)));
+  //we need to gtfo...
+  case ADirection of
+    cdExit: FSellItAllNow:=True;
+    cdEnter: FSellItAllNow:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.LargeBuyUp(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('LargeBuyUp::direction is ' + IntToStr(Ord(ADirection)));
+  //if we break the upper bounds, we're no longer requesting for a large
+  //buy in
+  case ADirection of
+    cdExit: FLargeBuy:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.LargeBuyLow(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('LargeBuyLow::direction is ' + IntToStr(Ord(ADirection)));
+  //entering from the lower bound of this channel means it's a good oppurtunity
+  //to buy in, while exiting, means hold off
+  case ADirection of
+    cdEnter: FLargeBuy:=True;
+    cdExit: FLargeBuy:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.SmallBuyUp(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('SmallBuyUp::direction is ' + IntToStr(Ord(ADirection)));
+  //if we break the upper bounds, we're no longer requesting for a small
+  //buy in
+  case ADirection of
+    cdExit: FSmallBuy:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.SmallBuyLow(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('SmallBuyLow::direction is ' + IntToStr(Ord(ADirection)));
+  //entering from the lower bound of this channel means it's a good oppurtunity
+  //to buy in, while exiting, means hold off
+  case ADirection of
+    cdEnter: FSmallBuy:=True;
+    cdExit: FSmallBuy:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.SmallSellUp(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('SmallSellUp::direction is ' + IntToStr(Ord(ADirection)));
+  //exiting the upper bounds means we no longer should sell small
+  case ADirection of
+    cdExit: FSmallSell:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.SmallSellLow(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('SmallSellLow::direction is ' + IntToStr(Ord(ADirection)));
+  //exiting the lower, means we no longer should sell, but entering
+  //puts us in the sell mode
+  case ADirection of
+    cdEnter: FSmallSell:=True;
+    cdExit: FSmallSell:=False;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.LargeSellUp(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('LargeSellUp::direction is ' + IntToStr(Ord(ADirection)));
+  //large sell exiting puts us into to large sell mode, while
+  //entering puts us back to mid sell
+  case ADirection of
+    cdExit: FLargeSell:=True;
+    cdEnter: FMidSell:=True;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.LargeSellLow(const ASender: IChannel;
+  const ADirection: TChannelDirection);
+begin
+  LogInfo('LargeSellLow::direction is ' + IntToStr(Ord(ADirection)));
+  //the lower channel controls mid-range sell oppurtunities
+  case ADirection of
+    cdEnter: FMidSell:=True;
+    cdExit: FMidSell:=False;
+  end;
 end;
 
 function TTierStrategyGDAXImpl.DoFeed(const ATicker: ITicker;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
 var
+  I:Integer;
   LTicker:ITickerGDAX;
+  LSize:TPositionSize;
+  LOrderSize,
+  LMin:Extended;
+  LPerc,
+  LOrderSellTot:Single;
+  LSell:Boolean;
+  LGDAXOrder:IGDAXOrder;
+  LChannel:IChannel;
 begin
   Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, AAAC, Error);
   if not Result then
@@ -259,19 +445,193 @@ begin
     if not FChannel.Feed(ATicker,AManager,AFunds,AInventory,AAAC,Error) then
       Exit;
 
+    //log the channels' state
+    LogInfo('DoFeed::[StdDev]-' + FloatToStr(FChannel.StdDev));
+    for I:=0 to Pred(FChannel.Count) do
+    begin
+      LChannel:=FChannel.ByIndex[I];
+      LogInfo('DoFeed::channel ' + LChannel.Name + ' ' +
+        '[anchor]-' + FloatToStr(LChannel.AnchorPrice) + ' ' +
+        '[lower]-' + FloatToStr(LChannel.Lower) + ' ' +
+        '[upper]-' + FloatToStr(LChannel.Upper)
+      );
+      LChannel:=nil;
+    end;
+
     //cast to gdax ticker
     LTicker:=ATicker as ITickerGDAX;
+    LMin:=LTicker.Ticker.Product.BaseMinSize;
 
+    //get whether or not we should make a position
+    if GetPosition(LSize,LPerc,LSell) then
+    begin
+      //see if we need to place a sell
+      if LSell then
+      begin
+        //set the order size based off the percentage returned to us
+        LOrderSize:=RoundTo(AInventory * LPerc,-8);
 
+        //check to see if we have enough inventory to perform a sell
+        if (LOrderSize) < LMin then
+        begin
+          LogInfo(Format('DoFeed::SellMode::%s is lower than min size',[FloatToStr(LOrderSize)]));
+          Exit(True);
+        end;
+
+        //if we are in only profit mode, we need to some validation before
+        //placing an order
+        if FOnlyProfit then
+        begin
+          //figure out the total amount depending on limit/market
+          if FUseMarketSell then
+          begin
+            //figure the amount of currency we would receive minus the fees
+            LOrderSellTot:=(LOrderSize * LTicker.Ticker.Ask) - (FMarketFee * LOrderSize);
+            LGDAXOrder.OrderType:=otMarket;
+            LogInfo('DoFeed::SellMode::using market sell, with OnlyProfit, total sell amount would be ' + FloatToStr(LOrderSellTot));
+          end
+          else
+          begin
+            LOrderSellTot:=LOrderSize * LTicker.Ticker.Ask;
+            LGDAXOrder.OrderType:=otLimit;
+            LogInfo('DoFeed::SellMode::using limit sell, with OnlyProfit, total sell amount would be ' + FloatToStr(LOrderSellTot));
+          end;
+
+          //if the cost to sell is less-than aquisition of size, we would be
+          //losing money, and that is not allowed in this case
+          if LOrderSellTot < (AAC * LOrderSize) then
+          begin
+            LogInfo('DoFeed::SellMode::sell would result in loss, and OnlyProfit is on, exiting');
+            Exit(True)
+          end;
+        end
+        else
+        begin
+          //todo - everything to sell some shit for market/limit
+        end;
+
+        //set the order side to sell
+        LGDAXOrder.Side:=osSell;
+        LGDAXOrder.Size:=LOrderSize;
+      end
+      //otherwise we are seeing if we can open a buy position
+      else
+      begin
+        //set the order size based on the amount of funds we have
+        //and how many units of min this will purchase
+        LOrderSize:=((AFunds * LPerc) div LMin) * LMin;
+
+        if LOrderSize < LMin then
+        begin
+          LogInfo(Format('DoFeed::BuyMode::%s is lower than min size',[FloatToStr(LOrderSize)]));
+          Exit(True);
+        end;
+
+        if FOnlyLower then
+        begin
+          //todo - only lower aac, with checks for limit/market
+        end
+        else
+        begin
+          //todo - buy some shit for market/limit
+        end;
+      end;
+
+      //if we were successful calling the order manager, report success
+      PositionSuccess(LSize,LSell);
+      Result:=True;
+    end
+    else
+      Exit(True);
   except on E:Exception do
     Error:=E.Message;
+  end;
+end;
+
+function TTierStrategyGDAXImpl.GetPosition(out Size: TPositionSize; out
+  Percentage: Single; out Sell: Boolean): Boolean;
+begin
+  Result:=False;
+  //todo - check flags used for making positions to return the enum/percent
+  //prioritize flags to return to use
+  if FSellItAllNow then
+  begin
+    Sell:=True;
+    Percentage:=1;
+    Size:=psAll;
+    Exit(True);
+  end
+  else
+  begin
+    //check for any buys weighted highest to lowest in priority
+    if not FDontBuy then
+    begin
+      if FLargeBuy then
+      begin
+        Sell:=False;
+        Percentage:=FLargePerc;
+        Size:=psLarge;
+        Exit(True);
+      end
+      else if FSmallBuy then
+      begin
+        Sell:=False;
+        Percentage:=FSmallPerc;
+        Size:=psSmall;
+        Exit(True);
+      end;
+    end;
+
+    //check for any sells weighted highest to lowest in priority
+    if FLargeSell then
+    begin
+      Sell:=True;
+      Percentage:=FLargePerc;
+      Size:=psLarge;
+      Exit(True);
+    end
+    else if FMidSell then
+    begin
+      Sell:=True;
+      Percentage:=FMidPerc;
+      Size:=psMid;
+      Exit(True);
+    end
+    else if FSmallSell then
+    begin
+      Sell:=True;
+      Percentage:=FSmallPerc;
+      Size:=psSmall;
+      Exit(True);
+    end;
+  end;
+end;
+
+procedure TTierStrategyGDAXImpl.PositionSuccess(Const ASize:TPositionSize;Const ASell:Boolean);
+begin
+  if ASell then
+  begin
+    if (ASize=psSmall) or (ASize=psAll) then
+      FSmallSell:=False;
+    if (ASize=psMid) or (ASize=psAll) then
+      FMidSell:=False;
+    if (ASize=psLarge) or (ASize=psAll) then
+      FLargeSell:=False;
+  end
+  else
+  begin
+    if (ASize=psSmall) or (ASize=psAll) then
+      FSmallBuy:=False;
+    if (ASize=psMid) or (ASize=psAll) or (ASize=psLarge) then
+      FLargeBuy:=False;
   end;
 end;
 
 constructor TTierStrategyGDAXImpl.Create;
 begin
   inherited Create;
-  FChannel:=TChannelImpl.Create;
+  FChannel:=TChannelStrategyImpl.Create;
+  InitChannel;
 end;
 
 destructor TTierStrategyGDAXImpl.Destroy;

@@ -185,7 +185,9 @@ begin
     SetLength(LArr,FTickers.Count);
     for I:=0 to Pred(FTickers.Count) do
       LArr[I]:=FTickers[I].Price;
-    Result:=Math.stddev(LArr);
+    Result:=Math.stddev(PExtended(@LArr[0]),Length(LArr));
+    if Result=NaN then
+      Result:=0;
   except on E:Exception do
     LogError(E.Message);
   end;

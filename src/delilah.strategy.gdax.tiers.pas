@@ -473,7 +473,7 @@ begin
     end;
 
     //log the channels' state
-    LogInfo('DoFeed::[StdDev]-' + FloatToStr(FChannel.StdDev));
+    LogInfo('DoFeed::[StdDev]:' + FloatToStr(FChannel.StdDev));
     for I:=0 to Pred(FChannel.Count) do
     begin
       LChannel:=FChannel.ByIndex[I];
@@ -574,7 +574,7 @@ begin
         end;
 
         //simple check to see if bid is lower than aac when requested
-        if FOnlyLower then
+        if FOnlyLower and (RoundTo(AInventory,-8) >= LMin) then
           if not (LTicker.Ticker.Bid < AAAC) then
           begin
             LogInfo(Format('DoFeed::BuyMode::ticker [bid]:%f is not lower than [aac]:%f',[LTicker.Ticker.Bid,AAAC]));

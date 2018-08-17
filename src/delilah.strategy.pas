@@ -30,7 +30,7 @@ type
     function Feed(Const ATicker : ITicker;Const AManager:IOrderManager;
       Const AFunds,AInventory,AAAC:Extended;Out Error:String):Boolean;
     constructor Create;virtual;overload;
-    constructor Create(Const AOnInfo,AOnError,AOnWarn:TStrategyLogEvent);
+    constructor Create(Const AOnInfo,AOnError,AOnWarn:TStrategyLogEvent);virtual;overload;
   end;
 
 implementation
@@ -77,16 +77,18 @@ end;
 
 constructor TStrategyImpl.Create;
 begin
-  //nothing
+  FOnError:=nil;
+  FOnInfo:=nil;
+  FOnWarn:=nil;
 end;
 
 constructor TStrategyImpl.Create(const AOnInfo, AOnError,
   AOnWarn: TStrategyLogEvent);
 begin
+  Create;
   FOnInfo:=AOnInfo;
   FOnError:=AOnError;
   FOnWarn:=AOnWarn;
-  create;
 end;
 
 end.

@@ -179,12 +179,20 @@ var
   LArr:TArray<Extended>;
 begin
   Result:=0;
-  if FTickers.Count<1 then
-    Exit;
-  SetLength(LArr,FTickers.Count);
-  for I:=0 to Pred(FTickers.Count) do
-    LArr[I]:=FTickers[I].Price;
-  Result:=Math.stddev(PExtended(@LArr[0]),Length(LArr));
+  try
+    if FTickers.Count<1 then
+      Exit;
+    SetLength(LArr,FTickers.Count);
+    for I:=0 to Pred(FTickers.Count) do
+      LArr[I]:=FTickers[I].Price;
+    //was getting sigfpe errors when just calling stddev, added
+    //to try and avoid
+    if variance(PExtended(@LArr[0]),Length(LArr))=0 then
+      Exit;
+    Result:=Math.stddev(PExtended(@LArr[0]),Length(LArr));
+  except on E:Exception do
+    LogError(E.Message);
+  end;
 end;
 
 function TWindowStrategyImpl.GetIsReady: Boolean;

@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, delilah.strategy.channels, delilah.types,
-  delilah.strategy.gdax;
+  delilah.strategy.gdax, fgl, delilah.strategy;
 
 type
 
@@ -114,6 +114,7 @@ type
     FLargeSell,
     FMidSell,
     FSmallSell: Boolean;
+    FIDS: TFPGList<String>;
     function GetChannel: IChannelStrategy;
     function GetLargePerc: Single;
     function GetMarketFee: Single;
@@ -161,6 +162,10 @@ type
       we were successful placing to the order manager
     *)
     procedure PositionSuccess(Const ASize:TPositionSize;Const ASell:Boolean);
+    (*
+      clears managed positions by cancelling those not completed
+    *)
+    procedure ClearOldPositions(Const AManager:IOrderManager);
   public
     property ChannelStrategy : IChannelStrategy read GetChannel;
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
@@ -171,16 +176,18 @@ type
     property SmallTierPer : Single read GetSmallPerc write SetSmallPerc;
     property MidTierPerc : Single read GetMidPerc write SetMidPerc;
     property LargeTierPerc : Single read GetLargePerc write SetLargePerc;
-    constructor Create; override; overload;
+    constructor Create(const AOnInfo, AOnError, AOnWarn: TStrategyLogEvent);override;
     destructor Destroy; override;
   end;
 
 implementation
 uses
+  math,
   gdax.api.consts,
   gdax.api.types,
   gdax.api.orders,
-  delilah.ticker.gdax;
+  delilah.ticker.gdax,
+  delilah.order.gdax;
 
 { TTierStrategyGDAXImpl }
 
@@ -286,6 +293,9 @@ var
   LSmallSell,
   LLargeSell:IChannel;
 begin
+  //todo - these numbers are "magic" right now, should break them out
+  //into a properties maybe
+
   LGTFO:=FChannel.Add(GTFO,-2.5,-3.5)[GTFO];
   LGTFO.OnLower:=GTFOLow;
   LGTFO.OnUpper:=GTFOUp;
@@ -426,14 +436,17 @@ function TTierStrategyGDAXImpl.DoFeed(const ATicker: ITicker;
   Error: String): Boolean;
 var
   I:Integer;
+  LID:String;
   LTicker:ITickerGDAX;
   LSize:TPositionSize;
   LOrderSize,
   LMin:Extended;
   LPerc,
-  LOrderSellTot:Single;
+  LOrderSellTot,
+  LOrderBuyTot:Single;
   LSell:Boolean;
   LGDAXOrder:IGDAXOrder;
+  LDetails:IOrderDetails;
   LChannel:IChannel;
 begin
   Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, AAAC, Error);
@@ -444,6 +457,20 @@ begin
     //feed the channel
     if not FChannel.Feed(ATicker,AManager,AFunds,AInventory,AAAC,Error) then
       Exit;
+
+    if not FChannel.IsReady then
+    begin
+      LogInfo(
+        Format(
+          'window is not ready [size]:%d [collected]:%d',
+          [
+            FChannel.WindowSizeInMilli,
+            FChannel.CollectedSizeInMilli
+          ]
+        )
+      );
+      Exit(True);
+    end;
 
     //log the channels' state
     LogInfo('DoFeed::[StdDev]-' + FloatToStr(FChannel.StdDev));
@@ -465,6 +492,9 @@ begin
     //get whether or not we should make a position
     if GetPosition(LSize,LPerc,LSell) then
     begin
+      //this will remove any old limit orders outstanding
+      ClearOldPositions(AManager);
+
       //see if we need to place a sell
       if LSell then
       begin
@@ -499,7 +529,7 @@ begin
 
           //if the cost to sell is less-than aquisition of size, we would be
           //losing money, and that is not allowed in this case
-          if LOrderSellTot < (AAC * LOrderSize) then
+          if LOrderSellTot < (AAAC * LOrderSize) then
           begin
             LogInfo('DoFeed::SellMode::sell would result in loss, and OnlyProfit is on, exiting');
             Exit(True)
@@ -507,7 +537,13 @@ begin
         end
         else
         begin
-          //todo - everything to sell some shit for market/limit
+          if FUseMarketSell then
+            LGDAXOrder.OrderType:=otMarket
+          else
+          begin
+            LGDAXOrder.OrderType:=otLimit;
+            LGDAXOrder.Price:=LTicker.Ticker.Ask;
+          end;
         end;
 
         //set the order side to sell
@@ -517,26 +553,59 @@ begin
       //otherwise we are seeing if we can open a buy position
       else
       begin
+        //see if we have enough funds to cover either a limit or market
+        LOrderBuyTot:=RoundTo(AFunds * LPerc,-8);
+
+        if LOrderBuyTot > AFunds then
+        begin
+          LogInfo(Format('DoFeed::BuyMode::would need %f funds, but only %f',[LOrderBuyTot,AFunds]));
+          Exit(True);
+        end;
+
         //set the order size based on the amount of funds we have
         //and how many units of min this will purchase
-        LOrderSize:=((AFunds * LPerc) div LMin) * LMin;
+        LOrderSize:=Trunc(LOrderBuyTot / LMin) * LMin;
 
+        //check to see the order size isn't too small
         if LOrderSize < LMin then
         begin
           LogInfo(Format('DoFeed::BuyMode::%s is lower than min size',[FloatToStr(LOrderSize)]));
           Exit(True);
         end;
 
+        //simple check to see if bid is lower than aac when requested
         if FOnlyLower then
-        begin
-          //todo - only lower aac, with checks for limit/market
-        end
+          if not (LTicker.Ticker.Bid < AAAC) then
+          begin
+            LogInfo(Format('DoFeed::BuyMode::ticker [bid]:%f is not lower than [aac]:%f',[LTicker.Ticker.Bid,AAAC]));
+            Exit(True);
+          end;
+
+        //update order depending on type
+        if FUseMarketBuy then
+          LGDAXOrder.OrderType:=otMarket
         else
         begin
-          //todo - buy some shit for market/limit
+          LGDAXOrder.OrderType:=otLimit;
+          LGDAXOrder.Price:=LTicker.Ticker.Bid;
         end;
+
+        //set the order up for buying
+        LGDAXOrder.Side:=osBuy;
+        LGDAXOrder.Size:=LOrderSize;
       end;
 
+      //call the manager to place the order
+      LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);
+      if not AManager.Place(
+        LDetails,
+        LID,
+        Error
+      ) then
+        Exit;
+
+      if LGDAXOrder.OrderType=otLimit then
+        FIDS.Add(LID);
       //if we were successful calling the order manager, report success
       PositionSuccess(LSize,LSell);
       Result:=True;
@@ -607,7 +676,8 @@ begin
   end;
 end;
 
-procedure TTierStrategyGDAXImpl.PositionSuccess(Const ASize:TPositionSize;Const ASell:Boolean);
+procedure TTierStrategyGDAXImpl.PositionSuccess(const ASize: TPositionSize;
+  const ASell: Boolean);
 begin
   if ASell then
   begin
@@ -627,16 +697,43 @@ begin
   end;
 end;
 
-constructor TTierStrategyGDAXImpl.Create;
+procedure TTierStrategyGDAXImpl.ClearOldPositions(Const AManager:IOrderManager);
+var
+  I:Integer;
+  LDetails:IOrderDetails;
+  LError:String;
 begin
-  inherited Create;
-  FChannel:=TChannelStrategyImpl.Create;
+  //will iterate all managed positions and cancel those not completed
+  for I:=0 to Pred(FIDS.Count) do
+  begin
+    if AManager.Exists[FIDS[I]] then
+    begin
+      if AManager.Status[FIDS[I]]<>omCompleted then
+        if not AManager.Cancel(FIDS[I],LDetails,LError) then
+        begin
+          LogError('ClearOldPositions::' + LError);
+          Exit;
+        end;
+    end;
+  end;
+
+  //if everything went well, clear the positions
+  FIDS.Clear;
+end;
+
+constructor TTierStrategyGDAXImpl.Create(const AOnInfo, AOnError,
+  AOnWarn: TStrategyLogEvent);
+begin
+  inherited Create(AOnInfo,AOnError,AOnWarn);
+  FChannel:=TChannelStrategyImpl.Create(AOnInfo,AOnError,AOnWarn);
+  FIDS:=TFPGList<String>.Create;
   InitChannel;
 end;
 
 destructor TTierStrategyGDAXImpl.Destroy;
 begin
   FChannel:=nil;
+  FIDS.Free;
   inherited Destroy;
 end;
 

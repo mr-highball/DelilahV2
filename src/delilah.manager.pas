@@ -35,6 +35,7 @@ type
     procedure SetOnRemove(Const AValue: TOrderRemoveEvent);
     procedure SetOnStatus(Const AValue: TOrderStatusEvent);
   strict protected
+    property Orders : TOrderDetails read FOrders;
     //children override these
     function DoGetStatus(
       Const ADetails: IOrderDetails): TOrderManagerStatus;virtual;abstract;
@@ -50,6 +51,7 @@ type
     procedure DoOnRemove(Const ADetails:IOrderDetails;Const AID:String);
     procedure DoOnStatus(Const ADetails:IOrderDetails;Const AID:String;
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
+    function DoRefresh(Out Error:String):Boolean;virtual;abstract;
   public
     //events
     property OnBeforePlace : TBeforeOrderPlaceEvent read GetOnBeforePlace
@@ -75,6 +77,7 @@ type
       Out Error:String):Boolean;overload;
     function Details(Const AID:String;Out Details:IOrderDetails):Boolean;overload;
     function ID(Const ADetails:IOrderDetails;Out ID:String):Boolean;
+    function Refresh(Out Error:String):Boolean;
     procedure Clear;
     constructor Create;virtual;
     destructor Destroy; override;
@@ -322,6 +325,16 @@ begin
     Exit;
   ID:=FOrders.Keys[I];
   Result:=True;
+end;
+
+function TOrderManagerImpl.Refresh(out Error: String): Boolean;
+begin
+  Result:=False;
+  try
+    Result:=DoRefresh(Error);
+  except on E:Exception do
+    Error:=E.Message;
+  end;
 end;
 
 procedure TOrderManagerImpl.Clear;

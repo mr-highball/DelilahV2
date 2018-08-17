@@ -40,6 +40,7 @@ type
     function DoCancel(const ADetails: IOrderDetails;
       out Error: String): Boolean; override;
     function DoGetStatus(const ADetails: IOrderDetails): TOrderManagerStatus;override;
+    function DoRefresh(out Error: String): Boolean; override;
   public
     property Authenticator : IGDAXAuthenticator read GetAuth write SetAuth;
     constructor Create; override;
@@ -207,6 +208,24 @@ begin
       DoOnStatus(LDetails,LID,LOldStatus,Result);
   except on E:Exception do
     LError:=E.Message;
+  end;
+end;
+
+function TGDAXOrderManagerImpl.DoRefresh(out Error: String): Boolean;
+var
+  I:Integer;
+begin
+  //right now, we will just go through the listing of orders and check
+  //the status. this will count against gdax private endpoint limit, so
+  //if the strategy stores a lot of orders, this may cause a problem. could
+  //potentially sort by price and only refresh up to a certain price?
+  Result:=False;
+  try
+    for I:=0 to Pred(Orders.Count) do
+      Status[Orders.Keys[I]];
+    Result:=True;
+  except on E:Exception do
+    Error:=E.Message;
   end;
 end;
 

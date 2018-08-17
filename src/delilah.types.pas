@@ -149,6 +149,10 @@ type
     *)
     function ID(Const ADetails:IOrderDetails;Out ID:String):Boolean;
     (*
+      will attempt to refresh the status information for managed orders
+    *)
+    function Refresh(Out Error:String):Boolean;
+    (*
       will attempt to remove all orders. orders unable to be removed will be
       "silently" be skipped over
     *)

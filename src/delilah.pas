@@ -632,6 +632,10 @@ var
 begin
   Result:=False;
   try
+    //before calling down to the strategies we need to refresh our manager
+    if not FOrderManager.Refresh(Error) then
+      Exit;
+
     //simply iterate strategies and attempt to feed, they are responsible
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do

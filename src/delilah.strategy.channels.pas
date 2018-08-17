@@ -270,6 +270,7 @@ function TChannelStrategyImpl.DoFeed(const ATicker: ITicker;
 var
   I:Integer;
   LAnch:Single;
+  LStd:Single;
 begin
   //call to parent first
   Result:=inherited;
@@ -283,14 +284,15 @@ begin
     begin
       //fetch the anchor price
       LAnch:=DoCalcAnchorPrice;
+      LStd:=StdDev;
       for I:=0 to Pred(FMap.Count) do
       begin
         LogInfo(
           Format('DoFeed::updating channel ' + FMap.Data[I]
-            .Update(StdDev,LAnch)
+            .Update(LStd,LAnch)
             .CheckPrice(ATicker.Price)
             .Name + ' with [StdDev]:%f [Anchor]:%f [Price]:%f',
-            [StdDev,LAnch,ATicker.Price]
+            [LStd,LAnch,ATicker.Price]
           )
         );
       end;

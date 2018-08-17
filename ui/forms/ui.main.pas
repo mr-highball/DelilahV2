@@ -391,7 +391,12 @@ begin
   LStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   //during testing only require a small size, but this is where we would
   //put for example, 1hr worth of time, or a day.. or whatever.
-  LStrategy.ChannelStrategy.WindowSizeInMilli:=30000;//25 * 60 * 1000;
+  LStrategy.ChannelStrategy.WindowSizeInMilli:=Trunc(0.5 * 60 * 1000);
+  LStrategy.SmallTierPerc:=0.05;
+  LStrategy.MidTierPerc:=0.10;
+  LStrategy.LargeTierPerc:=0.15;
+  LStrategy.OnlyLowerAAC:=True;
+  LStrategy.OnlyProfit:=True;
   //set a multiplier of 3, which will increase the size of buy orders
   (*
   LStrategy.Multiplier:=3;*)
@@ -445,14 +450,31 @@ var
   LTickPrice,
   LAAC,
   LFundsLed:Extended;
+  LFile:String;
 begin
   //only keep so much before purging visual log
   if multi_log.Lines.Count>5000 then
+  begin
+    LFile:='log_'+FormatDateTime('mm_dd_yyyy.log',Now);
+    with TStringList.Create do
+    begin
+      try
+        if FileExists(LFile) then
+          LoadFromFile(LFile);
+        Append(multi_log.Lines.Text);
+        SaveToFile(LFile);
+      finally
+        Free;
+      end;
+    end;
     multi_log.Lines.Clear;
+  end;
+
   //purge chart old entries after 10k
   if chart_source.Count>10000 then
     for I:=0 to 1000 do
       chart_source.Delete(0);
+
   //sandbox mode apparently is reporting incorrect times from GDAX...
   //for everything to work as production does, assign the time manually
   if FAuth.IsSanboxMode then
@@ -465,8 +487,10 @@ begin
       ]
     )
   );
+
   //add the ticker price
   chart_source.Add(ATick.Time,ATick.Price);
+
   //feed the engine a tick
   LTick:=TGDAXTickerImpl.Create(ATick);
   if not FEngine.Feed(

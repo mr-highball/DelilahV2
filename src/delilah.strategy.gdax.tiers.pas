@@ -502,9 +502,15 @@ begin
       //see if we need to place a sell
       if LSell then
       begin
-        LogInfo('DoFeed::sell logic');
+        LogInfo('DoFeed::sell logic reached');
         //set the order size based off the percentage returned to us
         LOrderSize:=Abs(RoundTo(AInventory * LPerc,-8));
+
+        if (LOrderSize < LMin) and (RoundTo(AInventory,-8) >= LMin) then
+        begin
+          LogInfo('DoFeed::SellMode::order too small, but we have at least min setting size of order to min');
+          LOrderSize:=LMin;
+        end;
 
         //check to see if we have enough inventory to perform a sell
         if (LOrderSize < LMin) or (LOrderSize > AInventory) then
@@ -570,7 +576,7 @@ begin
 
         //set the order size based on the amount of funds we have
         //and how many units of min this will purchase
-        LOrderSize:=RoundTo(LOrderBuyTot * LMin,-8);
+        LOrderSize:=Trunc(LOrderBuyTot / LTicker.Ticker.Bid / LMin) * LMin;
 
         //check to see the order size isn't too small
         if LOrderSize < LMin then
@@ -735,6 +741,12 @@ begin
   inherited Create(AOnInfo,AOnError,AOnWarn);
   FChannel:=TChannelStrategyImpl.Create(AOnInfo,AOnError,AOnWarn);
   FIDS:=TFPGList<String>.Create;
+  FSmallPerc:=0.05;
+  FMidPerc:=0.10;
+  FLargePerc:=0.15;
+  FMarketFee:=0.003;
+  FUseMarketBuy:=False;
+  FUseMarketSell:=False;
   InitChannel;
 end;
 

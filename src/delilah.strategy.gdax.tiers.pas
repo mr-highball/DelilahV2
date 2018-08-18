@@ -570,7 +570,7 @@ begin
 
         //set the order size based on the amount of funds we have
         //and how many units of min this will purchase
-        LOrderSize:=Trunc(LOrderBuyTot / LMin) * LMin;
+        LOrderSize:=RoundTo(LOrderBuyTot * LMin,-8);
 
         //check to see the order size isn't too small
         if LOrderSize < LMin then
@@ -601,7 +601,7 @@ begin
         LGDAXOrder.Size:=LOrderSize;
       end;
 
-      LogInfo(Format('DoFeed::[buyorder]:%s [limit]:%s [price]:%f [size]:%f',[BoolToStr(LGDAXOrder.Side=osSell,True),BoolToStr(LGDAXOrder.OrderType=otLimit,True),LGDAXOrder.Price,LGDAXOrder.Size]));
+      LogInfo(Format('DoFeed::[buyorder]:%s [limit]:%s [price]:%f [size]:%f',[BoolToStr(LGDAXOrder.Side=osBuy,True),BoolToStr(LGDAXOrder.OrderType=otLimit,True),LGDAXOrder.Price,LGDAXOrder.Size]));
 
       //call the manager to place the order
       LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);

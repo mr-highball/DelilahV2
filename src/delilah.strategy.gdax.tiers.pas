@@ -489,6 +489,10 @@ begin
     LTicker:=ATicker as ITickerGDAX;
     LMin:=LTicker.Ticker.Product.BaseMinSize;
 
+    //initialize the order
+    LGDAXOrder:=TGDAXOrderImpl.Create;
+    LGDAXOrder.Product:=LTicker.Ticker.Product;
+
     //get whether or not we should make a position
     if GetPosition(LSize,LPerc,LSell) then
     begin
@@ -498,13 +502,14 @@ begin
       //see if we need to place a sell
       if LSell then
       begin
+        LogInfo('DoFeed::sell logic');
         //set the order size based off the percentage returned to us
-        LOrderSize:=RoundTo(AInventory * LPerc,-8);
+        LOrderSize:=Abs(RoundTo(AInventory * LPerc,-8));
 
         //check to see if we have enough inventory to perform a sell
-        if (LOrderSize) < LMin then
+        if (LOrderSize < LMin) or (LOrderSize > AInventory) then
         begin
-          LogInfo(Format('DoFeed::SellMode::%s is lower than min size',[FloatToStr(LOrderSize)]));
+          LogInfo(Format('DoFeed::SellMode::%s is lower than min size or no inventory',[FloatToStr(LOrderSize)]));
           Exit(True);
         end;
 
@@ -553,8 +558,9 @@ begin
       //otherwise we are seeing if we can open a buy position
       else
       begin
+        LogInfo('DoFeed::buy logic');
         //see if we have enough funds to cover either a limit or market
-        LOrderBuyTot:=RoundTo(AFunds * LPerc,-8);
+        LOrderBuyTot:=Abs(RoundTo(AFunds * LPerc,-8));
 
         if LOrderBuyTot > AFunds then
         begin
@@ -594,6 +600,8 @@ begin
         LGDAXOrder.Side:=osBuy;
         LGDAXOrder.Size:=LOrderSize;
       end;
+
+      LogInfo(Format('DoFeed::[buyorder]:%s [limit]:%s [price]:%f [size]:%f',[BoolToStr(LGDAXOrder.Side=osSell,True),BoolToStr(LGDAXOrder.OrderType=otLimit,True),LGDAXOrder.Price,LGDAXOrder.Size]));
 
       //call the manager to place the order
       LDetails:=TGDAXOrderDetailsImpl.Create(LGDAXOrder);

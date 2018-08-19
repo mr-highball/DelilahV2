@@ -296,11 +296,11 @@ begin
   //todo - these numbers are "magic" right now, should break them out
   //into a properties maybe
 
-  LGTFO:=FChannel.Add(GTFO,-2.5,-3.5)[GTFO];
+  LGTFO:=FChannel.Add(GTFO,-3.5,-4)[GTFO];
   LGTFO.OnLower:=GTFOLow;
   LGTFO.OnUpper:=GTFOUp;
 
-  LLargeBuy:=FChannel.Add(LARGE_BUY,-1,-2)[LARGE_BUY];
+  LLargeBuy:=FChannel.Add(LARGE_BUY,-2,-3)[LARGE_BUY];
   LLargeBuy.OnLower:=LargeBuyUp;
   LLargeBuy.OnUpper:=LargeBuyLow;
 
@@ -739,9 +739,9 @@ begin
   inherited Create(AOnInfo,AOnError,AOnWarn);
   FChannel:=TChannelStrategyImpl.Create(AOnInfo,AOnError,AOnWarn);
   FIDS:=TFPGList<String>.Create;
-  FSmallPerc:=0.05;
-  FMidPerc:=0.10;
-  FLargePerc:=0.15;
+  FSmallPerc:=0.02;
+  FMidPerc:=0.03;
+  FLargePerc:=0.05;
   FMarketFee:=0.003;
   FUseMarketBuy:=False;
   FUseMarketSell:=False;

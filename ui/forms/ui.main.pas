@@ -70,7 +70,8 @@ type
     FFunds : TSingleLine;
     FInit : Boolean;
     FEngine : IDelilah;
-    FCompletedOrders : Cardinal;
+    FCompletedOrders,
+    FTempWindowSetting : Cardinal;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -158,6 +159,9 @@ begin
   ).Balance;
   //simple counter for completed orders
   FCompletedOrders:=json_main.ReadInteger('completed_orders',0);
+
+  //todo - remove this once strategies can persist
+  FTempWindowSetting:=json_main.ReadInteger('temp_window_setting',20 * 60 * 1000);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -190,6 +194,9 @@ begin
   json_main.WriteString('holds_ledger',FloatToStr(FEngine.HoldsLedger.Balance));
   json_main.WriteString('inventory_ledger',FloatToStr(FEngine.InventoryLedger.Balance));
   json_main.WriteString('inventory_holds_ledger',FloatToStr(FEngine.HoldsInventoryLedger.Balance));
+
+  //todo - temporary, will remove
+  json_main.WriteInteger('temp_window_setting',FTempWindowSetting);
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -385,18 +392,21 @@ var
 begin
   //clear chart source
   chart_source.Clear;
+
   //todo - right now just adding an sample strategy, but need to choose
   //from the selected strategy in some dropdown once fully implemented.
   //also allow easy ui binding, and registering...
   LStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
-  //during testing only require a small size, but this is where we would
-  //put for example, 1hr worth of time, or a day.. or whatever.
-  LStrategy.ChannelStrategy.WindowSizeInMilli:=Trunc(0.5 * 60 * 1000);
-  LStrategy.SmallTierPerc:=0.05;
-  LStrategy.MidTierPerc:=0.10;
-  LStrategy.LargeTierPerc:=0.15;
+
+  //todo - currently using a config to pull window, but this needs
+  //to be dynamic based on strategy (since not all strategies utilize a window)
+  LStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
+  LStrategy.SmallTierPerc:=0.025;
+  LStrategy.MidTierPerc:=0.05;
+  LStrategy.LargeTierPerc:=0.10;
   LStrategy.OnlyLowerAAC:=True;
   LStrategy.OnlyProfit:=True;
+
   //set a multiplier of 3, which will increase the size of buy orders
   (*
   LStrategy.Multiplier:=3;*)
@@ -405,17 +415,22 @@ begin
   );
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
+
   //if the funds has changed since the last time this was run, reset it
   if FEngine.Funds<>StrToFloatDef(FFunds.Text,0) then
     FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
+
   //start the engine to accept tickers
   if not FEngine.Start(LError) then
     LogError(LError);
+
   //start collecting tickers for the product
   FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
   FProducts.ProductFrame.Running:=True;
+
   //update the status
   ignition_main.Status:='Started';
+
   //disable all controls that would cause issues
   FAuth.Enabled:=False;
   FProducts.Enabled:=False;

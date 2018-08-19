@@ -161,7 +161,7 @@ type
       after a call is made to GetPosition, call this method to report that
       we were successful placing to the order manager
     *)
-    procedure PositionSuccess(Const ASize:TPositionSize;Const ASell:Boolean);
+    procedure PositionSuccess;
     (*
       clears managed positions by cancelling those not completed
     *)
@@ -516,6 +516,11 @@ begin
         if (LOrderSize < LMin) or (LOrderSize > AInventory) then
         begin
           LogInfo(Format('DoFeed::SellMode::%s is lower than min size or no inventory',[FloatToStr(LOrderSize)]));
+          LogInfo('DoFeed::SellMode::clearing signals');
+
+          //although this is not a "success" we have no inventory, and should still should clear the signals
+          //to allow for buys to be acted on since sells are prioritized
+          PositionSuccess;
           Exit(True);
         end;
 
@@ -535,6 +540,7 @@ begin
           begin
             LOrderSellTot:=LOrderSize * LTicker.Ticker.Ask;
             LGDAXOrder.OrderType:=otLimit;
+            LGDAXOrder.Price:=LTicker.Ticker.Ask;
             LogInfo('DoFeed::SellMode::using limit sell, with OnlyProfit, total sell amount would be ' + FloatToStr(LOrderSellTot));
           end;
 
@@ -618,10 +624,13 @@ begin
       ) then
         Exit;
 
+      //add limit order id's to a list so we can periodically check them
+      //if we are switching positions
       if LGDAXOrder.OrderType=otLimit then
         FIDS.Add(LID);
+
       //if we were successful calling the order manager, report success
-      PositionSuccess(LSize,LSell);
+      PositionSuccess;
       Result:=True;
     end
     else
@@ -635,8 +644,7 @@ function TTierStrategyGDAXImpl.GetPosition(out Size: TPositionSize; out
   Percentage: Single; out Sell: Boolean): Boolean;
 begin
   Result:=False;
-  //todo - check flags used for making positions to return the enum/percent
-  //prioritize flags to return to use
+  //prioritize an all sell above everything
   if FSellItAllNow then
   begin
     Sell:=True;
@@ -690,25 +698,15 @@ begin
   end;
 end;
 
-procedure TTierStrategyGDAXImpl.PositionSuccess(const ASize: TPositionSize;
-  const ASell: Boolean);
+procedure TTierStrategyGDAXImpl.PositionSuccess;
 begin
-  if ASell then
-  begin
-    if (ASize=psSmall) or (ASize=psAll) then
-      FSmallSell:=False;
-    if (ASize=psMid) or (ASize=psAll) then
-      FMidSell:=False;
-    if (ASize=psLarge) or (ASize=psAll) then
-      FLargeSell:=False;
-  end
-  else
-  begin
-    if (ASize=psSmall) or (ASize=psAll) then
-      FSmallBuy:=False;
-    if (ASize=psMid) or (ASize=psAll) or (ASize=psLarge) then
-      FLargeBuy:=False;
-  end;
+  //init all signal flags to false
+  FDontBuy:=False;
+  FLargeBuy:=False;
+  FSmallBuy:=False;
+  FLargeSell:=False;
+  FMidSell:=False;
+  FSmallSell:=False;
 end;
 
 procedure TTierStrategyGDAXImpl.ClearOldPositions(Const AManager:IOrderManager);

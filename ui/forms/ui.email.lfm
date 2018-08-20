@@ -8,7 +8,7 @@ object EmailSetup: TEmailSetup
   ClientWidth = 438
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
   object pnl_ctrls: TPanel
     Left = 5
     Height = 290
@@ -18,9 +18,19 @@ object EmailSetup: TEmailSetup
     BorderSpacing.Around = 5
     BevelColor = clNone
     BevelOuter = bvNone
+    ClientHeight = 290
+    ClientWidth = 428
     Color = clWhite
     ParentColor = False
     TabOrder = 0
+    object Memo1: TMemo
+      Left = 0
+      Height = 90
+      Top = 0
+      Width = 428
+      Align = alTop
+      TabOrder = 0
+    end
   end
   object pnl_btns: TPanel
     Left = 5

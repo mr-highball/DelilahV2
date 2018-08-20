@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  JSONPropStorage, ExtCtrls, StdCtrls, ui.email.frame;
+  JSONPropStorage, ExtCtrls, StdCtrls, ui.email.frame, smtpsend, blcksock,
+  ssl_openssl;
 
 type
 
@@ -18,6 +19,7 @@ type
     btn_save: TButton;
     btn_cancel: TButton;
     json_email: TJSONPropStorage;
+    Memo1: TMemo;
     pnl_btns: TPanel;
     pnl_ctrls: TPanel;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -26,6 +28,8 @@ type
     FEmail:TEmailSetupFrame;
     FOnCancel: TOnCancel;
     FOnSave: TOnSave;
+    procedure MonitorSock(Sender: TObject; Reason: THookSocketReason;
+      const Value: String);
   protected
     procedure DoOnSave(Sender:TObject);
     procedure DoOnCancel(Sender:TObject);
@@ -41,7 +45,7 @@ var
 
 implementation
 uses
-  smtpsend;
+  typinfo;
 
 {$R *.lfm}
 
@@ -55,6 +59,12 @@ begin
   FEmail.Parent:=pnl_ctrls;
 end;
 
+procedure TEmailSetup.MonitorSock(Sender: TObject; Reason: THookSocketReason;
+  const Value: String);
+begin
+  Memo1.Append(GetEnumName(TypeInfo(THookSocketReason),Ord(Reason)) + '-' + Value);
+end;
+
 procedure TEmailSetup.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
   DoOnCancel(Self);
@@ -65,9 +75,8 @@ var
   LEmail:TStringList;
   LSMTP:TSMTPSend;
 begin
-  //todo - just testing code need to remove
+  //todo - just testing code need to move to send email method
   LSMTP:=TSMTPSend.Create;
-  LSMTP.AutoTLS:=True;
   LEmail:=TStringList.Create;
   LEmail.Add('test mssaage');
   LEmail.Add('-from bot man');
@@ -75,10 +84,17 @@ begin
   LSMTP.Password:=FEmail.Password;
   LSMTP.TargetHost:=FEmail.SMTPAddress;
   LSMTP.TargetPort:=IntToStr(FEmail.Port);
+  //LSMTP.AutoTLS:=True;
+  LSMTP.FullSSL:=True;
+  LSMTP.Sock.OnStatus:=MonitorSock;
   if not LSMTP.Login then
-    ShowMessage('Unable to login');
+    ShowMessage('Unable to login:' + LSMTP.FullResult.Text);
+  if not LSMTP.MailFrom(FEmail.Email,LEmail.Text.Length) then
+    ShowMessage('Unable to mailFrom:' + LSMTP.FullResult.Text);
+  if not LSMTP.MailTo(FEmail.Email) then
+    ShowMessage('Unable to mailTo:' + LSMTP.FullResult.Text);
   if not LSMTP.MailData(LEmail) then
-    ShowMessage('unable to send email:' + LSMTP.ResultString);
+    ShowMessage('unable to send email:' + LSMTP.FullResult.Text);
   LSMTP.Logout;
   LEmail.Free;
   LSMTP.Free;

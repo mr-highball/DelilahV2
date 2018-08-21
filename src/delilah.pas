@@ -570,9 +570,11 @@ begin
   //nothing to complete if we aren't managing this order
   if not FOrderManager.Exists[AID] then
     Exit;
+
   //balance the hold ledgers
   BalanceOrder(AID,lsHold);
   BalanceOrder(AID,lsInvHold);
+
   //record entries to funds ledger
   if ADetails.OrderType=odBuy then
     LBal:=FFundsLedger.RecordEntry(
@@ -588,6 +590,7 @@ begin
     ).Balance;
   StoreLedgerID(AID,LID,lsStd);
   LOldInv:=FInvLedger.Balance;
+
   //record entries to inventory ledger
   if ADetails.OrderType=odBuy then
     LBal:=FInvLedger.RecordEntry(
@@ -602,9 +605,6 @@ begin
       LID
     ).Balance;
   StoreLedgerID(AID,LID,lsStdInv);
-
-  //**todo** - negative funds seem to be happening on the last few orders?
-  //need to do some research to figure out what's going on (inventory)
 
   //now update the average aquisition cost for our inventory
   if FInvLedger.Balance=0 then

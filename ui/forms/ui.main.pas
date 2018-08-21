@@ -409,7 +409,7 @@ begin
   LShortStrategy.SmallTierSellPerc:=0.05;
   LShortStrategy.MidTierSellPerc:=0.10;
   LShortStrategy.LargeTierSellPerc:=0.15;
-  LShortStrategy.UseMarketBuy:=True;
+  LShortStrategy.UseMarketBuy:=False;
   LShortStrategy.UseMarketSell:=False;
   LShortStrategy.OnlyLowerAAC:=True;
   LShortStrategy.OnlyProfit:=True;

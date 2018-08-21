@@ -62,12 +62,20 @@ function TGDAXOrderDetailsImpl.DoGetPrice: Extended;
 begin
   if not Assigned(FOrder) then
     Exit(0);
-  //price needs to add any fees associated and can be calculated a bit
-  //simpler with limit orders
-  if FOrder.OrderType=otLimit then
-    Result:=FOrder.Price + Abs(FOrder.FillFees)
+  (*
+    below we are using the ExecutedValue which is only present on orders
+    after 2016, but is the cumulative (size * price), so we don't have to make
+    a second call to the fills endpoint. only market orders will have fill fees
+    as of writing this, but this accounts if coinbase decides to charge for
+    limit orders as well
+  *)
+
+  //for buy orders we need to add the fees to price to show higher cost
+  if FOrder.Side=osBuy then
+    Result:=((FOrder.ExecutedValue + Abs(FOrder.FillFees)) / FOrder.FilledSized)
+  //but for sell orders we need to subtract any fees to show reduction in profit
   else
-    Result:=(FOrder.ExecutedValue / FOrder.FilledSized) + Abs(FOrder.FillFees);
+    Result:=((FOrder.ExecutedValue - Abs(FOrder.FillFees)) / FOrder.FilledSized)
 end;
 
 function TGDAXOrderDetailsImpl.DoGetSize: Extended;

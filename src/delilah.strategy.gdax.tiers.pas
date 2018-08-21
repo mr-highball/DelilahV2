@@ -30,20 +30,26 @@ type
     //property methods
     function GetChannel: IChannelStrategy;
     function GetLargePerc: Single;
+    function GetLargeSellPerc: Single;
     function GetMarketFee: Single;
     function GetMidPerc: Single;
+    function GetMidSellPerc: Single;
     function GetOnlyLower: Boolean;
     function GetOnlyProfit: Boolean;
     function GetSmallPerc: Single;
+    function GetSmallSellPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
     procedure SetLargePerc(Const AValue: Single);
+    procedure SetLargeSellPerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
     procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
+    procedure SetMidSellPerc(Const AValue: Single);
     procedure SetOnlyLower(Const AValue: Boolean);
     procedure SetOnlyProfit(Const AValue: Boolean);
     procedure SetSmallPerc(Const AValue: Single);
+    procedure SetSmallSellPerc(Const AValue: Single);
     procedure SetUseMarketBuy(Const AValue: Boolean);
 
     //properties
@@ -76,20 +82,29 @@ type
     *)
     property MarketFee : Single read GetMarketFee write SetMarketFee;
     (*
-      percentage of funds/inventory to use when a small tier position is detected
-      either selling or buying
+      percentage of funds/inventory to use when a small tier position is detected buying
     *)
     property SmallTierPerc : Single read GetSmallPerc write SetSmallPerc;
     (*
-      percentage of funds/inventory to use when a medium tier position is detected
-      either selling or buying
+      percentage of funds/inventory to use when a medium tier position is detected buying
     *)
     property MidTierPerc : Single read GetMidPerc write SetMidPerc;
     (*
-      percentage of funds/inventory to use when a large tier position is detected
-      either selling or buying
+      percentage of funds/inventory to use when a large tier position is detected buying
     *)
     property LargeTierPerc : Single read GetLargePerc write SetLargePerc;
+    (*
+      percentage of funds/inventory to use when a small tier position is detected selling
+    *)
+    property SmallTierSellPerc : Single read GetSmallSellPerc write SetSmallSellPerc;
+    (*
+      percentage of funds/inventory to use when a medium tier position is detected selling
+    *)
+    property MidTierSellPerc : Single read GetMidSellPerc write SetMidSellPerc;
+    (*
+      percentage of funds/inventory to use when a large tier position is detected selling
+    *)
+    property LargeTierSellPerc : Single read GetLargeSellPerc write SetLargeSellPerc;
   end;
 
   { TTierStrategyGDAXImpl }
@@ -106,7 +121,10 @@ type
     FSmallPerc,
     FMidPerc,
     FMarketFee,
-    FLargePerc: Single;
+    FLargePerc,
+    FSmallSellPerc,
+    FMidSellPerc,
+    FLargeSellPerc: Single;
     FDontBuy,
     FSellItAllNow,
     FLargeBuy,
@@ -117,20 +135,26 @@ type
     FIDS: TFPGList<String>;
     function GetChannel: IChannelStrategy;
     function GetLargePerc: Single;
+    function GetLargeSellPerc: Single;
     function GetMarketFee: Single;
     function GetMidPerc: Single;
+    function GetMidSellPerc: Single;
     function GetOnlyLower: Boolean;
     function GetOnlyProfit: Boolean;
     function GetSmallPerc: Single;
+    function GetSmallSellPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
     procedure SetLargePerc(Const AValue: Single);
+    procedure SetLargeSellPerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
     procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
+    procedure SetMidSellPerc(Const AValue: Single);
     procedure SetOnlyLower(Const AValue: Boolean);
     procedure SetOnlyProfit(Const AValue: Boolean);
     procedure SetSmallPerc(Const AValue: Single);
+    procedure SetSmallSellPerc(Const AValue: Single);
     procedure SetUseMarketBuy(Const AValue: Boolean);
     procedure InitChannel;
     procedure GTFOUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
@@ -176,6 +200,9 @@ type
     property SmallTierPer : Single read GetSmallPerc write SetSmallPerc;
     property MidTierPerc : Single read GetMidPerc write SetMidPerc;
     property LargeTierPerc : Single read GetLargePerc write SetLargePerc;
+    property SmallTierSellPerc : Single read GetSmallSellPerc write SetSmallSellPerc;
+    property MidTierSellPerc : Single read GetMidSellPerc write SetMidSellPerc;
+    property LargeTierSellPerc : Single read GetLargeSellPerc write SetLargeSellPerc;
     constructor Create(const AOnInfo, AOnError, AOnWarn: TStrategyLogEvent);override;
     destructor Destroy; override;
   end;
@@ -201,6 +228,11 @@ begin
   Result:=FLargePerc;
 end;
 
+function TTierStrategyGDAXImpl.GetLargeSellPerc: Single;
+begin
+  Result:=FLargeSellPerc;
+end;
+
 function TTierStrategyGDAXImpl.GetMarketFee: Single;
 begin
   Result:=FMarketFee;
@@ -209,6 +241,11 @@ end;
 function TTierStrategyGDAXImpl.GetMidPerc: Single;
 begin
   Result:=FMidPerc;
+end;
+
+function TTierStrategyGDAXImpl.GetMidSellPerc: Single;
+begin
+  Result:=FMidSellPerc;
 end;
 
 function TTierStrategyGDAXImpl.GetOnlyLower: Boolean;
@@ -224,6 +261,11 @@ end;
 function TTierStrategyGDAXImpl.GetSmallPerc: Single;
 begin
   Result:=FSmallPerc;
+end;
+
+function TTierStrategyGDAXImpl.GetSmallSellPerc: Single;
+begin
+  Result:=FSmallSellPerc;
 end;
 
 function TTierStrategyGDAXImpl.GetUseMarketBuy: Boolean;
@@ -244,6 +286,11 @@ begin
     FLargePerc:=AValue;
 end;
 
+procedure TTierStrategyGDAXImpl.SetLargeSellPerc(const AValue: Single);
+begin
+  FLargeSellPerc:=AValue;
+end;
+
 procedure TTierStrategyGDAXImpl.SetMarketFee(const AValue: Single);
 begin
   FMarketFee:=AValue;
@@ -262,6 +309,11 @@ begin
     FMidPerc:=AValue;
 end;
 
+procedure TTierStrategyGDAXImpl.SetMidSellPerc(const AValue: Single);
+begin
+  FMidSellPerc:=AValue;
+end;
+
 procedure TTierStrategyGDAXImpl.SetOnlyLower(const AValue: Boolean);
 begin
   FOnlyLower:=AValue;
@@ -278,6 +330,11 @@ begin
     FSmallPerc:=AValue
   else
     FSmallPerc:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetSmallSellPerc(const AValue: Single);
+begin
+  FSmallSellPerc:=AValue;
 end;
 
 procedure TTierStrategyGDAXImpl.SetUseMarketBuy(const AValue: Boolean);
@@ -584,10 +641,19 @@ begin
         //and how many units of min this will purchase
         LOrderSize:=Trunc(LOrderBuyTot / LTicker.Ticker.Bid / LMin) * LMin;
 
+        //our percentage would be too small, but we have at least min, so set
+        //to min in order to make a purchase
+        if (LOrderSize < LMin)
+          and (RoundTo(AFunds / LTicker.Ticker.Bid,-8) >= LMin)
+        then
+          LOrderSize:=LMin;
+
         //check to see the order size isn't too small
         if LOrderSize < LMin then
         begin
           LogInfo(Format('DoFeed::BuyMode::%s is lower than min size',[FloatToStr(LOrderSize)]));
+          LogInfo('DoFeed::BuyMode::clearing signals');
+          PositionSuccess;
           Exit(True);
         end;
 
@@ -677,21 +743,21 @@ begin
     if FLargeSell then
     begin
       Sell:=True;
-      Percentage:=FLargePerc;
+      Percentage:=FLargeSellPerc;
       Size:=psLarge;
       Exit(True);
     end
     else if FMidSell then
     begin
       Sell:=True;
-      Percentage:=FMidPerc;
+      Percentage:=FMidSellPerc;
       Size:=psMid;
       Exit(True);
     end
     else if FSmallSell then
     begin
       Sell:=True;
-      Percentage:=FSmallPerc;
+      Percentage:=FSmallSellPerc;
       Size:=psSmall;
       Exit(True);
     end;
@@ -709,7 +775,7 @@ begin
   FSmallSell:=False;
 end;
 
-procedure TTierStrategyGDAXImpl.ClearOldPositions(Const AManager:IOrderManager);
+procedure TTierStrategyGDAXImpl.ClearOldPositions(const AManager: IOrderManager);
 var
   I:Integer;
   LDetails:IOrderDetails;
@@ -742,6 +808,9 @@ begin
   FSmallPerc:=0.02;
   FMidPerc:=0.03;
   FLargePerc:=0.05;
+  FSmallSellPerc:=0.05;
+  FMidSellperc:=0.10;
+  FLargeSellPerc:=0.20;
   FMarketFee:=0.003;
   FUseMarketBuy:=False;
   FUseMarketSell:=False;

@@ -388,7 +388,8 @@ end;
 procedure TMain.StartStrategy(Sender: TObject);
 var
   LError:String;
-  LStrategy:ITierStrategyGDAX;
+  LShortStrategy,
+  LLongStrategy:ITierStrategyGDAX;
 begin
   //clear chart source
   chart_source.Clear;
@@ -396,23 +397,45 @@ begin
   //todo - right now just adding an sample strategy, but need to choose
   //from the selected strategy in some dropdown once fully implemented.
   //also allow easy ui binding, and registering...
-  LStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LShortStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LLongStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
 
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
-  LStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LStrategy.SmallTierPerc:=0.025;
-  LStrategy.MidTierPerc:=0.05;
-  LStrategy.LargeTierPerc:=0.10;
-  LStrategy.OnlyLowerAAC:=True;
-  LStrategy.OnlyProfit:=True;
+  LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
+  LShortStrategy.SmallTierPerc:=0.01;
+  LShortStrategy.MidTierPerc:=0.02;
+  LShortStrategy.LargeTierPerc:=0.03;
+  LShortStrategy.SmallTierSellPerc:=0.05;
+  LShortStrategy.MidTierSellPerc:=0.10;
+  LShortStrategy.LargeTierSellPerc:=0.15;
+  LShortStrategy.UseMarketBuy:=True;
+  LShortStrategy.UseMarketSell:=False;
+  LShortStrategy.OnlyLowerAAC:=True;
+  LShortStrategy.OnlyProfit:=True;
+  LShortStrategy.MarketFee:=0.004;//intentionally make it higher
 
-  //set a multiplier of 3, which will increase the size of buy orders
-  (*
-  LStrategy.Multiplier:=3;*)
+  LLongStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting * 5;
+  LLongStrategy.SmallTierPerc:=0.05;
+  LLongStrategy.MidTierPerc:=0.075;
+  LLongStrategy.LargeTierPerc:=0.10;
+  LLongStrategy.SmallTierSellPerc:=0.25;
+  LLongStrategy.MidTierSellPerc:=0.50;
+  LLongStrategy.LargeTierSellPerc:=1.0;
+  LLongStrategy.UseMarketBuy:=True;
+  LLongStrategy.UseMarketSell:=False;
+  LLongStrategy.OnlyLowerAAC:=True;
+  LLongStrategy.OnlyProfit:=True;
+  LLongStrategy.MarketFee:=0.004;//intentionally make it higher
+
+  //add both short/long strategies
   FEngine.Strategies.Add(
-    LStrategy
+    LShortStrategy
   );
+  FEngine.Strategies.Add(
+    LLongStrategy
+  );
+
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
 

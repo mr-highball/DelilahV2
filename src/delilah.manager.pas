@@ -46,7 +46,7 @@ type
 
     //event helper methods
     procedure DoOnBeforePlace(Const ADetails:IOrderDetails;
-      Var Allow:Boolean;Out ADisallowReason);
+      Var Allow:Boolean;Out ADisallowReason:String);
     procedure DoOnPlace(Const ADetails:IOrderDetails;Const AID:String);
     procedure DoOnRemove(Const ADetails:IOrderDetails;Const AID:String);
     procedure DoOnStatus(Const ADetails:IOrderDetails;Const AID:String;
@@ -156,7 +156,7 @@ begin
 end;
 
 procedure TOrderManagerImpl.DoOnBeforePlace(const ADetails: IOrderDetails;
-  var Allow: Boolean; out ADisallowReason);
+  var Allow: Boolean; out ADisallowReason:String);
 begin
   if Assigned(FOnBeforePlace) then
     FOnBeforePlace(ADetails,Allow,ADisallowReason)

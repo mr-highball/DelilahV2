@@ -51,7 +51,7 @@ type
     event triggered before an order is placed
   *)
   TBeforeOrderPlaceEvent = procedure(Const ADetails:IOrderDetails;
-    Var Allow:Boolean;Out ADisallowReason) of object;
+    Var Allow:Boolean;Out ADisallowReason:String) of object;
 
   (*
     event triggered when a new order is placed

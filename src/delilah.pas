@@ -78,6 +78,8 @@ type
     function GetHoldsLedger: IExtendedLedger;
     function GetInventory: Extended;
     function GetInventoryLedger: IExtendedLedger;
+    procedure DoBeforePlace(Const ADetails:IOrderDetails;
+      Var Allow:Boolean;Out ADisallowReason:String);
     procedure DoPlace(Const ADetails:IOrderDetails;Const AID:String);
     procedure DoRemove(Const ADetails:IOrderDetails;Const AID:String);
     procedure DoStatus(Const ADetails:IOrderDetails;Const AID:String;
@@ -176,7 +178,7 @@ begin
   Result:=FHoldsInvLedger.Balance;
 end;
 
-procedure TDelilahImpl.SetAAC(Const AValue: Extended);
+procedure TDelilahImpl.SetAAC(const AValue: Extended);
 begin
   FAAC:=AValue;
 end;
@@ -310,6 +312,7 @@ begin
   FOrderManager.OnPlace:=DoPlace;
   FOrderManager.OnRemove:=DoRemove;
   FOrderManager.OnStatus:=DoStatus;
+  FOrderManager.OnBeforePlace:=DoBeforePlace;
 end;
 
 function TDelilahImpl.GetAvailableFunds: Extended;
@@ -346,6 +349,70 @@ end;
 function TDelilahImpl.GetInventoryLedger: IExtendedLedger;
 begin
   Result:=FInvLedger;
+end;
+
+procedure TDelilahImpl.DoBeforePlace(const ADetails: IOrderDetails;
+  var Allow: Boolean; out ADisallowReason:String);
+var
+  LAmt:Extended;
+begin
+  Allow:=False;
+
+  //if the order total cost would exceed either funds or attempt
+  //to sell more inventory than we have, then this would be an invalid order
+  if ADetails.OrderType=odBuy then
+  begin
+    //calculate total cost of the order
+    LAmt:=ADetails.Price * ADetails.Size;
+
+    //can't make a purchase with less than or equal to zero funds
+    if LAmt <= 0 then
+    begin
+      ADisallowReason:=Format(
+        '%s is negative, which is not allowed for a sell',
+        [FloatToStr(LAmt)]
+      );
+      Exit;
+    end;
+
+    if LAmt > AvailableFunds then
+    begin
+      ADisallowReason:=Format(
+        '%s would exceed available funds of %s',
+        [FloatToStr(LAmt),FloatToStr(AvailableFunds)]
+      );
+      Exit;
+    end;
+  end
+  else
+  begin
+    //just checking against the size of the details
+    LAmt:=ADetails.Size;
+
+    //can't sell less than or equal to inventory
+    if LAmt <= 0 then
+    begin
+      ADisallowReason:=Format(
+        '%s is negative, which is not allowed for a sell',
+        [FloatToStr(LAmt)]
+      );
+      Exit;
+    end;
+
+    //basic check against available inventory
+    if LAmt > AvailableInventory then
+    begin
+      ADisallowReason:=Format(
+        '%s would exceed available funds of %s',
+        [FloatToStr(LAmt),FloatToStr(AvailableInventory)]
+      );
+      Exit;
+    end;
+  end;
+
+  //as long as everything above checked out, we will allow the transaction
+  //to be performed
+  Allow:=True;
 end;
 
 procedure TDelilahImpl.DoPlace(const ADetails: IOrderDetails; const AID: String);

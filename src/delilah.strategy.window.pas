@@ -185,8 +185,11 @@ begin
     SetLength(LArr,FTickers.Count);
     for I:=0 to Pred(FTickers.Count) do
       LArr[I]:=FTickers[I].Price;
-    Result:=Math.stddev(LArr);
-    //Result:=Math.stddev(PExtended(@LArr[0]),Length(LArr));
+    //we want to avoid floating point errors which can occur
+    //if we try to calculate the stddev of a negative number
+    if Math.variance(PExtended(@LArr[0]),Length(LArr)) <= 0 then
+      Exit;
+    Result:=Math.stddev(PExtended(@LArr[0]),Length(LArr));
   except on E:Exception do
     LogError(E.Message);
   end;

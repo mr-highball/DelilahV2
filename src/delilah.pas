@@ -131,6 +131,8 @@ type
   end;
 
 implementation
+uses
+  Math;
 
 { TDelilahImpl.TLedgerPair }
 
@@ -175,7 +177,10 @@ end;
 
 function TDelilahImpl.GetInventoryHolds: Extended;
 begin
-  Result:=FHoldsInvLedger.Balance;
+  if FHoldsInvLedger.Balance <> NaN then
+    Result:=FHoldsInvLedger.Balance
+  else
+    Result:=0;
 end;
 
 procedure TDelilahImpl.SetAAC(const AValue: Extended);
@@ -317,13 +322,24 @@ end;
 
 function TDelilahImpl.GetAvailableFunds: Extended;
 begin
+  Result:=0;
   //holds ledger should not be added if positive (ie. in the event a sell is on
   //the book but being held)
   if Holds>0 then
-    Result:=FFundsLedger.Balance
+  begin
+    if FFundsLedger.Balance <> NaN then
+      Result:=FFundsLedger.Balance
+    else
+      Result:=0;
+  end
   //use addition here, because holds are going to be a series of credits (negative)
   else
-    Result:=FundsLedger.Balance + Holds;
+  begin
+    if FFundsLedger.Balance <> NaN then
+      Result:=FFundsLedger.Balance + Holds
+    else
+      Result:=0 + Holds;
+  end;
 end;
 
 function TDelilahImpl.GetFunds: Extended;
@@ -333,7 +349,9 @@ end;
 
 function TDelilahImpl.GetHolds: Extended;
 begin
-  Result:=FHoldsLedger.Balance;
+  Result:=0;
+  if FHoldsLedger.Balance <> Nan then;
+    Result:=FHoldsLedger.Balance;
 end;
 
 function TDelilahImpl.GetHoldsLedger: IExtendedLedger;
@@ -343,7 +361,10 @@ end;
 
 function TDelilahImpl.GetInventory: Extended;
 begin
-  Result:=FInvLedger.Balance;
+  if FInvLedger.Balance <> NaN then
+    Result:=FInvLedger.Balance
+  else
+    Result:=0;
 end;
 
 function TDelilahImpl.GetInventoryLedger: IExtendedLedger;
@@ -677,8 +698,8 @@ begin
   if FInvLedger.Balance=0 then
     FAAC:=0
   //only update the aquistion cost if the balance has increased
-  else if LOldInv<FInvLedger.Balance then
-    FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (FInvLedger.Balance);
+  else if LOldInv<Inventory then
+    FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (Inventory);
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;

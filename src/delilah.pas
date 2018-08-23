@@ -177,10 +177,7 @@ end;
 
 function TDelilahImpl.GetInventoryHolds: Extended;
 begin
-  if FHoldsInvLedger.Balance <> NaN then
-    Result:=FHoldsInvLedger.Balance
-  else
-    Result:=0;
+  Result:=FHoldsInvLedger.Balance
 end;
 
 procedure TDelilahImpl.SetAAC(const AValue: Extended);
@@ -326,20 +323,10 @@ begin
   //holds ledger should not be added if positive (ie. in the event a sell is on
   //the book but being held)
   if Holds>0 then
-  begin
-    if FFundsLedger.Balance <> NaN then
-      Result:=FFundsLedger.Balance
-    else
-      Result:=0;
-  end
+    Result:=FFundsLedger.Balance
   //use addition here, because holds are going to be a series of credits (negative)
   else
-  begin
-    if FFundsLedger.Balance <> NaN then
-      Result:=FFundsLedger.Balance + Holds
-    else
-      Result:=0 + Holds;
-  end;
+    Result:=FFundsLedger.Balance + Holds
 end;
 
 function TDelilahImpl.GetFunds: Extended;
@@ -349,9 +336,7 @@ end;
 
 function TDelilahImpl.GetHolds: Extended;
 begin
-  Result:=0;
-  if FHoldsLedger.Balance <> Nan then;
-    Result:=FHoldsLedger.Balance;
+  Result:=FHoldsLedger.Balance;
 end;
 
 function TDelilahImpl.GetHoldsLedger: IExtendedLedger;
@@ -361,10 +346,7 @@ end;
 
 function TDelilahImpl.GetInventory: Extended;
 begin
-  if FInvLedger.Balance <> NaN then
-    Result:=FInvLedger.Balance
-  else
-    Result:=0;
+  Result:=FInvLedger.Balance
 end;
 
 function TDelilahImpl.GetInventoryLedger: IExtendedLedger;
@@ -440,7 +422,8 @@ procedure TDelilahImpl.DoPlace(const ADetails: IOrderDetails; const AID: String)
 var
   LID:String;
   LStatus:TOrderManagerStatus;
-  LBal:Extended;
+  LBal,
+  LEntry:Extended;
 begin
   LBal:=0;
   LStatus:=FOrderManager.Status[AID];
@@ -450,32 +433,44 @@ begin
       begin
         //record an entry into the holds ledger
         if ADetails.OrderType=odBuy then
+        begin
+          LEntry:=ADetails.Price * ADetails.Size;
           LBal:=FHoldsLedger.RecordEntry(
-            ADetails.Price * ADetails.Size,
+            LEntry,
             ltDebit,
             LID
           ).Balance
+        end
         else
+        begin
+          LEntry:=ADetails.Price * ADetails.Size;
           LBal:=FHoldsLedger.RecordEntry(
-            ADetails.Price * ADetails.Size,
+            LEntry,
             ltCredit,
             LID
           ).Balance;
+        end;
         //now store the ledger id associated with this order id
         StoreLedgerID(AID,LID,lsHold);
         //record an entry for the holds inventory
         if ADetails.OrderType=odBuy then
+        begin
+          LEntry:=ADetails.Size;
           LBal:=FHoldsInvLedger.RecordEntry(
             ADetails.Size,
             ltCredit,
             LID
           ).Balance
+        end
         else
+        begin
+          LEntry:=ADetails.Size;
           LBal:=FHoldsInvLedger.RecordEntry(
             ADetails.Size,
             ltDebit,
             LID
           ).Balance;
+        end;
         StoreLedgerID(AID,LID,lsInvHold)
       end;
   end;
@@ -583,6 +578,7 @@ var
   LType:TLedgerType;
   LBal:Extended;
 begin
+  LBal:=0;
   //check to see if we even have this order id recorded, and if not everything
   //should be properly balanced
   I:=FOrderLedger.IndexOf(AOrderID);

@@ -61,12 +61,12 @@ function TStrategyImpl.Feed(const ATicker: ITicker;
 begin
   LogInfo(
     Format(
-      'about to feed strategy - [ticker]:%f [funds]:%f [inventory]:%f [aac]:%f',
+      'about to feed strategy - [ticker]:%s [funds]:%s [inventory]:%s [aac]:%s',
       [
-        ATicker.Price,
-        AFunds,
-        AInventory,
-        AAAC
+        FloatToStr(ATicker.Price),
+        FloatToStr(AFunds),
+        FloatToStr(AInventory),
+        FloatToStr(AAAC)
       ]
     )
   );

@@ -365,23 +365,26 @@ begin
   //to sell more inventory than we have, then this would be an invalid order
   if ADetails.OrderType=odBuy then
   begin
-    //calculate total cost of the order
-    LAmt:=ADetails.Price * ADetails.Size;
+    //price may or may not be filled out, but size cannot be zero
+    LAmt:=ADetails.Size;
 
-    //can't make a purchase with less than or equal to zero funds
+    //can't make a purchase for no inventory
     if LAmt <= 0 then
     begin
       ADisallowReason:=Format(
-        '%s is negative, which is not allowed for a sell',
+        '[size]:%s is negative or zero, which is not allowed for a buy',
         [FloatToStr(LAmt)]
       );
       Exit;
     end;
 
+    //now set the amount equal to the total cost of the order
+    LAmt:=ADetails.Price * ADetails.Size;
+
     if LAmt > AvailableFunds then
     begin
       ADisallowReason:=Format(
-        '%s would exceed available funds of %s',
+        '[cost]:%s would exceed available funds of %s',
         [FloatToStr(LAmt),FloatToStr(AvailableFunds)]
       );
       Exit;
@@ -396,7 +399,7 @@ begin
     if LAmt <= 0 then
     begin
       ADisallowReason:=Format(
-        '%s is negative, which is not allowed for a sell',
+        '[size]:%s is negative or zero, which is not allowed for a sell',
         [FloatToStr(LAmt)]
       );
       Exit;

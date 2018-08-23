@@ -403,9 +403,9 @@ begin
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
   LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=0.01;
-  LShortStrategy.MidTierPerc:=0.02;
-  LShortStrategy.LargeTierPerc:=0.03;
+  LShortStrategy.SmallTierPerc:=0.005;
+  LShortStrategy.MidTierPerc:=0.01;
+  LShortStrategy.LargeTierPerc:=0.02;
   LShortStrategy.SmallTierSellPerc:=0.05;
   LShortStrategy.MidTierSellPerc:=0.10;
   LShortStrategy.LargeTierSellPerc:=0.15;
@@ -416,9 +416,9 @@ begin
   LShortStrategy.MarketFee:=0.004;//intentionally make it higher
 
   LLongStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting * 5;
-  LLongStrategy.SmallTierPerc:=0.05;
-  LLongStrategy.MidTierPerc:=0.075;
-  LLongStrategy.LargeTierPerc:=0.10;
+  LLongStrategy.SmallTierPerc:=0.03;
+  LLongStrategy.MidTierPerc:=0.05;
+  LLongStrategy.LargeTierPerc:=0.08;
   LLongStrategy.SmallTierSellPerc:=0.25;
   LLongStrategy.MidTierSellPerc:=0.50;
   LLongStrategy.LargeTierSellPerc:=1.0;

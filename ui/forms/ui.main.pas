@@ -417,12 +417,12 @@ begin
 
   LLongStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting * 5;
   LLongStrategy.SmallTierPerc:=0.03;
-  LLongStrategy.MidTierPerc:=0.05;
-  LLongStrategy.LargeTierPerc:=0.08;
+  LLongStrategy.MidTierPerc:=0.04;
+  LLongStrategy.LargeTierPerc:=0.06;
   LLongStrategy.SmallTierSellPerc:=0.25;
   LLongStrategy.MidTierSellPerc:=0.50;
   LLongStrategy.LargeTierSellPerc:=1.0;
-  LLongStrategy.UseMarketBuy:=True;
+  LLongStrategy.UseMarketBuy:=False;
   LLongStrategy.UseMarketSell:=False;
   LLongStrategy.OnlyLowerAAC:=True;
   LLongStrategy.OnlyProfit:=True;

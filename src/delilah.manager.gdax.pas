@@ -94,9 +94,9 @@ begin
   Result:=omCanceled;
   //map the gdax status as best we can to the engine statuses
   case AStatus of
-    stActive,stPending,stOpen: Result:=omActive;
+    stActive,stPending,stOpen,stSettled: Result:=omActive;
     stCancelled,stRejected,stUnknown: Result:=omCanceled;
-    stDone,stSettled: Result:=omCompleted;
+    stDone: Result:=omCompleted;
   end;
 end;
 
@@ -150,7 +150,7 @@ begin
     //remove for the id
     if LDetails.Order.FilledSized>0 then
     begin
-      LDetails.Order.OrderStatus:=stSettled;
+      LDetails.Order.OrderStatus:=stDone;
       if not Place(ADetails,LID) then
         Exit;
       Self.Delete(LID);
@@ -180,8 +180,8 @@ begin
     LDetails:=ADetails as IGDAXOrderDetails;
     LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     LDetails.Order.Authenticator:=Authenticator;
-    //avoid a web call when we already have a settled order
-    if not (LDetails.Order.OrderStatus=stSettled) then
+    //avoid a web call when we already have a done order
+    if not (LDetails.Order.OrderStatus=stDone) then
     begin
       //attempt to post the order assuming strategy has filled it out correctly
       if not LDetails.Order.Get(LContent,LError) then

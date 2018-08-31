@@ -73,7 +73,9 @@ begin
   //for buy orders we need to add the fees to price to show higher cost
   if FOrder.Side=osBuy then
   begin
-    if FOrder.OrderStatus in [stDone] then
+    if (FOrder.OrderStatus=stDone)
+      or ((FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0))
+    then
     begin
       if FOrder.FilledSized > 0 then
         Result:=((FOrder.ExecutedValue + Abs(FOrder.FillFees)) / FOrder.FilledSized)
@@ -86,7 +88,9 @@ begin
   //but for sell orders we need to subtract any fees to show reduction in profit
   else
   begin
-    if FOrder.OrderStatus in [stDone] then
+    if (FOrder.OrderStatus=stDone)
+      or ((FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0))
+    then
     begin
       if FOrder.FilledSized > 0 then
         Result:=((FOrder.ExecutedValue - Abs(FOrder.FillFees)) / FOrder.FilledSized)
@@ -108,7 +112,12 @@ begin
   if FOrder.OrderStatus in [stDone] then
     Result:=FOrder.FilledSized
   else
-    Result:=FOrder.Size;
+  begin
+    if (FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0)  then
+      Result:=FOrder.FilledSized
+    else
+      Result:=FOrder.Size;
+  end;
 end;
 
 function TGDAXOrderDetailsImpl.DoGetType: TOrderDetailsType;

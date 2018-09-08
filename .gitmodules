@@ -10,6 +10,3 @@
 [submodule "src/AraratSynapse"]
 	path = src/AraratSynapse
 	url = https://github.com/svn2github/AraratSynapse.git
-[submodule "ezthreads"]
-	path = ezthreads
-	url = https://github.com/mr-highball/ezthreads.git

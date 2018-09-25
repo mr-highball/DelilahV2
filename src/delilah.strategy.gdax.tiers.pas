@@ -659,11 +659,31 @@ begin
 
         //simple check to see if bid is lower than aac when requested
         if FOnlyLower and (RoundTo(AInventory,-8) >= LMin) then
-          if not (LTicker.Ticker.Bid < AAAC) then
+        begin
+          //for limit buys, we don't have to worry about a fee which
+          //would change aac differently than the bid price
+          if not FUseMarketBuy and (not (LTicker.Ticker.Bid < AAAC)) then
           begin
             LogInfo(Format('DoFeed::BuyMode::ticker [bid]:%f is not lower than [aac]:%f',[LTicker.Ticker.Bid,AAAC]));
             Exit(True);
+          end
+          //account for what the new aac "would" be assuming we get the order
+          //placed at this price, with the specified fee. this can't account
+          //for slippage, or if the price moves by the time the order is actually
+          //made, but it's the best that can be done
+          else if FUseMarketBuy and ((AInventory > 0) and (AAAC > 0)) then
+          begin
+            //use this variable to hold what aac would be if successfull
+            LOrderBuyTot:=((LOrderSize * ((1 + FMarketFee) * LTicker.Ticker.Bid) + (AAAC * AInventory)) / (LOrderSize + AInventory));
+
+            //check to see if the estimated aac is not greater than the current aac
+            if LOrderBuyTot > AAAC then
+            begin
+              LogInfo(Format('DoFeed::BuyMode::market order shows higher [aac]:%f than [current aac]:%f',[LOrderBuyTot,AAAC]));
+              Exit(True);
+            end;
           end;
+        end;
 
         //update order depending on type
         if FUseMarketBuy then

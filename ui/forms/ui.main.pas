@@ -410,7 +410,7 @@ begin
   LShortStrategy.MidTierSellPerc:=0.35;
   LShortStrategy.LargeTierSellPerc:=0.5;
   LShortStrategy.UseMarketBuy:=True;
-  LShortStrategy.UseMarketSell:=False;
+  LShortStrategy.UseMarketSell:=True;
   LShortStrategy.OnlyLowerAAC:=True;
   LShortStrategy.OnlyProfit:=True;
   LShortStrategy.MarketFee:=0.01;//intentionally make it higher

@@ -57,6 +57,7 @@ type
     function GetCleanThresh: Single;
     function GetCollected: Cardinal;
     function GetHighest: Extended;
+    function GetAverage: Extended;
     function GetIsReady: Boolean;
     function GetLowest: Extended;
     function GetStdDev: Single;
@@ -132,6 +133,11 @@ begin
   Result:=FWindow.HighestPrice;
 end;
 
+function TSampleGDAXImpl.GetAverage: Extended;
+begin
+  Result:=FWindow.AveragePrice;
+end;
+
 function TSampleGDAXImpl.GetIsReady: Boolean;
 begin
   Result:=FWindow.IsReady;
@@ -162,7 +168,7 @@ begin
   FWindow.CleanupThreshold:=AValue;
 end;
 
-procedure TSampleGDAXImpl.SetMultiplier(Const AValue: Cardinal);
+procedure TSampleGDAXImpl.SetMultiplier(const AValue: Cardinal);
 begin
   FMultiplier:=AValue;
 end;

@@ -17,6 +17,7 @@ type
   IWindowStrategy = interface(IStrategy)
     ['{535CAC6E-19BA-4C2D-975B-EA3C737C6A75}']
     //property methods
+    function GetAverage: Extended;
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
     function GetCollected: Cardinal;
@@ -64,6 +65,10 @@ type
     *)
     property LowestPrice : Extended read GetLowest;
     (*
+      current average of the window
+    *)
+    property AveragePrice : Extended read GetAverage;
+    (*
       returns true when the length of time from the first ticker stored
       and the last ticker stored is at or above the window size
     *)
@@ -78,6 +83,7 @@ type
     FCleanPerc: Single;
     FCleanThresh: Single;
     FSize: Cardinal;
+    function GetAverage: Extended;
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
     function GetCollected: Cardinal;
@@ -106,6 +112,7 @@ type
     property StdDev : Single read GetStdDev;
     property LowestPrice : Extended read GetLowest;
     property HighestPrice : Extended read GetHighest;
+    property AveragePrice : Extended read GetAverage;
     property IsReady : Boolean read GetIsReady;
     constructor Create; override;
     destructor Destroy; override;
@@ -120,6 +127,20 @@ uses
 function TWindowStrategyImpl.GetCleanPerc: Single;
 begin
   Result:=FCleanPerc;
+end;
+
+function TWindowStrategyImpl.GetAverage: Extended;
+var
+  I:Integer;
+  LArr:TArray<Extended>;
+begin
+  Result:=0;
+  if FTickers.Count<1 then
+    Exit;
+  SetLength(LArr,FTickers.Count);
+  for I:=0 to Pred(FTickers.Count) do
+    LArr[I]:=FTickers[I].Price;
+  Result:=Math.mean(PExtended(@LArr[0]),Length(LArr));
 end;
 
 function TWindowStrategyImpl.GetCleanThresh: Single;

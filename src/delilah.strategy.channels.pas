@@ -311,7 +311,7 @@ function TChannelStrategyImpl.DoCalcAnchorPrice: Single;
 begin
   //calculate a simple average for the anchor price
   //(this may change in the future, but children can override)
-  Result:=(LowestPrice + HighestPrice + Tickers.Last.Price) / 3;
+  Result:=(LowestPrice + AveragePrice + HighestPrice + Tickers.Last.Price) / 4;
 end;
 
 function TChannelStrategyImpl.DoGetChannelClass: TChannelImplClass;

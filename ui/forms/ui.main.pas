@@ -403,17 +403,17 @@ begin
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
   LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=0.05;
-  LShortStrategy.MidTierPerc:=0.07;
-  LShortStrategy.LargeTierPerc:=0.10;
-  LShortStrategy.SmallTierSellPerc:=0.25;
-  LShortStrategy.MidTierSellPerc:=0.35;
-  LShortStrategy.LargeTierSellPerc:=0.5;
+  LShortStrategy.SmallTierPerc:=0.025;
+  LShortStrategy.MidTierPerc:=0.035;
+  LShortStrategy.LargeTierPerc:=0.05;
+  LShortStrategy.SmallTierSellPerc:=0.10;
+  LShortStrategy.MidTierSellPerc:=0.15;
+  LShortStrategy.LargeTierSellPerc:=0.25;
   LShortStrategy.UseMarketBuy:=True;
-  LShortStrategy.UseMarketSell:=True;
+  LShortStrategy.UseMarketSell:=False;
   LShortStrategy.OnlyLowerAAC:=True;
   LShortStrategy.OnlyProfit:=True;
-  LShortStrategy.MarketFee:=0.01;//intentionally make it higher
+  LShortStrategy.MarketFee:=0.012;//intentionally make it higher
 
   (*
   LLongStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting * 5;

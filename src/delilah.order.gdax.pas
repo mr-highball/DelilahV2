@@ -106,18 +106,12 @@ function TGDAXOrderDetailsImpl.DoGetSize: Extended;
 begin
   if not Assigned(FOrder) then
     Exit(0);
-  //when an order is completed we have to differentiate between
-  //requested size, and what was actually filled. here we choose
-  //to report the filled size in this manner, but may change pending use
-  if FOrder.OrderStatus in [stDone] then
+
+  //if the order is done or cancelled, then report back the filled size
+  if FOrder.OrderStatus in [stCancelled,stDone] then
     Result:=FOrder.FilledSized
   else
-  begin
-    if (FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0)  then
-      Result:=FOrder.FilledSized
-    else
-      Result:=FOrder.Size;
-  end;
+    Result:=FOrder.Size;
 end;
 
 function TGDAXOrderDetailsImpl.DoGetType: TOrderDetailsType;

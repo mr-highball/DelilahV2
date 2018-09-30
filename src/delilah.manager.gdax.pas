@@ -49,7 +49,7 @@ type
 
 implementation
 uses
-  gdax.api.authenticator, delilah.order.gdax;
+  gdax.api.authenticator, delilah.order.gdax, gdax.api.fills;
 
 { TGDAXOrderManagerImpl }
 
@@ -130,7 +130,9 @@ end;
 function TGDAXOrderManagerImpl.DoCancel(const ADetails: IOrderDetails;
   out Error: String): Boolean;
 var
+  I:Integer;
   LDetails:IGDAXOrderDetails;
+  LFills:IGDAXFills;
   LContent,
   LID:String;
 begin
@@ -141,20 +143,36 @@ begin
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
+
     //attempt to delete the order assuming strategy has filled it out correctly
     if not LDetails.Order.Delete(LContent,Error) then
       Exit;
-    //there is a chance for partial filling of orders, which our parent
-    //would have no idea how to handle. to get around this, we will check for
-    //partial fills, set the order as completed and attempt to place, then
-    //remove for the id
-    if LDetails.Order.FilledSized>0 then
+
+    //the order has been cancelled, so update the status
+    LDetails.Order.OrderStatus:=stCancelled;
+
+    //in the event of partial fills, we need to check if the fills
+    //object returns anything, if so, we need to update the cancelled
+    //order's properties (since cancelling an empty order removes the id
+    //entirely from gdax)
+    LFills:=TGDAXFillsImpl.Create;
+    LFills.OrderID:=LID;
+    LFills.Authenticator:=FAuth;
+    LFills.Get(LContent,Error);
+
+    //check if we have partial fills by looking at the count
+    if LFills.Count > 0 then
     begin
-      LDetails.Order.OrderStatus:=stDone;
-      if not Place(ADetails,LID) then
-        Exit;
-      Self.Delete(LID);
+      //update size and fees with our fills object
+      LDetails.Order.FilledSized:=LFills.TotalSize[[]];
+      LDetails.Order.FillFees:=LFills.TotalFees[[]];
+
+      //manually fill out the executed value property (cumulative size * price) / size
+      for I:=0 to Pred(LFills.Count) do
+        LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue + LFills.Entries[I].Size * LFills.Entries[I].Price;
+      LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue / LFills.TotalSize[[]];
     end;
+
     Result:=True;
   except on E:Exception do
     Error:=E.Message;
@@ -180,8 +198,8 @@ begin
     LDetails:=ADetails as IGDAXOrderDetails;
     LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     LDetails.Order.Authenticator:=Authenticator;
-    //avoid a web call when we already have a done order
-    if not (LDetails.Order.OrderStatus=stDone) then
+    //avoid a web call when we already have a cancelled/done order
+    if not (LDetails.Order.OrderStatus in [stCancelled,stDone]) then
     begin
       //attempt to post the order assuming strategy has filled it out correctly
       if not LDetails.Order.Get(LContent,LError) then

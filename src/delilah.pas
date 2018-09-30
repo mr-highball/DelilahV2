@@ -131,8 +131,6 @@ type
   end;
 
 implementation
-uses
-  Math;
 
 { TDelilahImpl.TLedgerPair }
 
@@ -504,15 +502,8 @@ procedure TDelilahImpl.DoStatus(const ADetails: IOrderDetails;
   const AID: String; const AOldStatus, ANewStatus: TOrderManagerStatus);
 begin
   case ANewStatus of
-    //when an order is marked as canceled we need to balance
-    //any holds on the funds and inventory ledger
-    omCanceled:
-      begin
-        BalanceOrder(AID,lsHold);
-        BalanceOrder(AID,lsInvHold);
-      end;
-    //for completed orders, call down to complete order method
-    omCompleted:
+    //when an order is marked as canceled/completed call down to complete order
+    omCanceled,omCompleted:
       begin
         CompleteOrder(ADetails,AID);
       end;
@@ -662,43 +653,49 @@ begin
   BalanceOrder(AID,lsHold);
   BalanceOrder(AID,lsInvHold);
 
-  //record entries to funds ledger
-  if ADetails.OrderType=odBuy then
-    LBal:=FFundsLedger.RecordEntry(
-      ADetails.Price * ADetails.Size,
-      ltDebit,
-      LID
-    ).Balance
-  else
-    LBal:=FFundsLedger.RecordEntry(
-      ADetails.Price * ADetails.Size,
-      ltCredit,
-      LID
-    ).Balance;
-  StoreLedgerID(AID,LID,lsStd);
-  LOldInv:=FInvLedger.Balance;
+  if ADetails.Size > 0 then
+  begin
+    //record entries to funds ledger
+    if ADetails.OrderType=odBuy then
+      LBal:=FFundsLedger.RecordEntry(
+        ADetails.Price * ADetails.Size,
+        ltDebit,
+        LID
+      ).Balance
+    else
+      LBal:=FFundsLedger.RecordEntry(
+        ADetails.Price * ADetails.Size,
+        ltCredit,
+        LID
+      ).Balance;
+    StoreLedgerID(AID,LID,lsStd);
+    LOldInv:=FInvLedger.Balance;
 
-  //record entries to inventory ledger
-  if ADetails.OrderType=odBuy then
-    LBal:=FInvLedger.RecordEntry(
-      ADetails.Size,
-      ltCredit,
-      LID
-    ).Balance
-  else
-    LBal:=FInvLedger.RecordEntry(
-      ADetails.Size,
-      ltDebit,
-      LID
-    ).Balance;
-  StoreLedgerID(AID,LID,lsStdInv);
+    //record entries to inventory ledger
+    if ADetails.OrderType=odBuy then
+      LBal:=FInvLedger.RecordEntry(
+        ADetails.Size,
+        ltCredit,
+        LID
+      ).Balance
+    else
+      LBal:=FInvLedger.RecordEntry(
+        ADetails.Size,
+        ltDebit,
+        LID
+      ).Balance;
+    StoreLedgerID(AID,LID,lsStdInv);
 
-  //now update the average aquisition cost for our inventory
-  if FInvLedger.Balance=0 then
-    FAAC:=0
-  //only update the aquistion cost if the balance has increased
-  else if LOldInv<Inventory then
-    FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (Inventory);
+    //now update the average aquisition cost for our inventory
+    if FInvLedger.Balance=0 then
+      FAAC:=0
+    //only update the aquistion cost if the balance has increased
+    else if LOldInv<Inventory then
+      FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (Inventory);
+  end;
+
+  //lastly remove this order from the manager since we no longer need it tracked
+  FOrderManager.Delete(AID);
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;

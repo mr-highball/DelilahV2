@@ -72,6 +72,9 @@ type
     FEngine : IDelilah;
     FCompletedOrders,
     FTempWindowSetting : Cardinal;
+    FMarketFee: Single;
+    FUseMarketBuy,
+    FUseMarketSell: Boolean;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -162,6 +165,9 @@ begin
 
   //todo - remove this once strategies can persist
   FTempWindowSetting:=json_main.ReadInteger('temp_window_setting',20 * 60 * 1000);
+  FMarketFee:=StrToFloatDef(json_main.ReadString('market_fee','0.005'),0.005);
+  FUseMarketBuy:=json_main.ReadBoolean('market_buy',False);
+  FUseMarketSell:=json_main.ReadBoolean('market_sell',False);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -197,6 +203,9 @@ begin
 
   //todo - temporary, will remove
   json_main.WriteInteger('temp_window_setting',FTempWindowSetting);
+  json_main.WriteBoolean('market_sell',FUseMarketSell);
+  json_main.WriteBoolean('market_buy',FUseMarketBuy);
+  json_main.WriteString('market_fee',FloatToStr(FMarketFee));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -409,11 +418,19 @@ begin
   LShortStrategy.SmallTierSellPerc:=0.10;
   LShortStrategy.MidTierSellPerc:=0.15;
   LShortStrategy.LargeTierSellPerc:=0.25;
-  LShortStrategy.UseMarketBuy:=True;
-  LShortStrategy.UseMarketSell:=False;
+  LShortStrategy.UseMarketBuy:=FUseMarketBuy;
+  LShortStrategy.UseMarketSell:=FUseMarketSell;
   LShortStrategy.OnlyLowerAAC:=True;
   LShortStrategy.OnlyProfit:=True;
-  LShortStrategy.MarketFee:=0.01;//intentionally make it higher
+  LShortStrategy.MarketFee:=FMarketFee;
+
+  //log some quick info for strategy
+  LogInfo(
+    Format(
+      'Strategy::[UseMarketBuy]-%s [UseMarketSell]-%s [MarketFee]-%s',
+      [BoolToStr(FUseMarketBuy,True),BoolToStr(FUseMarketSell,True),FloatToStr(FMarketFee)]
+    )
+  );
 
   (*
   LLongStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting * 5;

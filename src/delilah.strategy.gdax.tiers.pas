@@ -708,6 +708,10 @@ begin
         //simple check to see if bid is lower than aac when requested
         if FOnlyLower and (RoundTo(AInventory,-8) >= LMin) then
         begin
+          //initially set this variable to what the AAC would be if a limit
+          //order was successful
+          LOrderBuyTot:=((LOrderSize *  LTicker.Ticker.Bid) + (AAAC * AInventory)) / (LOrderSize + AInventory);
+
           //for limit buys, we don't have to worry about a fee which
           //would change aac differently than the bid price
           if not FUseMarketBuy and (not (LTicker.Ticker.Bid < AAAC)) then
@@ -721,7 +725,7 @@ begin
           //made, but it's the best that can be done
           else if FUseMarketBuy and ((AInventory > 0) and (AAAC > 0)) then
           begin
-            //use this variable to hold what aac would be if successfull
+            //use this variable to hold what aac would be if successfull accounting for fee
             LOrderBuyTot:=((LOrderSize * ((1 + FMarketFee) * LTicker.Ticker.Bid) + (AAAC * AInventory)) / (LOrderSize + AInventory));
 
             //check to see if the estimated aac is not greater than the current aac
@@ -730,15 +734,15 @@ begin
               LogInfo(Format('DoFeed::BuyMode::market order shows higher [aac]:%f than [current aac]:%f',[LOrderBuyTot,AAAC]));
               Exit(True);
             end;
+          end;
 
-            //make sure we are reducing by the minimum amount, using the calculated
-            //new aac, against the old
-            if (FMinReduction > 0)
-              and ((AAAC - LOrderBuyTot / AAAC) < FMinReduction) then
-            begin
-              LogInfo('DoFeed::BuyMode::a minimum reduction is set, and the current bid would not lower AAC enough, exiting');
-              Exit(True);
-            end;
+          //make sure we are reducing by the minimum amount, using the calculated
+          //new aac, against the old
+          if (FMinReduction > 0)
+            and ((AAAC - LOrderBuyTot / AAAC) < FMinReduction) then
+          begin
+            LogInfo('DoFeed::BuyMode::a minimum reduction is set, and the current bid would not lower AAC enough, exiting');
+            Exit(True);
           end;
         end;
 

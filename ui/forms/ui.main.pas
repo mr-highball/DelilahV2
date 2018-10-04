@@ -72,7 +72,9 @@ type
     FEngine : IDelilah;
     FCompletedOrders,
     FTempWindowSetting : Cardinal;
-    FMarketFee: Single;
+    FMarketFee,
+    FMinProfit,
+    FMinReduce: Single;
     FUseMarketBuy,
     FUseMarketSell: Boolean;
     procedure SetupEmail;
@@ -163,11 +165,13 @@ begin
   //simple counter for completed orders
   FCompletedOrders:=json_main.ReadInteger('completed_orders',0);
 
-  //todo - remove this once strategies can persist
+  //todo - remove these once strategies can persist
   FTempWindowSetting:=json_main.ReadInteger('temp_window_setting',20 * 60 * 1000);
   FMarketFee:=StrToFloatDef(json_main.ReadString('market_fee','0.005'),0.005);
   FUseMarketBuy:=json_main.ReadBoolean('market_buy',False);
   FUseMarketSell:=json_main.ReadBoolean('market_sell',False);
+  FMinReduce:=StrToFloatDef(json_main.ReadString('min_reduction','0'),0);
+  FMinProfit:=StrToFloatDef(json_main.ReadString('min_profit','0'),0);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -206,6 +210,8 @@ begin
   json_main.WriteBoolean('market_sell',FUseMarketSell);
   json_main.WriteBoolean('market_buy',FUseMarketBuy);
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
+  json_main.WriteString('min_reduction',FloatToStr(FMinReduce));
+  json_main.WriteString('min_profit',FloatToStr(FMinProfit));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -412,23 +418,25 @@ begin
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
   LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=0.01;
-  LShortStrategy.MidTierPerc:=0.02;
-  LShortStrategy.LargeTierPerc:=0.025;
-  LShortStrategy.SmallTierSellPerc:=0.10;
-  LShortStrategy.MidTierSellPerc:=0.15;
-  LShortStrategy.LargeTierSellPerc:=0.25;
+  LShortStrategy.SmallTierPerc:=0;//0.01;
+  LShortStrategy.MidTierPerc:=0;//0.02;
+  LShortStrategy.LargeTierPerc:=0;//0.025;
+  LShortStrategy.SmallTierSellPerc:=0;//0.10;
+  LShortStrategy.MidTierSellPerc:=0;//0.15;
+  LShortStrategy.LargeTierSellPerc:=0;//0.25;
   LShortStrategy.UseMarketBuy:=FUseMarketBuy;
   LShortStrategy.UseMarketSell:=FUseMarketSell;
-  LShortStrategy.OnlyLowerAAC:=True;
+  LShortStrategy.OnlyLowerAAC:=False;//True;
+  LShortStrategy.MinReduction:=FMinReduce;
+  LShortStrategy.MinProfit:=FMinProfit;
   LShortStrategy.OnlyProfit:=True;
   LShortStrategy.MarketFee:=FMarketFee;
 
   //log some quick info for strategy
   LogInfo(
     Format(
-      'Strategy::[UseMarketBuy]-%s [UseMarketSell]-%s [MarketFee]-%s',
-      [BoolToStr(FUseMarketBuy,True),BoolToStr(FUseMarketSell,True),FloatToStr(FMarketFee)]
+      'Strategy::[UseMarketBuy]-%s [UseMarketSell]-%s [MarketFee]-%s [MinReduce]-%s [MinProfit]-%s',
+      [BoolToStr(FUseMarketBuy,True),BoolToStr(FUseMarketSell,True),FloatToStr(FMarketFee),FloatToStr(FMinReduce),FloatToStr(FMinProfit)]
     )
   );
 

@@ -731,10 +731,13 @@ begin
               Exit(True);
             end;
 
-            //make sure we are reducing
-            if (FMinReduction > 0) then
+            //make sure we are reducing by the minimum amount, using the calculated
+            //new aac, against the old
+            if (FMinReduction > 0)
+              and ((AAAC - LOrderBuyTot / AAAC) < FMinReduction) then
             begin
-              //todo - implement this
+              LogInfo('DoFeed::BuyMode::a minimum reduction is set, and the current bid would not lower AAC enough, exiting');
+              Exit(True);
             end;
           end;
         end;

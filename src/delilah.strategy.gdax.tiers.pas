@@ -34,6 +34,8 @@ type
     function GetMarketFee: Single;
     function GetMidPerc: Single;
     function GetMidSellPerc: Single;
+    function GetMinProfit: Single;
+    function GetMinReduction: Single;
     function GetOnlyLower: Boolean;
     function GetOnlyProfit: Boolean;
     function GetSmallPerc: Single;
@@ -46,6 +48,8 @@ type
     procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
     procedure SetMidSellPerc(Const AValue: Single);
+    procedure SetMinProfit(Const AValue: Single);
+    procedure SetMinReduction(Const AValue: Single);
     procedure SetOnlyLower(Const AValue: Boolean);
     procedure SetOnlyProfit(Const AValue: Boolean);
     procedure SetSmallPerc(Const AValue: Single);
@@ -63,9 +67,17 @@ type
     *)
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
     (*
+      minimum percentage to sell inventory for, only works with OnlyProfit true
+    *)
+    property MinProfit : Single read GetMinProfit write SetMinProfit;
+    (*
       when true, buy orders can only be placed if it would lower AAC
     *)
     property OnlyLowerAAC : Boolean read GetOnlyLower write SetOnlyLower;
+    (*
+      minimum percentage to reduce AAC, only works when OnlyLowerAAC is True
+    *)
+    property MinReduction : Single read GetMinReduction write SetMinReduction;
     (*
       when true, market orders are made for buys instead of limit orders ensuring
       a quick entry price, but most likely incurring fees
@@ -124,7 +136,9 @@ type
     FLargePerc,
     FSmallSellPerc,
     FMidSellPerc,
-    FLargeSellPerc: Single;
+    FLargeSellPerc,
+    FMinProfit,
+    FMinReduction: Single;
     FDontBuy,
     FSellItAllNow,
     FLargeBuy,
@@ -139,6 +153,8 @@ type
     function GetMarketFee: Single;
     function GetMidPerc: Single;
     function GetMidSellPerc: Single;
+    function GetMinProfit: Single;
+    function GetMinReduction: Single;
     function GetOnlyLower: Boolean;
     function GetOnlyProfit: Boolean;
     function GetSmallPerc: Single;
@@ -151,6 +167,8 @@ type
     procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
     procedure SetMidSellPerc(Const AValue: Single);
+    procedure SetMinProfit(Const AValue: Single);
+    procedure SetMinReduction(Const AValue: Single);
     procedure SetOnlyLower(Const AValue: Boolean);
     procedure SetOnlyProfit(Const AValue: Boolean);
     procedure SetSmallPerc(Const AValue: Single);
@@ -193,7 +211,9 @@ type
   public
     property ChannelStrategy : IChannelStrategy read GetChannel;
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
+    property MinProfit : Single read GetMinProfit write SetMinProfit;
     property OnlyLowerAAC : Boolean read GetOnlyLower write SetOnlyLower;
+    property MinReduction : Single read GetMinReduction write SetMinReduction;
     property UseMarketBuy : Boolean read GetUseMarketBuy write SetUseMarketBuy;
     property UseMarketSell : Boolean read GetUseMarketSell write SetMarketSell;
     property MarketFee : Single read GetMarketFee write SetMarketFee;
@@ -246,6 +266,16 @@ end;
 function TTierStrategyGDAXImpl.GetMidSellPerc: Single;
 begin
   Result:=FMidSellPerc;
+end;
+
+function TTierStrategyGDAXImpl.GetMinProfit: Single;
+begin
+  Result:=FMinProfit;
+end;
+
+function TTierStrategyGDAXImpl.GetMinReduction: Single;
+begin
+  Result:=FMinReduction;
 end;
 
 function TTierStrategyGDAXImpl.GetOnlyLower: Boolean;
@@ -312,6 +342,16 @@ end;
 procedure TTierStrategyGDAXImpl.SetMidSellPerc(const AValue: Single);
 begin
   FMidSellPerc:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetMinProfit(Const AValue: Single);
+begin
+  FMinProfit:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetMinReduction(Const AValue: Single);
+begin
+  FMinReduction:=AValue;
 end;
 
 procedure TTierStrategyGDAXImpl.SetOnlyLower(const AValue: Boolean);
@@ -608,6 +648,14 @@ begin
             LogInfo('DoFeed::SellMode::sell would result in loss, and OnlyProfit is on, exiting');
             Exit(True)
           end;
+
+          //if we have a minimum profit, see if we've met the criteria
+          if (FMinProfit > 0)
+            and ((LOrderSellTot - (AAAC * LOrderSize)) / (AAAC * LOrderSize) < FMinProfit) then
+          begin
+            LogInfo('DoFeed::SellMode::a minimum profit is set and the current ask price is less, exiting');
+            Exit(True);
+          end;
         end
         else
         begin
@@ -681,6 +729,12 @@ begin
             begin
               LogInfo(Format('DoFeed::BuyMode::market order shows higher [aac]:%f than [current aac]:%f',[LOrderBuyTot,AAAC]));
               Exit(True);
+            end;
+
+            //make sure we are reducing
+            if (FMinReduction > 0) then
+            begin
+              //todo - implement this
             end;
           end;
         end;
@@ -832,6 +886,8 @@ begin
   FMidSellperc:=0.10;
   FLargeSellPerc:=0.20;
   FMarketFee:=0.003;
+  FMinProfit:=0;
+  FMinReduction:=0;
   FUseMarketBuy:=False;
   FUseMarketSell:=False;
   InitChannel;

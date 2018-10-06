@@ -418,15 +418,15 @@ begin
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
   LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=0;//0.01;
-  LShortStrategy.MidTierPerc:=0;//0.02;
-  LShortStrategy.LargeTierPerc:=0;//0.025;
-  LShortStrategy.SmallTierSellPerc:=0;//0.10;
-  LShortStrategy.MidTierSellPerc:=0;//0.15;
-  LShortStrategy.LargeTierSellPerc:=0;//0.25;
+  LShortStrategy.SmallTierPerc:=0.10;
+  LShortStrategy.MidTierPerc:=0.10;
+  LShortStrategy.LargeTierPerc:=0.15;
+  LShortStrategy.SmallTierSellPerc:=1.0;
+  LShortStrategy.MidTierSellPerc:=1.0;
+  LShortStrategy.LargeTierSellPerc:=1.0;
   LShortStrategy.UseMarketBuy:=FUseMarketBuy;
   LShortStrategy.UseMarketSell:=FUseMarketSell;
-  LShortStrategy.OnlyLowerAAC:=False;//True;
+  LShortStrategy.OnlyLowerAAC:=True;
   LShortStrategy.MinReduction:=FMinReduce;
   LShortStrategy.MinProfit:=FMinProfit;
   LShortStrategy.OnlyProfit:=True;

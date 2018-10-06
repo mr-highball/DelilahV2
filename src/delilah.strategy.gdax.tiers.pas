@@ -714,9 +714,9 @@ begin
 
           //for limit buys, we don't have to worry about a fee which
           //would change aac differently than the bid price
-          if not FUseMarketBuy and (not (LTicker.Ticker.Bid < AAAC)) then
+          if not FUseMarketBuy and (LOrderBuyTot > AAAC) then
           begin
-            LogInfo(Format('DoFeed::BuyMode::ticker [bid]:%f is not lower than [aac]:%f',[LTicker.Ticker.Bid,AAAC]));
+            LogInfo(Format('DoFeed::BuyMode::[new aac]:%f is not lower than [aac]:%f',[LOrderBuyTot,AAAC]));
             Exit(True);
           end
           //account for what the new aac "would" be assuming we get the order
@@ -739,7 +739,7 @@ begin
           //make sure we are reducing by the minimum amount, using the calculated
           //new aac, against the old
           if (FMinReduction > 0)
-            and ((AAAC - LOrderBuyTot / AAAC) < FMinReduction) then
+            and (((AAAC - LOrderBuyTot) / AAAC) < FMinReduction) then
           begin
             LogInfo('DoFeed::BuyMode::a minimum reduction is set, and the current bid would not lower AAC enough, exiting');
             Exit(True);

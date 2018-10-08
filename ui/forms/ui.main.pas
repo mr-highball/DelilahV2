@@ -418,9 +418,9 @@ begin
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
   LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=0.10;
-  LShortStrategy.MidTierPerc:=0.10;
-  LShortStrategy.LargeTierPerc:=0.15;
+  LShortStrategy.SmallTierPerc:=0.05;
+  LShortStrategy.MidTierPerc:=0.05;
+  LShortStrategy.LargeTierPerc:=0.10;
   LShortStrategy.SmallTierSellPerc:=1.0;
   LShortStrategy.MidTierSellPerc:=1.0;
   LShortStrategy.LargeTierSellPerc:=1.0;

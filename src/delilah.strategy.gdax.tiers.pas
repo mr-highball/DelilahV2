@@ -801,25 +801,6 @@ begin
   end
   else
   begin
-    //check for any buys weighted highest to lowest in priority
-    if not FDontBuy then
-    begin
-      if FLargeBuy then
-      begin
-        Sell:=False;
-        Percentage:=FLargePerc;
-        Size:=psLarge;
-        Exit(True);
-      end
-      else if FSmallBuy then
-      begin
-        Sell:=False;
-        Percentage:=FSmallPerc;
-        Size:=psSmall;
-        Exit(True);
-      end;
-    end;
-
     //check for any sells weighted highest to lowest in priority
     if FLargeSell then
     begin
@@ -841,6 +822,25 @@ begin
       Percentage:=FSmallSellPerc;
       Size:=psSmall;
       Exit(True);
+    end;
+
+    //check for any buys weighted highest to lowest in priority
+    if not FDontBuy then
+    begin
+      if FLargeBuy then
+      begin
+        Sell:=False;
+        Percentage:=FLargePerc;
+        Size:=psLarge;
+        Exit(True);
+      end
+      else if FSmallBuy then
+      begin
+        Sell:=False;
+        Percentage:=FSmallPerc;
+        Size:=psSmall;
+        Exit(True);
+      end;
     end;
   end;
 end;

@@ -198,7 +198,7 @@ type
     (*
       returns true if we should take a particular position
     *)
-    function GetPosition(Out Size:TPositionSize;Out Percentage:Single;Out Sell:Boolean):Boolean;
+    function GetPosition(Const AInventory:Extended;Out Size:TPositionSize;Out Percentage:Single;Out Sell:Boolean):Boolean;
     (*
       after a call is made to GetPosition, call this method to report that
       we were successful placing to the order manager
@@ -591,7 +591,7 @@ begin
     LGDAXOrder.Product:=LTicker.Ticker.Product;
 
     //get whether or not we should make a position
-    if GetPosition(LSize,LPerc,LSell) then
+    if GetPosition(AInventory,LSize,LPerc,LSell) then
     begin
       //this will remove any old limit orders outstanding
       ClearOldPositions(AManager);
@@ -787,12 +787,12 @@ begin
   end;
 end;
 
-function TTierStrategyGDAXImpl.GetPosition(out Size: TPositionSize; out
+function TTierStrategyGDAXImpl.GetPosition(Const AInventory:Extended;out Size: TPositionSize; out
   Percentage: Single; out Sell: Boolean): Boolean;
 begin
   Result:=False;
   //prioritize an all sell above everything
-  if FSellItAllNow then
+  if FSellItAllNow and (AInventory > 0) then
   begin
     Sell:=True;
     Percentage:=1;
@@ -801,27 +801,31 @@ begin
   end
   else
   begin
-    //check for any sells weighted highest to lowest in priority
-    if FLargeSell then
+    //can't sell without inventory, this check ensures buy signals don't get ignored
+    if AInventory > 0 then
     begin
-      Sell:=True;
-      Percentage:=FLargeSellPerc;
-      Size:=psLarge;
-      Exit(True);
-    end
-    else if FMidSell then
-    begin
-      Sell:=True;
-      Percentage:=FMidSellPerc;
-      Size:=psMid;
-      Exit(True);
-    end
-    else if FSmallSell then
-    begin
-      Sell:=True;
-      Percentage:=FSmallSellPerc;
-      Size:=psSmall;
-      Exit(True);
+      //check for any sells weighted highest to lowest in priority
+      if FLargeSell then
+      begin
+        Sell:=True;
+        Percentage:=FLargeSellPerc;
+        Size:=psLarge;
+        Exit(True);
+      end
+      else if FMidSell then
+      begin
+        Sell:=True;
+        Percentage:=FMidSellPerc;
+        Size:=psMid;
+        Exit(True);
+      end
+      else if FSmallSell then
+      begin
+        Sell:=True;
+        Percentage:=FSmallSellPerc;
+        Size:=psSmall;
+        Exit(True);
+      end;
     end;
 
     //check for any buys weighted highest to lowest in priority

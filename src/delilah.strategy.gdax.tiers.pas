@@ -417,6 +417,7 @@ end;
 procedure TTierStrategyGDAXImpl.GTFOUp(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('GTFOUp::direction is ' + IntToStr(Ord(ADirection)));
   //entering or exiting this channel from the upper bounds puts us in a
   //"watch" mode for GTFO by toggling the "dont buy" flag
@@ -429,6 +430,7 @@ end;
 procedure TTierStrategyGDAXImpl.GTFOLow(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('GTFOLow::direction is ' + IntToStr(Ord(ADirection)));
   //we need to gtfo...
   case ADirection of
@@ -440,6 +442,7 @@ end;
 procedure TTierStrategyGDAXImpl.LargeBuyUp(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('LargeBuyUp::direction is ' + IntToStr(Ord(ADirection)));
   //if we break the upper bounds, we're no longer requesting for a large
   //buy in
@@ -451,6 +454,7 @@ end;
 procedure TTierStrategyGDAXImpl.LargeBuyLow(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('LargeBuyLow::direction is ' + IntToStr(Ord(ADirection)));
   //entering from the lower bound of this channel means it's a good oppurtunity
   //to buy in, while exiting, means hold off
@@ -463,6 +467,7 @@ end;
 procedure TTierStrategyGDAXImpl.SmallBuyUp(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('SmallBuyUp::direction is ' + IntToStr(Ord(ADirection)));
   //if we break the upper bounds, we're no longer requesting for a small
   //buy in
@@ -474,6 +479,7 @@ end;
 procedure TTierStrategyGDAXImpl.SmallBuyLow(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('SmallBuyLow::direction is ' + IntToStr(Ord(ADirection)));
   //entering from the lower bound of this channel means it's a good oppurtunity
   //to buy in, while exiting, means hold off
@@ -486,6 +492,7 @@ end;
 procedure TTierStrategyGDAXImpl.SmallSellUp(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('SmallSellUp::direction is ' + IntToStr(Ord(ADirection)));
   //exiting the upper bounds means we no longer should sell small
   case ADirection of
@@ -496,6 +503,7 @@ end;
 procedure TTierStrategyGDAXImpl.SmallSellLow(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('SmallSellLow::direction is ' + IntToStr(Ord(ADirection)));
   //exiting the lower, means we no longer should sell, but entering
   //puts us in the sell mode
@@ -508,6 +516,7 @@ end;
 procedure TTierStrategyGDAXImpl.LargeSellUp(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('LargeSellUp::direction is ' + IntToStr(Ord(ADirection)));
   //large sell exiting puts us into to large sell mode, while
   //entering puts us back to mid sell
@@ -520,6 +529,7 @@ end;
 procedure TTierStrategyGDAXImpl.LargeSellLow(const ASender: IChannel;
   const ADirection: TChannelDirection);
 begin
+  PositionSuccess;
   LogInfo('LargeSellLow::direction is ' + IntToStr(Ord(ADirection)));
   //the lower channel controls mid-range sell oppurtunities
   case ADirection of

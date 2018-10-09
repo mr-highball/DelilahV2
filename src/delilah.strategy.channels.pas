@@ -27,7 +27,7 @@ type
     an abstraction for a defined price range based on an anchor price
     and deviations for an upper and lower limit
   *)
-  IChannel = interface
+  IChannel = interface(IStrategy)
     ['{7E2B54FC-43AE-48B6-B12B-584959816EA6}']
     //property methods
     function GetAnchor: Single;
@@ -141,7 +141,7 @@ type
   (*
     base implementation for a channel
   *)
-  TChannelImpl = class(TInterfacedObject,IChannel)
+  TChannelImpl = class(TStrategyImpl,IChannel)
   strict private
     FName: String;
     FOnUpper,
@@ -174,6 +174,10 @@ type
     procedure DoOnLower(Const ASender:IChannel;Const ADirection:TChannelDirection);
   strict protected
     procedure DoBeforeCheckPrice(Const APrice:Single);virtual;
+    (*
+      occurs after a price check, and passes whether or not a channel
+      was entered/exited
+    *)
     procedure DoAfterCheckPrice(Const APrice:Single;Const ATriggers:Boolean;
       Const ADirection:TChannelDirection);virtual;
   public
@@ -529,9 +533,12 @@ begin
 end;
 
 function TChannelImpl.CheckPrice(const APrice: Single):IChannel;
+var
+  LTriggers:Boolean;
 begin
   //init result
   Result:=Self as IChannel;
+  LTriggers:=False;
 
   //on the first check price, this will be zero, so go ahead and assign
   if FLastPrice <= 0 then
@@ -542,20 +549,36 @@ begin
 
   //check for price entering via upper channel
   if (FLastPrice > Upper) and (APrice < Upper) then
+  begin
+    LogInfo(Format('TChannelImpl::CheckPrice::EnterUpper::[LastPrice]:%s [Upper]:%s [Price]:%s',[FloatToStr(FLastPrice),FloatToStr(Upper),FloatToStr(APrice)]));
+    LTriggers:=True;
     DoOnUpper(Result,cdEnter)
+  end
   //otherwise check for an exit
   else if (FLastPrice < Upper) and (APrice > Upper) then
+  begin
+    LogInfo(Format('TChannelImpl::CheckPrice::ExitUpper::[LastPrice]:%s [Upper]:%s [Price]:%s',[FloatToStr(FLastPrice),FloatToStr(Upper),FloatToStr(APrice)]));
+    LTriggers:=True;
     DoOnUpper(Result,cdExit);
+  end;
 
   //check for price entering via lower channel (reverse from upper)
   if (FLastPrice < Lower) and (APrice > Lower) then
+  begin
+    LogInfo(Format('TChannelImpl::CheckPrice::EnterLower::[LastPrice]:%s [Lower]:%s [Price]:%s',[FloatToStr(FLastPrice),FloatToStr(Lower),FloatToStr(APrice)]));
+    LTriggers:=True;
     DoOnLower(Result,cdEnter)
+  end
   //otherwise check for an exit
   else if (FLastPrice > Lower) and (APrice < Lower) then
+  begin
+    LogInfo(Format('TChannelImpl::CheckPrice::ExitLower::[LastPrice]:%s [Lower]:%s [Price]:%s',[FloatToStr(FLastPrice),FloatToStr(Lower),FloatToStr(APrice)]));
+    LTriggers:=True;
     DoOnLower(Result,cdExit);
+  end;
 
   //call to virtual "after" method
-  DoAfterCheckPrice(APrice,False,cdEnter);
+  DoAfterCheckPrice(APrice,LTriggers,cdEnter);
 
   //set the last price to this price
   FLastPrice:=APrice;

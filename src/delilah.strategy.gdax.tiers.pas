@@ -444,10 +444,9 @@ procedure TTierStrategyGDAXImpl.LargeBuyUp(const ASender: IChannel;
 begin
   PositionSuccess;
   LogInfo('LargeBuyUp::direction is ' + IntToStr(Ord(ADirection)));
-  //if we break the upper bounds, we're no longer requesting for a large
-  //buy in
+  //if we break the upper bounds, we're probably going higher
   case ADirection of
-    cdExit: FLargeBuy:=False;
+    cdExit: FLargeBuy:=True;
   end;
 end;
 
@@ -460,7 +459,6 @@ begin
   //to buy in, while exiting, means hold off
   case ADirection of
     cdEnter: FLargeBuy:=True;
-    cdExit: FLargeBuy:=False;
   end;
 end;
 
@@ -469,10 +467,9 @@ procedure TTierStrategyGDAXImpl.SmallBuyUp(const ASender: IChannel;
 begin
   PositionSuccess;
   LogInfo('SmallBuyUp::direction is ' + IntToStr(Ord(ADirection)));
-  //if we break the upper bounds, we're no longer requesting for a small
-  //buy in
+  //if we break the upper bounds, we're probably going higher
   case ADirection of
-    cdExit: FSmallBuy:=False;
+    cdExit: FSmallBuy:=True;
   end;
 end;
 
@@ -485,7 +482,6 @@ begin
   //to buy in, while exiting, means hold off
   case ADirection of
     cdEnter: FSmallBuy:=True;
-    cdExit: FSmallBuy:=False;
   end;
 end;
 
@@ -494,9 +490,9 @@ procedure TTierStrategyGDAXImpl.SmallSellUp(const ASender: IChannel;
 begin
   PositionSuccess;
   LogInfo('SmallSellUp::direction is ' + IntToStr(Ord(ADirection)));
-  //exiting the upper bounds means we no longer should sell small
+  //entering/exiting both trigger a sell
   case ADirection of
-    cdExit: FSmallSell:=False;
+    cdEnter,cdExit: FSmallSell:=True;
   end;
 end;
 
@@ -505,11 +501,9 @@ procedure TTierStrategyGDAXImpl.SmallSellLow(const ASender: IChannel;
 begin
   PositionSuccess;
   LogInfo('SmallSellLow::direction is ' + IntToStr(Ord(ADirection)));
-  //exiting the lower, means we no longer should sell, but entering
-  //puts us in the sell mode
+  //entering/exiting both trigger a sell
   case ADirection of
-    cdEnter: FSmallSell:=True;
-    cdExit: FSmallSell:=False;
+    cdEnter,cdExit: FSmallSell:=True;
   end;
 end;
 
@@ -533,8 +527,7 @@ begin
   LogInfo('LargeSellLow::direction is ' + IntToStr(Ord(ADirection)));
   //the lower channel controls mid-range sell oppurtunities
   case ADirection of
-    cdEnter: FMidSell:=True;
-    cdExit: FMidSell:=False;
+    cdEnter,cdExit: FMidSell:=True;
   end;
 end;
 
@@ -801,6 +794,7 @@ function TTierStrategyGDAXImpl.GetPosition(Const AInventory:Extended;out Size: T
   Percentage: Single; out Sell: Boolean): Boolean;
 begin
   Result:=False;
+  Sell:=False;
   //prioritize an all sell above everything
   if FSellItAllNow and (AInventory > 0) then
   begin
@@ -868,6 +862,7 @@ begin
   FLargeSell:=False;
   FMidSell:=False;
   FSmallSell:=False;
+  FSellItAllNow:=False;
 end;
 
 procedure TTierStrategyGDAXImpl.ClearOldPositions(const AManager: IOrderManager);

@@ -74,7 +74,13 @@ type
     FTempWindowSetting : Cardinal;
     FMarketFee,
     FMinProfit,
-    FMinReduce: Single;
+    FMinReduce,
+    FSmallBuyPerc,
+    FMedBuyPerc,
+    FLargeBuyPerc,
+    FSmallSellPerc,
+    FMedSellPerc,
+    FLargeSellPerc: Single;
     FUseMarketBuy,
     FUseMarketSell: Boolean;
     procedure SetupEmail;
@@ -172,6 +178,12 @@ begin
   FUseMarketSell:=json_main.ReadBoolean('market_sell',False);
   FMinReduce:=StrToFloatDef(json_main.ReadString('min_reduction','0'),0);
   FMinProfit:=StrToFloatDef(json_main.ReadString('min_profit','0'),0);
+  FSmallBuyPerc:=StrToFloatDef(json_main.ReadString('small_buy_perc','0'),0);
+  FMedBuyPerc:=StrToFloatDef(json_main.ReadString('med_buy_perc','0'),0);
+  FLargeBuyPerc:=StrToFloatDef(json_main.ReadString('large_buy_perc','0'),0);
+  FSmallSellPerc:=StrToFloatDef(json_main.ReadString('small_sell_perc','0'),0);
+  FMedSellPerc:=StrToFloatDef(json_main.ReadString('med_sell_perc','0'),0);
+  FLargeSellPerc:=StrToFloatDef(json_main.ReadString('large_sell_perc','0'),0);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -212,6 +224,12 @@ begin
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
   json_main.WriteString('min_reduction',FloatToStr(FMinReduce));
   json_main.WriteString('min_profit',FloatToStr(FMinProfit));
+  json_main.WriteString('small_buy_perc',FloatToStr(FSmallBuyPerc));
+  json_main.WriteString('med_buy_perc',FloatToStr(FMedBuyPerc));
+  json_main.WriteString('large_buy_perc',FloatToStr(FLargeBuyPerc));
+  json_main.WriteString('small_sell_perc',FloatToStr(FSmallSellPerc));
+  json_main.WriteString('med_sell_perc',FloatToStr(FMedSellPerc));
+  json_main.WriteString('large_sell_perc',FloatToStr(FLargeSellPerc));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -418,12 +436,12 @@ begin
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
   LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=0.04;
-  LShortStrategy.MidTierPerc:=0.04;
-  LShortStrategy.LargeTierPerc:=0.08;
-  LShortStrategy.SmallTierSellPerc:=0.25;
-  LShortStrategy.MidTierSellPerc:=0.50;
-  LShortStrategy.LargeTierSellPerc:=1.0;
+  LShortStrategy.SmallTierPerc:=FSmallBuyPerc;
+  LShortStrategy.MidTierPerc:=FMedBuyPerc;
+  LShortStrategy.LargeTierPerc:=FLargeBuyPerc;
+  LShortStrategy.SmallTierSellPerc:=FSmallSellPerc;
+  LShortStrategy.MidTierSellPerc:=FMedSellPerc;
+  LShortStrategy.LargeTierSellPerc:=FLargeSellPerc;
   LShortStrategy.UseMarketBuy:=FUseMarketBuy;
   LShortStrategy.UseMarketSell:=FUseMarketSell;
   LShortStrategy.OnlyLowerAAC:=True;

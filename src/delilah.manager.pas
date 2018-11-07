@@ -9,6 +9,8 @@ uses
 
 type
 
+  TManagerLogEvent = procedure(Const AMessage:String) of object;
+
   { TOrderManagerImpl }
   (*
     base implementation of IOrderManager with virtual accessors
@@ -18,6 +20,9 @@ type
     type
       TOrderDetails = TFPGMapInterfacedObjectData<String,IOrderDetails>;
   strict private
+    FOnInfo,
+    FOnError,
+    FOnWarn : TManagerLogEvent;
     FOnBeforePlace: TBeforeOrderPlaceEvent;
     FOnPlace: TOrderPlaceEvent;
     FOnRemove: TOrderRemoveEvent;
@@ -52,6 +57,11 @@ type
     procedure DoOnStatus(Const ADetails:IOrderDetails;Const AID:String;
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
     function DoRefresh(Out Error:String):Boolean;virtual;abstract;
+
+    //logging methods
+    procedure LogInfo(Const AMessage:String);
+    procedure LogError(Const AMessage:String);
+    procedure LogWarning(Const AMessage:String);
   public
     //events
     property OnBeforePlace : TBeforeOrderPlaceEvent read GetOnBeforePlace
@@ -79,7 +89,8 @@ type
     function ID(Const ADetails:IOrderDetails;Out ID:String):Boolean;
     function Refresh(Out Error:String):Boolean;
     procedure Clear;
-    constructor Create;virtual;
+    constructor Create;virtual;overload;
+    constructor Create(Const AOnInfo,AOnError,AOnWarn:TManagerLogEvent);virtual;overload;
     destructor Destroy; override;
   end;
 
@@ -181,6 +192,24 @@ procedure TOrderManagerImpl.DoOnStatus(const ADetails: IOrderDetails;
 begin
   if Assigned(FOnStatus) then
     FOnStatus(ADetails,AID,AOldStatus,ANewStatus);
+end;
+
+procedure TOrderManagerImpl.LogInfo(const AMessage: String);
+begin
+  if Assigned(FOnInfo) then
+    FOnInfo(Self.Classname + '::' + AMessage);
+end;
+
+procedure TOrderManagerImpl.LogError(const AMessage: String);
+begin
+  if Assigned(FOnError) then
+    FOnError(Self.Classname + '::' + AMessage);
+end;
+
+procedure TOrderManagerImpl.LogWarning(const AMessage: String);
+begin
+  if Assigned(FOnWarn) then
+    FOnWarn(Self.Classname + '::' + AMessage);
 end;
 
 function TOrderManagerImpl.Place(const ADetails: IOrderDetails; out ID: String;
@@ -354,6 +383,15 @@ end;
 constructor TOrderManagerImpl.Create;
 begin
   FOrders:=TOrderDetails.Create;
+end;
+
+constructor TOrderManagerImpl.Create(const AOnInfo, AOnError,
+  AOnWarn: TManagerLogEvent);
+begin
+  Create;
+  FOnInfo:=AOnInfo;
+  FOnError:=AOnError;
+  FOnWarn:=AOnWarn;
 end;
 
 destructor TOrderManagerImpl.Destroy;

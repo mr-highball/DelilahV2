@@ -144,9 +144,14 @@ begin
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
 
+    LogInfo(Format('DoCancel::starting cancel [OrderID]-%s',[LDetails.Order.ID]));
+
     //attempt to delete the order assuming strategy has filled it out correctly
     if not LDetails.Order.Delete(LContent,Error) then
+    begin
+      LogError('DoCancel::Delete::failure with [Content]-'+LContent);
       Exit;
+    end;
 
     //the order has been cancelled, so update the status
     LDetails.Order.OrderStatus:=stCancelled;
@@ -158,7 +163,29 @@ begin
     LFills:=TGDAXFillsImpl.Create;
     LFills.OrderID:=LID;
     LFills.Authenticator:=FAuth;
-    LFills.Get(LContent,Error);
+    if not LFills.Get(LContent,Error) then
+    begin
+      LogInfo(
+        Format(
+          'DoCancel::FillsCheck::fills check failed but may be fine if not ' +
+          'a partial, [Error]-%s [Content]-%s',
+          [Error,LContent]
+        )
+      );
+
+      //in this case try to fall back to an order check just to make sure
+      //something with fills isn't going wrong
+      if not LDetails.Order.Get(LContent,Error) then
+      begin
+        LogInfo(
+          Format(
+            'DoCancel::OrderCheckFallback::order check failed but may be fine if not ' +
+            'a partial, [Error]-%s [Content]-%s',
+            [Error,LContent]
+          )
+        );
+      end;
+    end;
 
     //check if we have partial fills by looking at the count
     if LFills.Count > 0 then
@@ -166,6 +193,17 @@ begin
       //update size and fees with our fills object
       LDetails.Order.FilledSized:=LFills.TotalSize[[]];
       LDetails.Order.FillFees:=LFills.TotalFees[[]];
+
+      //log that we had a partial fill
+      LogInfo(
+        Format(
+          'DoCancel::PartialFound::[FilledSize]-%s [FillFees]-%s',
+          [
+            FloatToStr(LDetails.Order.FilledSized),
+            FloatToStr(LDetails.Order.FillFees)
+          ]
+        )
+      );
 
       //manually fill out the executed value property (cumulative size * price) / size
       for I:=0 to Pred(LFills.Count) do
@@ -189,15 +227,17 @@ var
 begin
   Result:=omCanceled;
   try
-    //todo - probably add out error parameter to DoGetStatus, right now
-    //they are just unhandled
-
     //will check everything needed for continuing
     if not GDAXDetailsValid(ADetails,LError) then
+    begin
+      LogError('DoGetStatus::[Error]-' + LError);
       Exit;
+    end;
+
     LDetails:=ADetails as IGDAXOrderDetails;
     LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     LDetails.Order.Authenticator:=Authenticator;
+
     //avoid a web call when we already have a cancelled/done order
     if not (LDetails.Order.OrderStatus in [stCancelled,stDone]) then
     begin
@@ -220,6 +260,7 @@ begin
     end
     else
       Result:=omCompleted;
+
     //notify listeners since base class does not handle status changes when
     //fetching statuses (handles cancel, remove, place automatically)
     if LOldStatus<>Result then
@@ -233,6 +274,8 @@ function TGDAXOrderManagerImpl.DoRefresh(out Error: String): Boolean;
 var
   I:Integer;
 begin
+  LogInfo('DoRefresh::[OrderCount]-' + IntToStr(Orders.Count));
+
   //right now, we will just go through the listing of orders and check
   //the status. this will count against gdax private endpoint limit, so
   //if the strategy stores a lot of orders, this may cause a problem. could

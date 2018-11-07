@@ -195,7 +195,7 @@ begin
   //create an engine
   FEngine:=TDelilahImpl.Create;
   //since we are dealing with GDAX assign the order manager
-  LManager:=TGDAXOrderManagerImpl.Create;
+  LManager:=TGDAXOrderManagerImpl.Create(LogInfo,LogError,LogError);
   FEngine.OrderManager:=LManager;
   FEngine.OnStatus:=EngineStatus;
 
@@ -589,14 +589,14 @@ begin
 
   //for debugging assign local variables
   LFunds:=FEngine.Funds;
-  LInventory:=FEngine.Inventory;
+  LInventory:=FEngine.AvailableInventory;
   LTickPrice:=LTick.Price;
   LAAC:=FEngine.AAC;
   LFundsLed:=FEngine.FundsLedger.Balance;
 
   //update status panels
   status_main.Panels[0].Text:='Funds ' + FloatToStr(FEngine.AvailableFunds);
-  status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.Inventory);
+  status_main.Panels[1].Text:='Inventory ' + FloatToStr(FEngine.AvailableInventory);
   status_main.Panels[2].Text:='AAC ' + FloatToStr(FEngine.AAC);
   status_main.Panels[3].Text:='Profit ' + FloatToStr(
     (

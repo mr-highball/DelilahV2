@@ -727,7 +727,7 @@ begin
         ATicker,
         FOrderManager,
         AvailableFunds,
-        Inventory,
+        AvailableInventory,
         FAAC,
         Error
       ) then

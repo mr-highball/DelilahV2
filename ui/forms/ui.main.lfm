@@ -9,7 +9,7 @@ object Main: TMain
   Menu = menu_main
   OnCreate = FormCreate
   ShowHint = True
-  LCLVersion = '1.8.2.0'
+  LCLVersion = '1.8.4.0'
   object pctrl_main: TPageControl
     Left = 5
     Height = 376

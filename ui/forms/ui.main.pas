@@ -110,7 +110,10 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  delilah.strategy.gdax.tiers;
+  delilah.strategy.gdax.tiers
+  {$IFDEF WINDOWS}
+  ,JwaWindows
+  {$ENDIF};
 
 {$R *.lfm}
 
@@ -535,6 +538,10 @@ var
   LFundsLed:Extended;
   LFile:String;
 begin
+  {$IFDEF WINDOWS}
+  SetThreadExecutionState(ES_CONTINUOUS OR ES_SYSTEM_REQUIRED OR DWORD($00000040));
+  {$ENDIF}
+
   //only keep so much before purging visual log
   if multi_log.Lines.Count>5000 then
   begin

@@ -17,7 +17,7 @@ type
     psSmall,
     psMid,
     psLarge,
-    psAll
+    psGTFO
   );
 
   { ITierStrategyGDAX }
@@ -29,6 +29,8 @@ type
     ['{C9AA33EF-DB73-4790-BD48-5AB5E27A4A81}']
     //property methods
     function GetChannel: IChannelStrategy;
+    function GetGTFOPerc: Single;
+    function GetIgnoreProfit: Single;
     function GetLargePerc: Single;
     function GetLargeSellPerc: Single;
     function GetMarketFee: Single;
@@ -42,6 +44,8 @@ type
     function GetSmallSellPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
+    procedure SetGTFOPerc(Const AValue: Single);
+    procedure SetIgnoreProfit(Const AValue: Single);
     procedure SetLargePerc(Const AValue: Single);
     procedure SetLargeSellPerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
@@ -66,6 +70,12 @@ type
       when true, sell orders can only be placed if it would result in profit
     *)
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
+    (*
+      when inventory makes up a certain "threshold" percentage compared
+      to funds available, a sell is allowed. If this setting is not desired
+      set to 0 or something greater than 1.0 (100%)
+    *)
+    property IgnoreOnlyProfitThreshold : Single read GetIgnoreProfit write SetIgnoreProfit;
     (*
       minimum percentage to sell inventory for, only works with OnlyProfit true
     *)
@@ -117,6 +127,10 @@ type
       percentage of funds/inventory to use when a large tier position is detected selling
     *)
     property LargeTierSellPerc : Single read GetLargeSellPerc write SetLargeSellPerc;
+    (*
+      when GTFO signal is reached, determines the percentage of inventory to sell
+    *)
+    property GTFOPerc : Single read GetGTFOPerc write SetGTFOPerc;
   end;
 
   { TTierStrategyGDAXImpl }
@@ -138,7 +152,9 @@ type
     FMidSellPerc,
     FLargeSellPerc,
     FMinProfit,
-    FMinReduction: Single;
+    FMinReduction,
+    FGTFOPerc,
+    FIgnoreProfitPerc: Single;
     FDontBuy,
     FSellItAllNow,
     FLargeBuy,
@@ -161,6 +177,8 @@ type
     function GetSmallSellPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
+    function GetGTFOPerc: Single;
+    function GetIgnoreProfit: Single;
     procedure SetLargePerc(Const AValue: Single);
     procedure SetLargeSellPerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
@@ -174,6 +192,8 @@ type
     procedure SetSmallPerc(Const AValue: Single);
     procedure SetSmallSellPerc(Const AValue: Single);
     procedure SetUseMarketBuy(Const AValue: Boolean);
+    procedure SetGTFOPerc(Const AValue: Single);
+    procedure SetIgnoreProfit(Const AValue: Single);
     procedure InitChannel;
     procedure GTFOUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
     procedure GTFOLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
@@ -211,6 +231,7 @@ type
   public
     property ChannelStrategy : IChannelStrategy read GetChannel;
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
+    property IgnoreOnlyProfitThreshold : Single read GetIgnoreProfit write SetIgnoreProfit;
     property MinProfit : Single read GetMinProfit write SetMinProfit;
     property OnlyLowerAAC : Boolean read GetOnlyLower write SetOnlyLower;
     property MinReduction : Single read GetMinReduction write SetMinReduction;
@@ -223,6 +244,7 @@ type
     property SmallTierSellPerc : Single read GetSmallSellPerc write SetSmallSellPerc;
     property MidTierSellPerc : Single read GetMidSellPerc write SetMidSellPerc;
     property LargeTierSellPerc : Single read GetLargeSellPerc write SetLargeSellPerc;
+    property GTFOPerc : Single read GetGTFOPerc write SetGTFOPerc;
     constructor Create(const AOnInfo, AOnError, AOnWarn: TStrategyLogEvent);override;
     destructor Destroy; override;
   end;
@@ -308,6 +330,16 @@ begin
   Result:=FUseMarketSell;
 end;
 
+function TTierStrategyGDAXImpl.GetGTFOPerc: Single;
+begin
+  Result:=FGTFOPerc;
+end;
+
+function TTierStrategyGDAXImpl.GetIgnoreProfit: Single;
+begin
+  Result:=FIgnoreProfitPerc;
+end;
+
 procedure TTierStrategyGDAXImpl.SetLargePerc(const AValue: Single);
 begin
   if AValue<0 then
@@ -344,12 +376,12 @@ begin
   FMidSellPerc:=AValue;
 end;
 
-procedure TTierStrategyGDAXImpl.SetMinProfit(Const AValue: Single);
+procedure TTierStrategyGDAXImpl.SetMinProfit(const AValue: Single);
 begin
   FMinProfit:=AValue;
 end;
 
-procedure TTierStrategyGDAXImpl.SetMinReduction(Const AValue: Single);
+procedure TTierStrategyGDAXImpl.SetMinReduction(const AValue: Single);
 begin
   FMinReduction:=AValue;
 end;
@@ -380,6 +412,16 @@ end;
 procedure TTierStrategyGDAXImpl.SetUseMarketBuy(const AValue: Boolean);
 begin
   FUseMarketBuy:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetGTFOPerc(const AValue: Single);
+begin
+  FGTFOPerc:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetIgnoreProfit(const AValue: Single);
+begin
+  FIgnoreProfitPerc:=AValue;
 end;
 
 procedure TTierStrategyGDAXImpl.InitChannel;
@@ -544,7 +586,8 @@ var
   LPerc,
   LOrderSellTot,
   LOrderBuyTot:Single;
-  LSell:Boolean;
+  LSell,
+  LAllowLoss:Boolean;
   LGDAXOrder:IGDAXOrder;
   LDetails:IOrderDetails;
   LChannel:IChannel;
@@ -603,6 +646,15 @@ begin
       if LSell then
       begin
         LogInfo('DoFeed::sell logic reached');
+
+        //if a gtfo siganl occurred, but no percentage was specified
+        //return here so the minimum logic won't be reached
+        if (LSize = psGTFO) and (LPerc <= 0) then
+        begin
+          LogInfo('DoFeed::GTFO occurred, but gtfo percentage is 0, exiting');
+          Exit(True);
+        end;
+
         //set the order size based off the percentage returned to us
         LOrderSize:=Abs(RoundTo(AInventory * LPerc,-8));
 
@@ -624,9 +676,20 @@ begin
           Exit(True);
         end;
 
+        //based on the threshold percentage and how much inventory to funds
+        //we currently have, we may allow selling at a loss when only profit is on
+        LAllowLoss:=
+          FOnlyProfit
+          and (FIgnoreProfitPerc > 0)
+          and ((AFunds + (AInventory * AAAC)) > 0)
+          and (((AInventory * AAAC) / (AFunds + (AInventory * AAAC))) >= FIgnoreProfitPerc);
+
+        if LAllowLoss then
+          LogInfo('DoFeed::SellMode::OnlyProfit is on and conditions were right to allow selling at a loss');
+
         //if we are in only profit mode, we need to some validation before
         //placing an order
-        if FOnlyProfit then
+        if FOnlyProfit and (not LAllowLoss) then
         begin
           //figure out the total amount depending on limit/market
           if FUseMarketSell then
@@ -790,8 +853,8 @@ begin
   end;
 end;
 
-function TTierStrategyGDAXImpl.GetPosition(Const AInventory:Extended;out Size: TPositionSize; out
-  Percentage: Single; out Sell: Boolean): Boolean;
+function TTierStrategyGDAXImpl.GetPosition(const AInventory: Extended; out
+  Size: TPositionSize; out Percentage: Single; out Sell: Boolean): Boolean;
 begin
   Result:=False;
   Sell:=False;
@@ -799,8 +862,8 @@ begin
   if FSellItAllNow and (AInventory > 0) then
   begin
     Sell:=True;
-    Percentage:=1;
-    Size:=psAll;
+    Percentage:=FGTFOPerc;
+    Size:=psGTFO;
     Exit(True);
   end
   else
@@ -906,6 +969,8 @@ begin
   FMinReduction:=0;
   FUseMarketBuy:=False;
   FUseMarketSell:=False;
+  FIgnoreProfitPerc:=0;
+  FGTFOPerc:=0;
   InitChannel;
 end;
 

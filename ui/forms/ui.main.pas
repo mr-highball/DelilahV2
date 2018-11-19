@@ -80,7 +80,9 @@ type
     FLargeBuyPerc,
     FSmallSellPerc,
     FMedSellPerc,
-    FLargeSellPerc: Single;
+    FLargeSellPerc,
+    FIgnoreProfitPerc,
+    FGTFOPerc: Single;
     FUseMarketBuy,
     FUseMarketSell: Boolean;
     procedure SetupEmail;
@@ -187,6 +189,8 @@ begin
   FSmallSellPerc:=StrToFloatDef(json_main.ReadString('small_sell_perc','0'),0);
   FMedSellPerc:=StrToFloatDef(json_main.ReadString('med_sell_perc','0'),0);
   FLargeSellPerc:=StrToFloatDef(json_main.ReadString('large_sell_perc','0'),0);
+  FIgnoreProfitPerc:=StrToFloatDef(json_main.ReadString('ignore_profit_perc','0'),0);
+  FGTFOPerc:=StrToFloatDef(json_main.ReadString('gtfo_perc','0'),0);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -233,6 +237,8 @@ begin
   json_main.WriteString('small_sell_perc',FloatToStr(FSmallSellPerc));
   json_main.WriteString('med_sell_perc',FloatToStr(FMedSellPerc));
   json_main.WriteString('large_sell_perc',FloatToStr(FLargeSellPerc));
+  json_main.WriteString('ignore_profit_perc',FloatToStr(FIgnoreProfitPerc));
+  json_main.WriteString('gtfo_perc',FloatToStr(FGTFOPerc));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -452,6 +458,8 @@ begin
   LShortStrategy.MinProfit:=FMinProfit;
   LShortStrategy.OnlyProfit:=True;
   LShortStrategy.MarketFee:=FMarketFee;
+  LShortStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
+  LShortStrategy.GTFOPerc:=FGTFOPerc;
 
   //log some quick info for strategy
   LogInfo(

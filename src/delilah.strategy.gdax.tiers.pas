@@ -678,11 +678,17 @@ begin
 
         //based on the threshold percentage and how much inventory to funds
         //we currently have, we may allow selling at a loss when only profit is on
+        //or if we need to gtfo
         LAllowLoss:=
-          FOnlyProfit
-          and (FIgnoreProfitPerc > 0)
-          and ((AFunds + (AInventory * AAAC)) > 0)
-          and (((AInventory * AAAC) / (AFunds + (AInventory * AAAC))) >= FIgnoreProfitPerc);
+          (
+            FOnlyProfit
+            and (FIgnoreProfitPerc > 0)
+            and ((AFunds + (AInventory * AAAC)) > 0)
+            and (((AInventory * AAAC) / (AFunds + (AInventory * AAAC))) >= FIgnoreProfitPerc)
+          )
+          or (
+            LSize = psGTFO
+          );
 
         if LAllowLoss then
           LogInfo('DoFeed::SellMode::OnlyProfit is on and conditions were right to allow selling at a loss');

@@ -49,7 +49,7 @@ type
 
 implementation
 uses
-  gdax.api.authenticator, delilah.order.gdax, gdax.api.fills;
+  gdax.api.authenticator, delilah.order.gdax, gdax.api.fills, math;
 
 { TGDAXOrderManagerImpl }
 
@@ -113,9 +113,17 @@ begin
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
+
+    //do rounding here for the size to avoid too accurate errors
+    LDetails.Order.Size:=RoundTo(LDetails.Order.Size,-8);
+
     //attempt to post the order assuming strategy has filled it out correctly
     if not LDetails.Order.Post(LContent,Error) then
+    begin
+      LogInfo('content: ' + LContent);
       Exit;
+    end;
+
     if LDetails.Order.OrderStatus in [stCancelled,stUnknown,stRejected] then
     begin
       Error:=LDetails.Order.RejectReason;

@@ -630,7 +630,7 @@ begin
 
     //cast to gdax ticker
     LTicker:=ATicker as ITickerGDAX;
-    LMin:=LTicker.Ticker.Product.BaseMinSize;
+    LMin:=RoundTo(LTicker.Ticker.Product.BaseMinSize,-8);
 
     //initialize the order
     LGDAXOrder:=TGDAXOrderImpl.Create;

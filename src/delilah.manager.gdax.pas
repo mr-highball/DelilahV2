@@ -119,10 +119,7 @@ begin
 
     //attempt to post the order assuming strategy has filled it out correctly
     if not LDetails.Order.Post(LContent,Error) then
-    begin
-      LogInfo('content: ' + LContent);
       Exit;
-    end;
 
     if LDetails.Order.OrderStatus in [stCancelled,stUnknown,stRejected] then
     begin

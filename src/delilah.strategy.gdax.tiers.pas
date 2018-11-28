@@ -664,6 +664,12 @@ begin
           LOrderSize:=LMin;
         end;
 
+        //now make sure we respect the quote increment (ie. can only sell
+        //in increments of quote increment, so min order size of 1.0 quote inc
+        //of 1.0, and our calc returned 3.5, we would have to sell 3)
+        if LOrderSize > 0 then
+          LOrderSize:=RoundTo(Trunc(LOrderSize / LGDAXOrder.Product.QuoteIncrement) * LGDAXOrder.Product.QuoteIncrement,-8);
+
         //check to see if we have enough inventory to perform a sell
         if (LOrderSize < LMin) or (LOrderSize > AInventory) then
         begin

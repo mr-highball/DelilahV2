@@ -656,7 +656,7 @@ begin
         end;
 
         //set the order size based off the percentage returned to us
-        LOrderSize:=Abs(RoundTo(AInventory * LPerc,-8));
+        LOrderSize:=RoundTo(Abs(AInventory * LPerc),-8);
 
         if (LOrderSize < LMin) and (RoundTo(AInventory,-8) >= LMin) then
         begin
@@ -668,7 +668,14 @@ begin
         //in increments of quote increment, so min order size of 1.0 quote inc
         //of 1.0, and our calc returned 3.5, we would have to sell 3)
         if LOrderSize > 0 then
-          LOrderSize:=RoundTo(Trunc(LOrderSize / LGDAXOrder.Product.QuoteIncrement) * LGDAXOrder.Product.QuoteIncrement,-8);
+        begin
+          //this code is for a suspect bug in cb quote inc for small
+          //coins (where min unit is whole number)
+          if RoundTo(LGDAXOrder.Product.BaseMinSize,-1) >= 1 then
+            LOrderSize:=Trunc(LOrderSize)
+          else
+            LOrderSize:=Trunc(LOrderSize / LGDAXOrder.Product.QuoteIncrement) * LGDAXOrder.Product.QuoteIncrement;
+        end;
 
         //check to see if we have enough inventory to perform a sell
         if (LOrderSize < LMin) or (LOrderSize > AInventory) then

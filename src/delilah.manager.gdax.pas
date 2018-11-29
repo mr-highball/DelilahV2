@@ -121,7 +121,21 @@ begin
     if not LDetails.Order.Post(LContent,Error) then
     begin
       LogInfo('post body: ' + LDetails.Order.PostBody);
-      Exit;
+
+      //this code is in place because I believe coinbase doesn't
+      //respect their quote_increment setting 100% correctly... saw it with
+      //bat-usdc, anyways in this case try a truncated version
+      if Error.IndexOf('too accurate') > 0 then
+      begin
+        //set the size to as many min sizes fit in the requested size
+        LDetails.Size:=Trunc(LDetails.Size / LDetails.Order.Product.BaseMinSize) * LDetails.Order.Product.BaseMinSize;
+
+        //attempt one more post
+        if not LDetails.Order.Post(LContent,Error) then
+          Exit;
+      end
+      else
+        Exit;
     end;
 
     if LDetails.Order.OrderStatus in [stCancelled,stUnknown,stRejected] then

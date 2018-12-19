@@ -658,12 +658,6 @@ begin
         //set the order size based off the percentage returned to us
         LOrderSize:=RoundTo(Abs(AInventory * LPerc),-8);
 
-        if (LOrderSize < LMin) and (RoundTo(AInventory,-8) >= LMin) then
-        begin
-          LogInfo('DoFeed::SellMode::order too small, but we have at least min setting size of order to min');
-          LOrderSize:=LMin;
-        end;
-
         //now make sure we respect the quote increment (ie. can only sell
         //in increments of quote increment, so min order size of 1.0 quote inc
         //of 1.0, and our calc returned 3.5, we would have to sell 3)
@@ -675,6 +669,14 @@ begin
             LOrderSize:=Trunc(LOrderSize)
           else
             LOrderSize:=Trunc(LOrderSize / LGDAXOrder.Product.QuoteIncrement) * LGDAXOrder.Product.QuoteIncrement;
+        end;
+
+        //last catch to see if our calculation would be less than min
+        //but we have at least min size inventory remaining to sell
+        if (LOrderSize < LMin) and (RoundTo(AInventory,-8) >= LMin) then
+        begin
+          LogInfo('DoFeed::SellMode::order too small, but we have at least min setting size of order to min');
+          LOrderSize:=LMin;
         end;
 
         //check to see if we have enough inventory to perform a sell

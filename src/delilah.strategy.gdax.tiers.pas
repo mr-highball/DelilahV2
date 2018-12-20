@@ -673,14 +673,14 @@ begin
 
         //last catch to see if our calculation would be less than min
         //but we have at least min size inventory remaining to sell
-        if (LOrderSize < LMin) and (RoundTo(AInventory,-8) >= LMin) then
+        if (RoundTo(LOrderSize,-8) <= LMin) and (RoundTo(AInventory,-8) >= LMin) then
         begin
-          LogInfo('DoFeed::SellMode::order too small, but we have at least min setting size of order to min');
+          LogInfo('DoFeed::SellMode::order is small, but we have at least min setting size of order to min');
           LOrderSize:=LMin;
         end;
 
         //check to see if we have enough inventory to perform a sell
-        if (LOrderSize < LMin) or (LOrderSize > AInventory) then
+        if (RoundTo(LOrderSize,-8) < RoundTo(LMin,-8)) or (RoundTo(LOrderSize,-8) > RoundTo(AInventory,-8)) then
         begin
           LogInfo(Format('DoFeed::SellMode::%s is lower than min size or no inventory',[FloatToStr(LOrderSize)]));
           LogInfo('DoFeed::SellMode::clearing signals');

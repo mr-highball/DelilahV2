@@ -131,6 +131,8 @@ type
   end;
 
 implementation
+uses
+  math;
 
 { TDelilahImpl.TLedgerPair }
 
@@ -379,7 +381,7 @@ begin
     //now set the amount equal to the total cost of the order
     LAmt:=ADetails.Price * ADetails.Size;
 
-    if LAmt > AvailableFunds then
+    if RoundTo(LAmt,-8) > RoundTo(AvailableFunds,-8) then
     begin
       ADisallowReason:=Format(
         '[cost]:%s would exceed available funds of %s',
@@ -404,7 +406,7 @@ begin
     end;
 
     //basic check against available inventory
-    if LAmt > AvailableInventory then
+    if RoundTo(LAmt,-8) > RoundTo(AvailableInventory,-8) then
     begin
       ADisallowReason:=Format(
         '%s would exceed available funds of %s',

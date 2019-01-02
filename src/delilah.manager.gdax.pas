@@ -69,6 +69,7 @@ function TGDAXOrderManagerImpl.GDAXDetailsValid(const ADetails: IOrderDetails;
 var
   LDetails:IGDAXOrderDetails;
 begin
+  Result:=False;
   if not Assigned(ADetails) then
   begin
     Error:='order details nil or invalid';
@@ -94,9 +95,9 @@ begin
   Result:=omCanceled;
   //map the gdax status as best we can to the engine statuses
   case AStatus of
-    stActive,stPending,stOpen,stSettled: Result:=omActive;
+    stActive,stPending,stOpen: Result:=omActive;
     stCancelled,stRejected,stUnknown: Result:=omCanceled;
-    stDone: Result:=omCompleted;
+    stDone,stSettled: Result:=omCompleted;
   end;
 end;
 
@@ -260,18 +261,27 @@ begin
     LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     LDetails.Order.Authenticator:=Authenticator;
 
-    //avoid a web call when we already have a cancelled/done order
-    if not (LDetails.Order.OrderStatus in [stCancelled,stDone]) then
+    //avoid a web call for cancelled orders
+    if LDetails.Order.OrderStatus <> stCancelled then
     begin
-      //attempt to post the order assuming strategy has filled it out correctly
+      //just dump the order info to make debugging logs easier
+      LogInfo('DoGetStatus::OrderInfo::' + LDetails.Order.PostBody);
+
+      //attempt to get the order assuming strategy has filled it out correctly
       if not LDetails.Order.Get(LContent,LError) then
+      begin
+        LogError('DoGetStatus::' + LError);
         Exit;
+      end;
+
       if not ID(ADetails,LID) then
       begin
         LError:='unable to fetch id for order details in ' + Self.Classname;
+        LogError('DoGetStatus::' + LError);
         Exit;
       end;
       Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
+
       //during the GDAX order life-cycle, there is a small window of time
       //before the order is marked as done, and finally marked as settled.
       //this check is in place to account for that, so we don't mark an order
@@ -288,7 +298,10 @@ begin
     if LOldStatus<>Result then
       DoOnStatus(LDetails,LID,LOldStatus,Result);
   except on E:Exception do
+  begin
     LError:=E.Message;
+    LogError('DoGetStatus::' + LError);
+  end
   end;
 end;
 

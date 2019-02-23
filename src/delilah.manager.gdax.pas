@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, delilah.types, delilah.manager, gdax.api.types,
-  gdax.api.consts;
+  gdax.api.consts, fgl;
 
 type
 
@@ -30,8 +30,13 @@ type
   TGDAXOrderManagerImpl = class(TOrderManagerImpl,IGDAXOrderManager)
   strict private
     FAuth: IGDAXAuthenticator;
+    FSettleMap: TFPGMap<String,Integer>;
     function GetAuth: IGDAXAuthenticator;
     procedure SetAuth(Const AValue: IGDAXAuthenticator);
+    function SettleCountCheck(Const AID:String):Boolean;
+
+    const
+      MAX_SETTLE_COUNT = 10;
   strict protected
     function GDAXDetailsValid(Const ADetails:IOrderDetails;Out Error:String):Boolean;
     function GDAXStatusToEngineStatus(Const AStatus:TOrderStatus):TOrderManagerStatus;
@@ -62,6 +67,42 @@ procedure TGDAXOrderManagerImpl.SetAuth(const AValue: IGDAXAuthenticator);
 begin
   FAuth:=nil;
   FAuth:=AValue;
+end;
+
+function TGDAXOrderManagerImpl.SettleCountCheck(const AID: String): Boolean;
+var
+  I, LCount: Integer;
+begin
+  Result:=False;
+  I:=FSettleMap.IndexOf(AID);
+  LCount:=0;
+
+  //if the id doesn't exist, then we aren't tracking and we need to
+  if I < 0 then
+  begin
+    FSettleMap.Add(AID,LCount);
+    Exit;
+  end;
+
+  //fetch the count from the map
+  LCount:=FSettleMap[AID];
+
+  //shouldn't happen, just do this for safety
+  if LCount < 0 then
+    LCount:=0;
+
+  //check to see if this would count for hitting the max count
+  if Succ(LCount) >= MAX_SETTLE_COUNT then
+  begin
+    //cleanup tracked id
+    FSettleMap.Delete(I);
+    Exit(True);
+  end
+  else
+  begin
+    Inc(LCount);
+    FSettleMap.AddOrSetData(AID,LCount);
+  end;
 end;
 
 function TGDAXOrderManagerImpl.GDAXDetailsValid(const ADetails: IOrderDetails;
@@ -288,7 +329,16 @@ begin
       //complete prematurely
       if Result=omCompleted then
         if not LDetails.Order.Settled then
-          Result:=omActive;
+        begin
+          //will check against max tries for settle count and return true if so
+          if not SettleCountCheck(LDetails.Order.ID) then
+            Result:=omActive
+          else
+            Result:=omCompleted;
+        end
+        //cleanup if we have stored in settle map
+        else if FSettleMap.IndexOf(LDetails.Order.ID) >= 0 then
+          FSettleMap.Delete(FSettleMap.IndexOf(LDetails.Order.ID));
     end
     else
       Result:=omCompleted;
@@ -329,11 +379,13 @@ constructor TGDAXOrderManagerImpl.Create;
 begin
   inherited Create;
   FAuth:=TGDAXAuthenticatorImpl.Create;
+  FSettleMap:=TFPGMap<String,Integer>.Create;
 end;
 
 destructor TGDAXOrderManagerImpl.Destroy;
 begin
   FAuth:=nil;
+  FSettleMap.Free;
   inherited Destroy;
 end;
 

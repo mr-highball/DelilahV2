@@ -313,7 +313,9 @@ begin
       begin
         LogError('DoGetStatus::' + LError);
         Exit;
-      end;
+      end
+      else
+        LogInfo('DoGetStatus::' + LContent);
 
       if not ID(ADetails,LID) then
       begin
@@ -330,6 +332,11 @@ begin
       if Result=omCompleted then
         if not LDetails.Order.Settled then
         begin
+          //old status is used for status updates, always set this to active
+          //in the case it is reported incorrectly as "completed"
+          if LOldStatus = omCompleted then
+            LOldStatus:=omActive;
+
           //will check against max tries for settle count and return true if so
           if not SettleCountCheck(LDetails.Order.ID) then
             Result:=omActive

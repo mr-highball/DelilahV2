@@ -30,13 +30,15 @@ type
   TGDAXOrderManagerImpl = class(TOrderManagerImpl,IGDAXOrderManager)
   strict private
     FAuth: IGDAXAuthenticator;
-    FSettleMap: TFPGMap<String,Integer>;
+    FSettleMap,
+    FCancelMap: TFPGMap<String,Integer>;
     function GetAuth: IGDAXAuthenticator;
     procedure SetAuth(Const AValue: IGDAXAuthenticator);
     function SettleCountCheck(Const AID:String):Boolean;
-
+    function CancelCountCheck(Const AID:String):Boolean;
     const
       MAX_SETTLE_COUNT = 10;
+      MAX_CANCEL_COUNT = 5;
   strict protected
     function GDAXDetailsValid(Const ADetails:IOrderDetails;Out Error:String):Boolean;
     function GDAXStatusToEngineStatus(Const AStatus:TOrderStatus):TOrderManagerStatus;
@@ -54,7 +56,11 @@ type
 
 implementation
 uses
-  gdax.api.authenticator, delilah.order.gdax, gdax.api.fills, math;
+  gdax.api.authenticator,
+  delilah.order.gdax,
+  gdax.api.fills,
+  gdax.api.time,
+  math;
 
 { TGDAXOrderManagerImpl }
 
@@ -105,6 +111,51 @@ begin
   end;
 end;
 
+function TGDAXOrderManagerImpl.CancelCountCheck(const AID: String): Boolean;
+var
+  I, LCount: Integer;
+  LTime: IGDAXTime;
+  LContent, LError: String;
+begin
+  Result:=False;
+  I:=FCancelMap.IndexOf(AID);
+  LCount:=0;
+
+  //we use the time endpoint as a check to make sure we have connectivity to
+  //gdax, if we fail this check don't count the cancel attempt as an attempt
+  LTime:=TGDAXTimeImpl.Create;
+  LTime.Authenticator:=FAuth; //not necessary, but add anyways
+  if not LTime.Get(LContent,LError) then
+    Exit;
+
+  //if the id doesn't exist, then we aren't tracking and we need to
+  if I < 0 then
+  begin
+    FCancelMap.Add(AID,LCount);
+    Exit;
+  end;
+
+  //fetch the count from the map
+  LCount:=FCancelMap[AID];
+
+  //shouldn't happen, just do this for safety
+  if LCount < 0 then
+    LCount:=0;
+
+  //check to see if this would count for hitting the max count
+  if Succ(LCount) >= MAX_CANCEL_COUNT then
+  begin
+    //cleanup tracked id
+    FCancelMap.Delete(I);
+    Exit(True);
+  end
+  else
+  begin
+    Inc(LCount);
+    FCancelMap.AddOrSetData(AID,LCount);
+  end;
+end;
+
 function TGDAXOrderManagerImpl.GDAXDetailsValid(const ADetails: IOrderDetails;
   out Error: String): Boolean;
 var
@@ -136,9 +187,9 @@ begin
   Result:=omCanceled;
   //map the gdax status as best we can to the engine statuses
   case AStatus of
-    stActive,stPending,stOpen: Result:=omActive;
+    stActive,stPending,stOpen,stDone: Result:=omActive;
     stCancelled,stRejected,stUnknown: Result:=omCanceled;
-    stDone,stSettled: Result:=omCompleted;
+    stSettled: Result:=omCompleted;
   end;
 end;
 
@@ -211,7 +262,9 @@ begin
     LogInfo(Format('DoCancel::starting cancel [OrderID]-%s',[LDetails.Order.ID]));
 
     //attempt to delete the order assuming strategy has filled it out correctly
-    if not LDetails.Order.Delete(LContent,Error) then
+    if (not LDetails.Order.Delete(LContent,Error))
+      and (not CancelCountCheck(LDetails.Order.ID))
+    then
     begin
       LogError('DoCancel::Delete::failure with [Content]-'+LContent);
       Exit;
@@ -325,11 +378,14 @@ begin
       end;
       Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
 
+      //note: this code was added before changing the order status to
+      //correclty report as "omCompleted" only if and order is settled.
+
       //during the GDAX order life-cycle, there is a small window of time
       //before the order is marked as done, and finally marked as settled.
       //this check is in place to account for that, so we don't mark an order
       //complete prematurely
-      if Result=omCompleted then
+      if Result = omCompleted then
         if not LDetails.Order.Settled then
         begin
           //old status is used for status updates, always set this to active
@@ -348,11 +404,11 @@ begin
           FSettleMap.Delete(FSettleMap.IndexOf(LDetails.Order.ID));
     end
     else
-      Result:=omCompleted;
+      Result:=omCanceled;
 
     //notify listeners since base class does not handle status changes when
     //fetching statuses (handles cancel, remove, place automatically)
-    if LOldStatus<>Result then
+    if LOldStatus <> Result then
       DoOnStatus(LDetails,LID,LOldStatus,Result);
   except on E:Exception do
   begin
@@ -387,12 +443,14 @@ begin
   inherited Create;
   FAuth:=TGDAXAuthenticatorImpl.Create;
   FSettleMap:=TFPGMap<String,Integer>.Create;
+  FCancelMap:=TFPGMap<String,Integer>.Create;
 end;
 
 destructor TGDAXOrderManagerImpl.Destroy;
 begin
   FAuth:=nil;
   FSettleMap.Free;
+  FCancelMap.Free;
   inherited Destroy;
 end;
 

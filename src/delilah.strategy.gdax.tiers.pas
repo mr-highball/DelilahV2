@@ -33,6 +33,7 @@ type
     function GetIgnoreProfit: Single;
     function GetLargePerc: Single;
     function GetLargeSellPerc: Single;
+    function GetLimitFee: Single;
     function GetMarketFee: Single;
     function GetMidPerc: Single;
     function GetMidSellPerc: Single;
@@ -48,6 +49,7 @@ type
     procedure SetIgnoreProfit(Const AValue: Single);
     procedure SetLargePerc(Const AValue: Single);
     procedure SetLargeSellPerc(Const AValue: Single);
+    procedure SetLimitFee(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
     procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
@@ -104,6 +106,10 @@ type
     *)
     property MarketFee : Single read GetMarketFee write SetMarketFee;
     (*
+      the fee associated with limit fee (works like marketfee)
+    *)
+    property LimitFee : Single read GetLimitFee write SetLimitFee;
+    (*
       percentage of funds/inventory to use when a small tier position is detected buying
     *)
     property SmallTierPerc : Single read GetSmallPerc write SetSmallPerc;
@@ -147,6 +153,7 @@ type
     FSmallPerc,
     FMidPerc,
     FMarketFee,
+    FLimitFee,
     FLargePerc,
     FSmallSellPerc,
     FMidSellPerc,
@@ -167,6 +174,7 @@ type
     function GetLargePerc: Single;
     function GetLargeSellPerc: Single;
     function GetMarketFee: Single;
+    function GetLimitFee: Single;
     function GetMidPerc: Single;
     function GetMidSellPerc: Single;
     function GetMinProfit: Single;
@@ -182,6 +190,7 @@ type
     procedure SetLargePerc(Const AValue: Single);
     procedure SetLargeSellPerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
+    procedure SetLimitFee(Const AValue: Single);
     procedure SetMarketSell(Const AValue: Boolean);
     procedure SetMidPerc(Const AValue: Single);
     procedure SetMidSellPerc(Const AValue: Single);
@@ -238,6 +247,7 @@ type
     property UseMarketBuy : Boolean read GetUseMarketBuy write SetUseMarketBuy;
     property UseMarketSell : Boolean read GetUseMarketSell write SetMarketSell;
     property MarketFee : Single read GetMarketFee write SetMarketFee;
+    property LimitFee : Single read GetLimitFee write SetLimitFee;
     property SmallTierPer : Single read GetSmallPerc write SetSmallPerc;
     property MidTierPerc : Single read GetMidPerc write SetMidPerc;
     property LargeTierPerc : Single read GetLargePerc write SetLargePerc;
@@ -278,6 +288,11 @@ end;
 function TTierStrategyGDAXImpl.GetMarketFee: Single;
 begin
   Result:=FMarketFee;
+end;
+
+function TTierStrategyGDAXImpl.GetLimitFee: Single;
+begin
+  Result:=FLimitFee;
 end;
 
 function TTierStrategyGDAXImpl.GetMidPerc: Single;
@@ -356,6 +371,11 @@ end;
 procedure TTierStrategyGDAXImpl.SetMarketFee(const AValue: Single);
 begin
   FMarketFee:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetLimitFee(const AValue: Single);
+begin
+  FLimitFee:=AValue;
 end;
 
 procedure TTierStrategyGDAXImpl.SetMarketSell(const AValue: Boolean);
@@ -722,7 +742,7 @@ begin
           end
           else
           begin
-            LOrderSellTot:=LOrderSize * LTicker.Ticker.Ask;
+            LOrderSellTot:=(LOrderSize * LTicker.Ticker.Ask) - (FLimitFee * LOrderSize * LTicker.Ticker.Ask);
             LGDAXOrder.OrderType:=otLimit;
             LGDAXOrder.Price:=LTicker.Ticker.Ask;
             LogInfo('DoFeed::SellMode::using limit sell, with OnlyProfit, total sell amount would be ' + FloatToStr(LOrderSellTot));
@@ -796,11 +816,10 @@ begin
         if FOnlyLower and (RoundTo(AInventory,-8) >= LMin) then
         begin
           //initially set this variable to what the AAC would be if a limit
-          //order was successful
-          LOrderBuyTot:=((LOrderSize *  LTicker.Ticker.Bid) + (AAAC * AInventory)) / (LOrderSize + AInventory);
+          //order was successful since this will be the most common type of order
+          LOrderBuyTot:=((LOrderSize * ((1 + FLimitFee) * LTicker.Ticker.Bid) + (AAAC * AInventory)) / (LOrderSize + AInventory));
 
-          //for limit buys, we don't have to worry about a fee which
-          //would change aac differently than the bid price
+          //check to see if the limit order would result in a higher AAC
           if not FUseMarketBuy and (LOrderBuyTot > AAAC) then
           begin
             LogInfo(Format('DoFeed::BuyMode::[new aac]:%f is not lower than [aac]:%f',[LOrderBuyTot,AAAC]));
@@ -985,7 +1004,8 @@ begin
   FSmallSellPerc:=0.05;
   FMidSellperc:=0.10;
   FLargeSellPerc:=0.20;
-  FMarketFee:=0.003;
+  FMarketFee:=0.003;//account for slippage on market orders
+  FLimitFee:=0.0015;
   FMinProfit:=0;
   FMinReduction:=0;
   FUseMarketBuy:=False;

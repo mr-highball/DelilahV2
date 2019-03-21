@@ -73,6 +73,7 @@ type
     FCompletedOrders,
     FTempWindowSetting : Cardinal;
     FMarketFee,
+    FLimitFee,
     FMinProfit,
     FMinReduce,
     FSmallBuyPerc,
@@ -179,6 +180,7 @@ begin
   //todo - remove these once strategies can persist
   FTempWindowSetting:=json_main.ReadInteger('temp_window_setting',20 * 60 * 1000);
   FMarketFee:=StrToFloatDef(json_main.ReadString('market_fee','0.005'),0.005);
+  FLimitFee:=StrToFloatDef(json_main.ReadString('limit_fee','0.0015'),0.0015);
   FUseMarketBuy:=json_main.ReadBoolean('market_buy',False);
   FUseMarketSell:=json_main.ReadBoolean('market_sell',False);
   FMinReduce:=StrToFloatDef(json_main.ReadString('min_reduction','0'),0);
@@ -229,6 +231,7 @@ begin
   json_main.WriteBoolean('market_sell',FUseMarketSell);
   json_main.WriteBoolean('market_buy',FUseMarketBuy);
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
+  json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
   json_main.WriteString('min_reduction',FloatToStr(FMinReduce));
   json_main.WriteString('min_profit',FloatToStr(FMinProfit));
   json_main.WriteString('small_buy_perc',FloatToStr(FSmallBuyPerc));
@@ -458,14 +461,15 @@ begin
   LShortStrategy.MinProfit:=FMinProfit;
   LShortStrategy.OnlyProfit:=True;
   LShortStrategy.MarketFee:=FMarketFee;
+  LShortStrategy.LimitFee:=FLimitFee;
   LShortStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
   LShortStrategy.GTFOPerc:=FGTFOPerc;
 
   //log some quick info for strategy
   LogInfo(
     Format(
-      'Strategy::[UseMarketBuy]-%s [UseMarketSell]-%s [MarketFee]-%s [MinReduce]-%s [MinProfit]-%s',
-      [BoolToStr(FUseMarketBuy,True),BoolToStr(FUseMarketSell,True),FloatToStr(FMarketFee),FloatToStr(FMinReduce),FloatToStr(FMinProfit)]
+      'Strategy::[UseMarketBuy]-%s [UseMarketSell]-%s [MarketFee]-%s [LimitFee]-%s [MinReduce]-%s [MinProfit]-%s',
+      [BoolToStr(FUseMarketBuy,True),BoolToStr(FUseMarketSell,True),FloatToStr(FMarketFee),FloatToStr(FLimitFee),FloatToStr(FMinReduce),FloatToStr(FMinProfit)]
     )
   );
 

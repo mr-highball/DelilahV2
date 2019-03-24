@@ -73,7 +73,7 @@ begin
   //for buy orders we need to add the fees to price to show higher cost
   if FOrder.Side=osBuy then
   begin
-    if (FOrder.OrderStatus=stDone)
+    if (FOrder.OrderStatus=stSettled)
       or ((FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0))
     then
     begin
@@ -88,7 +88,7 @@ begin
   //but for sell orders we need to subtract any fees to show reduction in profit
   else
   begin
-    if (FOrder.OrderStatus=stDone)
+    if (FOrder.OrderStatus=stSettled)
       or ((FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0))
     then
     begin
@@ -108,7 +108,7 @@ begin
     Exit(0);
 
   //if the order is done or cancelled, then report back the filled size
-  if FOrder.OrderStatus in [stCancelled,stDone] then
+  if FOrder.OrderStatus in [stCancelled,stSettled] then
     Result:=FOrder.FilledSized
   else
     Result:=FOrder.Size;

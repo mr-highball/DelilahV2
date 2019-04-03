@@ -258,12 +258,12 @@ begin
       Exit;
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
-
-    LogInfo(Format('DoCancel::starting cancel [OrderID]-%s',[LDetails.Order.ID]));
+    LID:=LDetails.Order.ID;
+    LogInfo(Format('DoCancel::starting cancel [OrderID]-%s',[LID]));
 
     //attempt to delete the order assuming strategy has filled it out correctly
     if (not LDetails.Order.Delete(LContent,Error))
-      and (not CancelCountCheck(LDetails.Order.ID))
+      and (not CancelCountCheck(LID))
     then
     begin
       LogError('DoCancel::Delete::failure with [Content]-'+LContent);

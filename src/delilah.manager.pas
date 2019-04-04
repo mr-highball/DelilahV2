@@ -238,7 +238,10 @@ begin
     //success
     Result:=True;
   except on E:Exception do
+  begin
+    LogError('Place::' + E.Message);
     Error:=E.Message;
+  end
   end;
 end;
 
@@ -274,7 +277,10 @@ begin
     //success
     Result:=True;
   except on E:Exception do
+  begin
+    LogError('Cancel::' + E.Message);
     Error:=E.Message;
+  end
   end;
 end;
 
@@ -306,7 +312,10 @@ begin
     //success
     Result:=True;
   except on E:Exception do
+  begin
+    LogError('Delete::' + E.Message);
     Error:=E.Message;
+  end
   end;
 end;
 
@@ -332,7 +341,10 @@ begin
     //success
     Result:=True;
   except on E:Exception do
+  begin
+    LogError('Details::' + E.Message);
     Error:=E.Message;
+  end
   end;
 end;
 

@@ -37,8 +37,8 @@ type
     function SettleCountCheck(Const AID:String):Boolean;
     function CancelCountCheck(Const AID:String):Boolean;
     const
-      MAX_SETTLE_COUNT = 10;
-      MAX_CANCEL_COUNT = 5;
+      MAX_SETTLE_COUNT = 20;
+      MAX_CANCEL_COUNT = 20;
   strict protected
     function GDAXDetailsValid(Const ADetails:IOrderDetails;Out Error:String):Boolean;
     function GDAXStatusToEngineStatus(Const AStatus:TOrderStatus):TOrderManagerStatus;
@@ -128,6 +128,8 @@ begin
   if not LTime.Get(LContent,LError) then
     Exit;
 
+  LogInfo('CancelCountCheck::starting, time check passed order-' + AID);
+
   //if the id doesn't exist, then we aren't tracking and we need to
   if I < 0 then
   begin
@@ -138,6 +140,8 @@ begin
   //fetch the count from the map
   LCount:=FCancelMap[AID];
 
+  LogInfo('CancelCountCheck::current cancel count ' + IntToStr(LCount) + ' max is ' + IntToStr(MAX_CANCEL_COUNT));
+
   //shouldn't happen, just do this for safety
   if LCount < 0 then
     LCount:=0;
@@ -145,6 +149,8 @@ begin
   //check to see if this would count for hitting the max count
   if Succ(LCount) >= MAX_CANCEL_COUNT then
   begin
+    LogInfo('CancelCountCheck::cancel count exceeded');
+
     //cleanup tracked id
     FCancelMap.Delete(I);
     Exit(True);
@@ -270,9 +276,6 @@ begin
       Exit;
     end;
 
-    //the order has been cancelled, so update the status
-    LDetails.Order.OrderStatus:=stCancelled;
-
     //in the event of partial fills, we need to check if the fills
     //object returns anything, if so, we need to update the cancelled
     //order's properties (since cancelling an empty order removes the id
@@ -284,8 +287,8 @@ begin
     begin
       LogInfo(
         Format(
-          'DoCancel::FillsCheck::fills check failed but may be fine if not ' +
-          'a partial, [Error]-%s [Content]-%s',
+          'DoCancel::FillsCheck::fills check failed so probably safe to call cancelled ' +
+          'web call details [Error]-%s [Content]-%s',
           [Error,LContent]
         )
       );
@@ -296,38 +299,59 @@ begin
       begin
         LogInfo(
           Format(
-            'DoCancel::OrderCheckFallback::order check failed but may be fine if not ' +
-            'a partial, [Error]-%s [Content]-%s',
+            'DoCancel::FillsCheck::order status check failed and fills check failed, order appears cancelled ' +
+            'web call details [Error]-%s [Content]-%s',
             [Error,LContent]
           )
         );
+
+      //if the order check didn't fail then it means we may have a partial fill
+      //or a complete fill, so exit and let the next status poll figure things out
+      end
+      else
+      begin
+        LogInfo(
+          'DoCancel::FillsCheck::order check succeeded, which means we may have a partial ' +
+          'however the fills check failed. punting this to next status check to get our pants on right ' +
+          'web call details [Content]-' + LContent
+        );
+        Exit;
       end;
     end;
 
     //check if we have partial fills by looking at the count
     if LFills.Count > 0 then
     begin
+      LogInfo('DoCancel::PartialFound::[FillCount]-' + IntToStr(LFills.Count));
+
       //update size and fees with our fills object
-      LDetails.Order.FilledSized:=LFills.TotalSize[[]];
-      LDetails.Order.FillFees:=LFills.TotalFees[[]];
+      LDetails.Order.FilledSized:=LFills.TotalSize[[LDetails.Order.Side]];
+      LDetails.Order.FillFees:=LFills.TotalFees[[LDetails.Order.Side]];
 
       //log that we had a partial fill
       LogInfo(
         Format(
-          'DoCancel::PartialFound::[FilledSize]-%s [FillFees]-%s',
+          'DoCancel::PartialFound::[FilledSize]-%s [FillFees]-%s [Unfilled]-%s',
           [
             FloatToStr(LDetails.Order.FilledSized),
-            FloatToStr(LDetails.Order.FillFees)
+            FloatToStr(LDetails.Order.FillFees),
+            FloatToStr(LDetails.Order.Size - LDetails.Order.FilledSized)
           ]
         )
       );
 
+      LogInfo('DoCancel::PartialFound::old [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
+
       //manually fill out the executed value property (cumulative size * price) / size
       for I:=0 to Pred(LFills.Count) do
         LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue + LFills.Entries[I].Size * LFills.Entries[I].Price;
-      LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue / LFills.TotalSize[[]];
+      LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue / LFills.TotalSize[[LDetails.Order.Side]];
+
+      LogInfo('DoCancel::PartialFound::new [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
     end;
 
+    //the order has been cancelled, so update the status
+    LDetails.Order.OrderStatus:=stCancelled;
     Result:=True;
   except on E:Exception do
     Error:=E.Message;

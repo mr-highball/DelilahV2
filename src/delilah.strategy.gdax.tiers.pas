@@ -1064,7 +1064,7 @@ begin
     LChopInd:=CHOP_MAGIC * LAvgAnc;
   end;
 
-  LogInfo('ChoppyWaters::deviation must be greater than [ChopIndicator]-%s' + FloatToStr(LChopInd));
+  LogInfo('ChoppyWaters::deviation must be greater than [ChopIndicator]-' + FloatToStr(LChopInd));
   Result:=LAvgDev < LChopInd;
 end;
 

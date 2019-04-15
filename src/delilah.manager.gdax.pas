@@ -342,10 +342,10 @@ begin
 
       LogInfo('DoCancel::PartialFound::old [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
 
-      //manually fill out the executed value property (cumulative size * price) / size
+      //manually fill out the executed value property, cumulative (size * price)
+      LDetails.Order.ExecutedValue:=0;
       for I:=0 to Pred(LFills.Count) do
         LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue + LFills.Entries[I].Size * LFills.Entries[I].Price;
-      LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue / LFills.TotalSize[[LDetails.Order.Side]];
 
       LogInfo('DoCancel::PartialFound::new [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
     end;

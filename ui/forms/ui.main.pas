@@ -65,6 +65,7 @@ type
     procedure pctrl_mainChange(Sender: TObject);
   private
     FAuth : TAuthenticator;
+    FOnlyLower: Boolean;
     FProducts : TProducts;
     FProductInit : Boolean;
     FFunds : TSingleLine;
@@ -85,7 +86,8 @@ type
     FIgnoreProfitPerc,
     FGTFOPerc: Single;
     FUseMarketBuy,
-    FUseMarketSell: Boolean;
+    FUseMarketSell,
+    FAvoidChop: Boolean;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -193,6 +195,8 @@ begin
   FLargeSellPerc:=StrToFloatDef(json_main.ReadString('large_sell_perc','0'),0);
   FIgnoreProfitPerc:=StrToFloatDef(json_main.ReadString('ignore_profit_perc','0'),0);
   FGTFOPerc:=StrToFloatDef(json_main.ReadString('gtfo_perc','0'),0);
+  FOnlyLower:=json_main.ReadBoolean('only_lower',True);
+  FAvoidChop:=json_main.ReadBoolean('avoid_chop',False);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -230,6 +234,8 @@ begin
   json_main.WriteInteger('temp_window_setting',FTempWindowSetting);
   json_main.WriteBoolean('market_sell',FUseMarketSell);
   json_main.WriteBoolean('market_buy',FUseMarketBuy);
+  json_main.WriteBoolean('only_lower',FOnlyLower);
+  json_main.WriteBoolean('avoid_chop',FAvoidChop);
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
   json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
   json_main.WriteString('min_reduction',FloatToStr(FMinReduce));
@@ -456,7 +462,8 @@ begin
   LShortStrategy.LargeTierSellPerc:=FLargeSellPerc;
   LShortStrategy.UseMarketBuy:=FUseMarketBuy;
   LShortStrategy.UseMarketSell:=FUseMarketSell;
-  LShortStrategy.OnlyLowerAAC:=True;
+  LShortStrategy.OnlyLowerAAC:=FOnlyLower;
+  LShortStrategy.AvoidChop:=FAvoidChop;
   LShortStrategy.MinReduction:=FMinReduce;
   LShortStrategy.MinProfit:=FMinProfit;
   LShortStrategy.OnlyProfit:=True;

@@ -27,6 +27,7 @@ type
   *)
   ITierStrategyGDAX = interface(IStrategyGDAX)
     ['{C9AA33EF-DB73-4790-BD48-5AB5E27A4A81}']
+    function GetAvoidChop: Boolean;
     //property methods
     function GetChannel: IChannelStrategy;
     function GetGTFOPerc: Single;
@@ -45,6 +46,7 @@ type
     function GetSmallSellPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
+    procedure SetAvoidChop(Const AValue: Boolean);
     procedure SetGTFOPerc(Const AValue: Single);
     procedure SetIgnoreProfit(Const AValue: Single);
     procedure SetLargePerc(Const AValue: Single);
@@ -100,6 +102,12 @@ type
       a quick exit price, but most likely incurring fees
     *)
     property UseMarketSell : Boolean read GetUseMarketSell write SetMarketSell;
+    (*
+      using a combination of order fee and min profit, will look at the anchor
+      and deviations to try and avoid purchasing inventory in choppy conditions.
+      this should avoid loading up on bags during uncertain times
+    *)
+    property AvoidChop : Boolean read GetAvoidChop write SetAvoidChop;
     (*
       the market fee associated with market orders. this setting is used
       in conjunction with OnlyProfit to determine if a sell can be made
@@ -168,7 +176,8 @@ type
     FSmallBuy,
     FLargeSell,
     FMidSell,
-    FSmallSell: Boolean;
+    FSmallSell,
+    FAvoidChop: Boolean;
     FIDS: TFPGList<String>;
     function GetChannel: IChannelStrategy;
     function GetLargePerc: Single;
@@ -214,6 +223,8 @@ type
     procedure SmallSellLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
     procedure LargeSellUp(Const ASender:IChannel;Const ADirection:TChannelDirection);
     procedure LargeSellLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
+    function GetAvoidChop: Boolean;
+    procedure SetAvoidChop(const AValue: Boolean);
   strict protected
     const
       GTFO = 'gtfo';
@@ -237,7 +248,9 @@ type
       clears managed positions by cancelling those not completed
     *)
     procedure ClearOldPositions(Const AManager:IOrderManager);
+    function ChoppyWaters : Boolean;
   public
+
     property ChannelStrategy : IChannelStrategy read GetChannel;
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
     property IgnoreOnlyProfitThreshold : Single read GetIgnoreProfit write SetIgnoreProfit;
@@ -246,6 +259,7 @@ type
     property MinReduction : Single read GetMinReduction write SetMinReduction;
     property UseMarketBuy : Boolean read GetUseMarketBuy write SetUseMarketBuy;
     property UseMarketSell : Boolean read GetUseMarketSell write SetMarketSell;
+    property AvoidChop : Boolean read GetAvoidChop write SetAvoidChop;
     property MarketFee : Single read GetMarketFee write SetMarketFee;
     property LimitFee : Single read GetLimitFee write SetLimitFee;
     property SmallTierPer : Single read GetSmallPerc write SetSmallPerc;
@@ -812,6 +826,15 @@ begin
           Exit(True);
         end;
 
+        //before doing any other calcs/comparisons, see if we are in
+        //choppy conditions, if so get out
+        if FAvoidChop and ChoppyWaters then
+        begin
+          LogInfo('DoFeed::BuyMode::choppy waters cap''n, gon hold off from buyin.');
+          PositionSuccess;
+          Exit(True);
+        end;
+
         //simple check to see if bid is lower than aac when requested
         if FOnlyLower and (RoundTo(AInventory,-8) >= LMin) then
         begin
@@ -992,6 +1015,69 @@ begin
   FIDS.Clear;
 end;
 
+function TTierStrategyGDAXImpl.ChoppyWaters: Boolean;
+var
+  I: Integer;
+  LAvgAnc,
+  LAvgDev,
+  LChopInd: Single;
+const
+  CHOP_MAGIC = 0.002;
+begin
+  Result:=False;
+
+  LogInfo('ChoppyWaters::starting');
+  //if we don't care about choppy market, then exit
+  if not FAvoidChop then
+  begin
+    LogInfo('ChoppyWaters::not avoiding chop, exiting');
+    Exit;
+  end;
+
+  //find the average anchor price and deviation
+  LAvgAnc:=0;
+  LAvgDev:=0;
+  for I := 0 to Pred(FChannel.Count) do
+  begin
+    LAvgAnc:=LAvgAnc + FChannel.ByIndex[I].AnchorPrice;
+    LAvgDev:=LAvgDev + FChannel.ByIndex[I].StdDev;
+  end;
+  LAvgAnc:=LAvgAnc / FChannel.Count;
+  LAvgDev:=LAvgDev / FChannel.Count;
+  LogInfo(
+    Format(
+      'ChoppyWaters::[AvgAnchor]-%s [AvgDeviation]-%s',
+      [FloatToStr(LAvgAnc),FloatToStr(LAvgDev)]
+    )
+  );
+
+  //now that we have the averages we need to find the largest of
+  //this calc, or the magic chop calc
+  if UseMarketBuy then
+    LChopInd:=((MarketFee * LAvgAnc) + (MinProfit * LAvgAnc)) / 2
+  else
+    LChopInd:=((LimitFee * LAvgAnc) + (MinProfit * LAvgAnc)) / 2;
+
+  if (CHOP_MAGIC * LAvgAnc) > LChopInd then
+  begin
+    LogInfo('ChoppyWaters::magic chop greater than calc');
+    LChopInd:=CHOP_MAGIC * LAvgAnc;
+  end;
+
+  LogInfo('ChoppyWaters::deviation must be greater than [ChopIndicator]-%s' + FloatToStr(LChopInd));
+  Result:=LAvgDev < LChopInd;
+end;
+
+function TTierStrategyGDAXImpl.GetAvoidChop: Boolean;
+begin
+  Result:=FAvoidChop;
+end;
+
+procedure TTierStrategyGDAXImpl.SetAvoidChop(const AValue: Boolean);
+begin
+  FAvoidChop:=AValue;
+end;
+
 constructor TTierStrategyGDAXImpl.Create(const AOnInfo, AOnError,
   AOnWarn: TStrategyLogEvent);
 begin
@@ -1012,6 +1098,7 @@ begin
   FUseMarketSell:=False;
   FIgnoreProfitPerc:=0;
   FGTFOPerc:=0;
+  FAvoidChop:=False;
   InitChannel;
 end;
 

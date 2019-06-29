@@ -142,9 +142,9 @@ begin
   Active:=False;
 
   //below we'll just check if inventory is less than 15% of total
-  if ADetails^.StartingFunds < 0 then
+  if ADetails^.TotalFunds < 0 then
     Exit
-  else if (ADetails^.Funds / ADetails^.StartingFunds) <= 0.15 then
+  else if (ADetails^.Funds / ADetails^.TotalFunds) <= 0.15 then
     Active:=True;
 end;
 

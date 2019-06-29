@@ -38,11 +38,11 @@ type
     FFunds: Extended;
     FInv: Extended;
     FIsBuy: Boolean;
-    FStart: Extended;
+    FTotal: Extended;
     FStrat: PTierStrategyGDAX;
     FTick: PTicker;
   public
-    property StartingFunds : Extended read FStart write FStart;
+    property TotalFunds : Extended read FTotal write FTotal;
     property Funds : Extended read FFunds write FFunds;
     property Inventory : Extended read FInv write FInv;
     property AAC : Extended read FAAC write FAAC;
@@ -232,7 +232,6 @@ type
     FIDS: TFPGList<String>;
     FActiveCriteria: TActiveCriteriaCallbackArray;
     FActiveCriteriaData: Pointer;
-    FStartingFunds: Extended;
   private
     function GetActiveCriteria: TActiveCriteriaCallbackArray;
     function GetActiveCriteriaData: Pointer;
@@ -711,10 +710,6 @@ var
   LCriteria:TActiveCriteriaDetails;
   LSelf: ITierStrategyGDAX;
 begin
-  //first feed
-  if FStartingFunds < 0 then
-    FStartingFunds:=AFunds;
-
   Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, AAAC, Error);
   if not Result then
     Exit;
@@ -744,7 +739,7 @@ begin
     begin
       AAC:=AAAC;
       Funds:=AFunds;
-      StartingFunds:=FStartingFunds;
+      TotalFunds:=AFunds + AAAC * AInventory;
       Inventory:=AInventory;
       Ticker:=@ATicker;
       Strategy:=@LSelf;
@@ -1241,7 +1236,6 @@ begin
   FUseMarketSell:=False;
   FIgnoreProfitPerc:=0;
   FGTFOPerc:=0;
-  FStartingFunds:=-1;
   FAvoidChop:=False;
   InitChannel;
 end;

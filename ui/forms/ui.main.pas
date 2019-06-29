@@ -55,6 +55,7 @@ type
     ts_strategy: TTabSheet;
     ts_auth: TTabSheet;
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
     procedure mi_auto_startClick(Sender: TObject);
@@ -89,6 +90,7 @@ type
     FUseMarketBuy,
     FUseMarketSell,
     FAvoidChop: Boolean;
+    FParentConfig: ITierStrategyGDAX;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -117,7 +119,7 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  math
+  math, dateutils
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};
@@ -126,6 +128,13 @@ uses
 
 const
   LOG_ENTRY = '%s %s - %s';
+
+procedure MoonParentReady(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+begin
+  //wait for our parent strategy to be ready before we go calling moonshots
+  Active:=PTierStrategyGDAX(ADetails.Data)^.ChannelStrategy.IsReady;
+end;
 
 procedure MoonLowInventory(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
@@ -144,21 +153,36 @@ procedure MoonRisingPrice(Const ADetails : PActiveCriteriaDetails;
 var
   LTickers: TTickers;
   I: Integer;
+  LTimePerTick: Extended;
   LDelta: TArray<Extended>;
   LAvg: Extended;
 begin
+  Active:=False;
+
   //if the price has steadily been rising using our configurable strategy
   //as the baseline, then go ahead and say we're "mooning". we'll use
   //average accel for this
-  LTickers:=ADetails^.Strategy^.ChannelStrategy.Tickers;
+  LTickers:=PTierStrategyGDAX(ADetails.Data)^.ChannelStrategy.Tickers;
+
+  //we need at least two tickerrs
+  if LTickers.Count < 2 then
+    Exit;
+
+  //find the average time between each tick in the set so we can use it
+  //to normalize our average accel "per tick" as opposed to per msec
+  LTimePerTick:=MilliSecondsBetween(LTickers[Pred(LTickers.Count)].Time, LTickers[0].Time) / LTickers.Count;
   SetLength(LDelta,LTickers.Count - 1);
   for I := 1 to Pred(LTickers.Count) do
-    LDelta[I]:=(LTickers[I].Price - LTickers[I - 1].Price) / (LTickers[I].Time - LTickers[I - 1].Time);
+    if LTickers[I].Time - LTickers[I - 1].Time > 0 then
+      LDelta[I - 1]:=(LTickers[I].Price - LTickers[I - 1].Price) / MilliSecondsBetween(LTickers[I].Time, LTickers[I - 1].Time);
 
   //now that we have all the deltas find the average and return true if positive
-  LAvg:=mean(LDelta);
+  LAvg:=mean(LDelta) * LTimePerTick;
+
   if LAvg > 0 then
     Active:=True;
+
+  Main.LogInfo('Main::MoonRisingPrice::average acceleration per tick: ' + FloatToStr(LAvg));
 end;
 
 procedure MoonSideBuy(Const ADetails : PActiveCriteriaDetails;
@@ -248,6 +272,7 @@ var
   LError:String;
   LManager:IGDAXOrderManager;
 begin
+  FParentConfig:=nil;;
   FCompletedOrders:=0;
   //create an engine
   FEngine:=TDelilahImpl.Create;
@@ -257,6 +282,11 @@ begin
   FEngine.OnStatus:=EngineStatus;
 
   InitControls;
+end;
+
+procedure TMain.FormDestroy(Sender: TObject);
+begin
+  FParentConfig:=nil;
 end;
 
 procedure TMain.json_mainSavingProperties(Sender: TObject);
@@ -516,6 +546,8 @@ begin
   LConfigStrategy.LimitFee:=FLimitFee;
   LConfigStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
   LConfigStrategy.GTFOPerc:=FGTFOPerc;
+  FParentConfig:=nil;
+  FParentConfig:=LConfigStrategy;
 
   //log some quick info for strategy
   LogInfo(
@@ -531,7 +563,11 @@ begin
     (*
       below we tailor these properties to the current set of moonman
       criteria. the idea is to only operate when we run out of inventory
-      and to let our parent strategy do the selling.
+      and to let our parent strategy do the selling. this should fix the case
+      where our parent (being lagging) has sold everything but bitcoin
+      jumps on the first falcon heavy it can get a ticket to. in this case
+      our parent strategy will almost never buy any coinage and miss
+      out on fat stacks
     *)
     LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=20 * 60 * 1000;
     LMoonStrategy.SmallTierPerc:=0.01;
@@ -546,9 +582,9 @@ begin
     LMoonStrategy.OnlyProfit:=True;
     LMoonStrategy.MarketFee:=0.000;
     LMoonStrategy.AvoidChop:=True;
-    LMoonStrategy.MinProfit:=0.005; //set this to affect AvoidChop
+    LMoonStrategy.MinProfit:=0.05; //set this to work with AvoidChop
     LMoonStrategy.ActiveCriteria:=GetMoonCriteria;
-    LMoonStrategy.ActiveCriteriaData:=@LConfigStrategy;
+    LMoonStrategy.ActiveCriteriaData:=@FParentConfig;
   end;
 
   //add both config/moon strategies
@@ -715,12 +751,13 @@ begin
   );
 end;
 
-function TMain.GetMoonCriteria(): TActiveCriteriaCallbackArray;
+function TMain.GetMoonCriteria: TActiveCriteriaCallbackArray;
 begin
-  SetLength(Result,3);
+  SetLength(Result,4);
   Result[0]:=MoonSideBuy;
-  Result[1]:=MoonLowInventory;
-  Result[2]:=MoonRisingPrice;
+  Result[1]:=MoonParentReady;
+  Result[2]:=MoonLowInventory;
+  Result[3]:=MoonRisingPrice;
 end;
 
 

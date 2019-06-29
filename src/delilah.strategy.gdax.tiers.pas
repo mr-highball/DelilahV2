@@ -20,6 +20,45 @@ type
     psGTFO
   );
 
+  ITierStrategyGDAX = interface;
+  PTierStrategyGDAX = ^ITierStrategyGDAX;
+
+  { TActiveCriteriaDetails }
+  (*
+    details of a current feed operation provided to the active callback
+    callback methods
+  *)
+  TActiveCriteriaDetails = record
+  public
+    type
+      PTicker = ^ITicker;
+  private
+    FAAC: Extended;
+    FData: Pointer;
+    FFunds: Extended;
+    FInv: Extended;
+    FIsBuy: Boolean;
+    FStart: Extended;
+    FStrat: PTierStrategyGDAX;
+    FTick: PTicker;
+  public
+    property StartingFunds : Extended read FStart write FStart;
+    property Funds : Extended read FFunds write FFunds;
+    property Inventory : Extended read FInv write FInv;
+    property AAC : Extended read FAAC write FAAC;
+    property IsBuy : Boolean read FIsBuy write FIsBuy;
+    property Ticker : PTicker read FTick write FTick;
+    property Strategy : PTierStrategyGDAX read FStrat write FStrat;
+    property Data : Pointer read FData write FData;
+  end;
+
+  PActiveCriteriaDetails = ^TActiveCriteriaDetails;
+
+  TActiveCriteriaCallback = procedure(Const ADetails : PActiveCriteriaDetails;
+    Var Active : Boolean);
+
+  TActiveCriteriaCallbackArray = array of TActiveCriteriaCallback;
+
   { ITierStrategyGDAX }
   (*
     strategy which sets various channels above and below each other (tiered)
@@ -27,8 +66,10 @@ type
   *)
   ITierStrategyGDAX = interface(IStrategyGDAX)
     ['{C9AA33EF-DB73-4790-BD48-5AB5E27A4A81}']
-    function GetAvoidChop: Boolean;
     //property methods
+    function GetActiveCriteria: TActiveCriteriaCallbackArray;
+    function GetActiveCriteriaData: Pointer;
+    function GetAvoidChop: Boolean;
     function GetChannel: IChannelStrategy;
     function GetGTFOPerc: Single;
     function GetIgnoreProfit: Single;
@@ -46,6 +87,8 @@ type
     function GetSmallSellPerc: Single;
     function GetUseMarketBuy: Boolean;
     function GetUseMarketSell: Boolean;
+    procedure SetActiveCritera(Const AValue: TActiveCriteriaCallbackArray);
+    procedure SetActiveCriteriaData(Const AValue: Pointer);
     procedure SetAvoidChop(Const AValue: Boolean);
     procedure SetGTFOPerc(Const AValue: Single);
     procedure SetIgnoreProfit(Const AValue: Single);
@@ -145,6 +188,14 @@ type
       when GTFO signal is reached, determines the percentage of inventory to sell
     *)
     property GTFOPerc : Single read GetGTFOPerc write SetGTFOPerc;
+
+    (*
+      active criteria callbacks can be used to add in custom pre-processing
+      rules for feed data, that report back to to the strategy whether an
+      action should be performed
+    *)
+    property ActiveCriteria : TActiveCriteriaCallbackArray read GetActiveCriteria write SetActiveCritera;
+    property ActiveCriteriaData : Pointer read GetActiveCriteriaData write SetActiveCriteriaData;
   end;
 
   { TTierStrategyGDAXImpl }
@@ -179,6 +230,12 @@ type
     FSmallSell,
     FAvoidChop: Boolean;
     FIDS: TFPGList<String>;
+    FActiveCriteria: TActiveCriteriaCallbackArray;
+    FActiveCriteriaData: Pointer;
+    FStartingFunds: Extended;
+  private
+    function GetActiveCriteria: TActiveCriteriaCallbackArray;
+    function GetActiveCriteriaData: Pointer;
     function GetChannel: IChannelStrategy;
     function GetLargePerc: Single;
     function GetLargeSellPerc: Single;
@@ -196,6 +253,8 @@ type
     function GetUseMarketSell: Boolean;
     function GetGTFOPerc: Single;
     function GetIgnoreProfit: Single;
+    procedure SetActiveCritera(Const AValue: TActiveCriteriaCallbackArray);
+    procedure SetActiveCriteriaData(Const AValue: Pointer);
     procedure SetLargePerc(Const AValue: Single);
     procedure SetLargeSellPerc(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
@@ -249,6 +308,7 @@ type
     *)
     procedure ClearOldPositions(Const AManager:IOrderManager);
     function ChoppyWaters : Boolean;
+    function ActiveCriteriaCheck(Const ADetails : PActiveCriteriaDetails) : Boolean;
   public
 
     property ChannelStrategy : IChannelStrategy read GetChannel;
@@ -269,6 +329,8 @@ type
     property MidTierSellPerc : Single read GetMidSellPerc write SetMidSellPerc;
     property LargeTierSellPerc : Single read GetLargeSellPerc write SetLargeSellPerc;
     property GTFOPerc : Single read GetGTFOPerc write SetGTFOPerc;
+    property ActiveCriteria : TActiveCriteriaCallbackArray read GetActiveCriteria write SetActiveCritera;
+    property ActiveCriteriaData : Pointer read GetActiveCriteriaData write SetActiveCriteriaData;
     constructor Create(const AOnInfo, AOnError, AOnWarn: TStrategyLogEvent);override;
     destructor Destroy; override;
   end;
@@ -287,6 +349,16 @@ uses
 function TTierStrategyGDAXImpl.GetChannel: IChannelStrategy;
 begin
   Result:=FChannel;
+end;
+
+function TTierStrategyGDAXImpl.GetActiveCriteria: TActiveCriteriaCallbackArray;
+begin
+  Result:=FActiveCriteria;
+end;
+
+function TTierStrategyGDAXImpl.GetActiveCriteriaData: Pointer;
+begin
+  Result:=FActiveCriteriaData;
 end;
 
 function TTierStrategyGDAXImpl.GetLargePerc: Single;
@@ -367,6 +439,17 @@ end;
 function TTierStrategyGDAXImpl.GetIgnoreProfit: Single;
 begin
   Result:=FIgnoreProfitPerc;
+end;
+
+procedure TTierStrategyGDAXImpl.SetActiveCritera(
+  const AValue: TActiveCriteriaCallbackArray);
+begin
+  FActiveCriteria:=AValue;
+end;
+
+procedure TTierStrategyGDAXImpl.SetActiveCriteriaData(Const AValue: Pointer);
+begin
+  FActiveCriteriaData:=AValue;
 end;
 
 procedure TTierStrategyGDAXImpl.SetLargePerc(const AValue: Single);
@@ -625,7 +708,13 @@ var
   LGDAXOrder:IGDAXOrder;
   LDetails:IOrderDetails;
   LChannel:IChannel;
+  LCriteria:TActiveCriteriaDetails;
+  LSelf: ITierStrategyGDAX;
 begin
+  //first feed
+  if FStartingFunds < 0 then
+    FStartingFunds:=AFunds;
+
   Result:=inherited DoFeed(ATicker, AManager, AFunds, AInventory, AAAC, Error);
   if not Result then
     Exit;
@@ -647,6 +736,19 @@ begin
         )
       );
       Exit(True);
+    end;
+
+    //initialize active criteria details
+    LSelf:=Self As ITierStrategyGDAX;
+    with LCriteria do
+    begin
+      AAC:=AAAC;
+      Funds:=AFunds;
+      StartingFunds:=FStartingFunds;
+      Inventory:=AInventory;
+      Ticker:=@ATicker;
+      Strategy:=@LSelf;
+      Data:=FActiveCriteriaData;
     end;
 
     //log the channels' state
@@ -680,6 +782,14 @@ begin
       if LSell then
       begin
         LogInfo('DoFeed::sell logic reached');
+
+        //perform pre-processing checks before other
+        LCriteria.IsBuy:=False;
+        if not ActiveCriteriaCheck(@LCriteria) then
+        begin
+          LogInfo('DoFeed::active criteria checks returned false, exiting sell');
+          Exit(True);
+        end;
 
         //if a gtfo siganl occurred, but no percentage was specified
         //return here so the minimum logic won't be reached
@@ -797,6 +907,15 @@ begin
       else
       begin
         LogInfo('DoFeed::buy logic');
+
+        //perform pre-processing checks before other
+        LCriteria.IsBuy:=True;
+        if not ActiveCriteriaCheck(@LCriteria) then
+        begin
+          LogInfo('DoFeed::active criteria checks returned false, exiting buy');
+          Exit(True);
+        end;
+
         //see if we have enough funds to cover either a limit or market
         LOrderBuyTot:=Abs(RoundTo(AFunds * LPerc,-8));
 
@@ -1068,6 +1187,30 @@ begin
   Result:=LAvgDev < LChopInd;
 end;
 
+function TTierStrategyGDAXImpl.ActiveCriteriaCheck(
+  const ADetails: PActiveCriteriaDetails): Boolean;
+var
+  I: Integer;
+begin
+  //default active to true
+  Result:=True;
+  if Length(FActiveCriteria) < 1 then
+    Exit(True)
+  else
+  begin
+    //iterate our callbacks and call each one
+    for I := 0 to High(FActiveCriteria) do
+    begin
+      if Assigned(FActiveCriteria[I]) then
+        FActiveCriteria[I](ADetails,Result);
+
+      //return one of the checks fails
+      if not Result then
+        Exit;
+    end;
+  end;
+end;
+
 function TTierStrategyGDAXImpl.GetAvoidChop: Boolean;
 begin
   Result:=FAvoidChop;
@@ -1098,6 +1241,7 @@ begin
   FUseMarketSell:=False;
   FIgnoreProfitPerc:=0;
   FGTFOPerc:=0;
+  FStartingFunds:=-1;
   FAvoidChop:=False;
   InitChannel;
 end;

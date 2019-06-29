@@ -9,7 +9,7 @@ uses
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
-  ui.usercontrol.singleline, delilah.types, ui.email;
+  ui.usercontrol.singleline, delilah.types, ui.email, delilah.strategy.gdax.tiers;
 
 type
 
@@ -66,6 +66,7 @@ type
   private
     FAuth : TAuthenticator;
     FOnlyLower: Boolean;
+    FMoonMan: Boolean;
     FProducts : TProducts;
     FProductInit : Boolean;
     FFunds : TSingleLine;
@@ -104,6 +105,7 @@ type
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
     procedure LogError(Const AMessage:String);
     procedure LogInfo(Const AMessage:String);
+    function GetMoonCriteria : TActiveCriteriaCallbackArray;
   public
   end;
 
@@ -115,7 +117,7 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  delilah.strategy.gdax.tiers
+  math
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};
@@ -124,6 +126,47 @@ uses
 
 const
   LOG_ENTRY = '%s %s - %s';
+
+procedure MoonLowInventory(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+begin
+  Active:=False;
+
+  //below we'll just check if inventory is less than 15% of total
+  if ADetails^.StartingFunds < 0 then
+    Exit
+  else if (ADetails^.Funds / ADetails^.StartingFunds) <= 0.15 then
+    Active:=True;
+end;
+
+procedure MoonRisingPrice(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+var
+  LTickers: TTickers;
+  I: Integer;
+  LDelta: TArray<Extended>;
+  LAvg: Extended;
+begin
+  //if the price has steadily been rising using our configurable strategy
+  //as the baseline, then go ahead and say we're "mooning". we'll use
+  //average accel for this
+  LTickers:=ADetails^.Strategy^.ChannelStrategy.Tickers;
+  SetLength(LDelta,LTickers.Count - 1);
+  for I := 1 to Pred(LTickers.Count) do
+    LDelta[I]:=(LTickers[I].Price - LTickers[I - 1].Price) / (LTickers[I].Time - LTickers[I - 1].Time);
+
+  //now that we have all the deltas find the average and return true if positive
+  LAvg:=mean(LDelta);
+  if LAvg > 0 then
+    Active:=True;
+end;
+
+procedure MoonSideBuy(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+begin
+  //moon strategy is only buy strategy
+  Active:=ADetails^.IsBuy;
+end;
 
 { TMain }
 
@@ -197,6 +240,7 @@ begin
   FGTFOPerc:=StrToFloatDef(json_main.ReadString('gtfo_perc','0'),0);
   FOnlyLower:=json_main.ReadBoolean('only_lower',True);
   FAvoidChop:=json_main.ReadBoolean('avoid_chop',False);
+  FMoonMan:=json_main.ReadBoolean('lunar_mission',False);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -236,6 +280,7 @@ begin
   json_main.WriteBoolean('market_buy',FUseMarketBuy);
   json_main.WriteBoolean('only_lower',FOnlyLower);
   json_main.WriteBoolean('avoid_chop',FAvoidChop);
+  json_main.WriteBoolean('lunar_mission',FMoonMan);
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
   json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
   json_main.WriteString('min_reduction',FloatToStr(FMinReduce));
@@ -439,8 +484,8 @@ end;
 procedure TMain.StartStrategy(Sender: TObject);
 var
   LError:String;
-  LShortStrategy,
-  LLongStrategy:ITierStrategyGDAX;
+  LConfigStrategy,
+  LMoonStrategy:ITierStrategyGDAX;
 begin
   //clear chart source
   chart_source.Clear;
@@ -448,29 +493,29 @@ begin
   //todo - right now just adding an sample strategy, but need to choose
   //from the selected strategy in some dropdown once fully implemented.
   //also allow easy ui binding, and registering...
-  LShortStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
-  LLongStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LConfigStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LMoonStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
 
   //todo - currently using a config to pull window, but this needs
   //to be dynamic based on strategy (since not all strategies utilize a window)
-  LShortStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LShortStrategy.SmallTierPerc:=FSmallBuyPerc;
-  LShortStrategy.MidTierPerc:=FMedBuyPerc;
-  LShortStrategy.LargeTierPerc:=FLargeBuyPerc;
-  LShortStrategy.SmallTierSellPerc:=FSmallSellPerc;
-  LShortStrategy.MidTierSellPerc:=FMedSellPerc;
-  LShortStrategy.LargeTierSellPerc:=FLargeSellPerc;
-  LShortStrategy.UseMarketBuy:=FUseMarketBuy;
-  LShortStrategy.UseMarketSell:=FUseMarketSell;
-  LShortStrategy.OnlyLowerAAC:=FOnlyLower;
-  LShortStrategy.AvoidChop:=FAvoidChop;
-  LShortStrategy.MinReduction:=FMinReduce;
-  LShortStrategy.MinProfit:=FMinProfit;
-  LShortStrategy.OnlyProfit:=True;
-  LShortStrategy.MarketFee:=FMarketFee;
-  LShortStrategy.LimitFee:=FLimitFee;
-  LShortStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
-  LShortStrategy.GTFOPerc:=FGTFOPerc;
+  LConfigStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
+  LConfigStrategy.SmallTierPerc:=FSmallBuyPerc;
+  LConfigStrategy.MidTierPerc:=FMedBuyPerc;
+  LConfigStrategy.LargeTierPerc:=FLargeBuyPerc;
+  LConfigStrategy.SmallTierSellPerc:=FSmallSellPerc;
+  LConfigStrategy.MidTierSellPerc:=FMedSellPerc;
+  LConfigStrategy.LargeTierSellPerc:=FLargeSellPerc;
+  LConfigStrategy.UseMarketBuy:=FUseMarketBuy;
+  LConfigStrategy.UseMarketSell:=FUseMarketSell;
+  LConfigStrategy.OnlyLowerAAC:=FOnlyLower;
+  LConfigStrategy.AvoidChop:=FAvoidChop;
+  LConfigStrategy.MinReduction:=FMinReduce;
+  LConfigStrategy.MinProfit:=FMinProfit;
+  LConfigStrategy.OnlyProfit:=True;
+  LConfigStrategy.MarketFee:=FMarketFee;
+  LConfigStrategy.LimitFee:=FLimitFee;
+  LConfigStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
+  LConfigStrategy.GTFOPerc:=FGTFOPerc;
 
   //log some quick info for strategy
   LogInfo(
@@ -480,28 +525,41 @@ begin
     )
   );
 
-  (*
-  LLongStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting * 5;
-  LLongStrategy.SmallTierPerc:=0.03;
-  LLongStrategy.MidTierPerc:=0.04;
-  LLongStrategy.LargeTierPerc:=0.06;
-  LLongStrategy.SmallTierSellPerc:=0.25;
-  LLongStrategy.MidTierSellPerc:=0.50;
-  LLongStrategy.LargeTierSellPerc:=1.0;
-  LLongStrategy.UseMarketBuy:=False;
-  LLongStrategy.UseMarketSell:=False;
-  LLongStrategy.OnlyLowerAAC:=True;
-  LLongStrategy.OnlyProfit:=True;
-  LLongStrategy.MarketFee:=0.004;//intentionally make it higher
-  *)
-  //add both short/long strategies
+  //as you can tell... this is a permanent strategy that will never ever change in the future
+  if FMoonMan then
+  begin
+    (*
+      below we tailor these properties to the current set of moonman
+      criteria. the idea is to only operate when we run out of inventory
+      and to let our parent strategy do the selling.
+    *)
+    LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=20 * 60 * 1000;
+    LMoonStrategy.SmallTierPerc:=0.01;
+    LMoonStrategy.MidTierPerc:=0.01;
+    LMoonStrategy.LargeTierPerc:=0.02;
+    LMoonStrategy.SmallTierSellPerc:=0;
+    LMoonStrategy.MidTierSellPerc:=0;
+    LMoonStrategy.LargeTierSellPerc:=0;
+    LMoonStrategy.UseMarketBuy:=True;
+    LMoonStrategy.UseMarketSell:=False;
+    LMoonStrategy.OnlyLowerAAC:=False;
+    LMoonStrategy.OnlyProfit:=True;
+    LMoonStrategy.MarketFee:=0.000;
+    LMoonStrategy.AvoidChop:=True;
+    LMoonStrategy.MinProfit:=0.005; //set this to affect AvoidChop
+    LMoonStrategy.ActiveCriteria:=GetMoonCriteria;
+    LMoonStrategy.ActiveCriteriaData:=@LConfigStrategy;
+  end;
+
+  //add both config/moon strategies
   FEngine.Strategies.Add(
-    LShortStrategy
+    LConfigStrategy
   );
-  (*
-  FEngine.Strategies.Add(
-    LLongStrategy
-  );*)
+
+  if FMoonMan then
+    FEngine.Strategies.Add(
+      LMoonStrategy
+    );
 
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
@@ -655,6 +713,14 @@ begin
   multi_log.Lines.Append(
     Format(LOG_ENTRY,['-INFO-',DateTimeToStr(Now),AMessage])
   );
+end;
+
+function TMain.GetMoonCriteria(): TActiveCriteriaCallbackArray;
+begin
+  SetLength(Result,3);
+  Result[0]:=MoonSideBuy;
+  Result[1]:=MoonLowInventory;
+  Result[2]:=MoonRisingPrice;
 end;
 
 

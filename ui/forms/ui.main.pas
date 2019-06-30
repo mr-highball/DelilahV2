@@ -141,10 +141,10 @@ procedure MoonLowInventory(Const ADetails : PActiveCriteriaDetails;
 begin
   Active:=False;
 
-  //below we'll just check if inventory is less than 15% of total
+  //below we check to see if we have a small inventory (more than 85% free funds)
   if ADetails^.TotalFunds < 0 then
     Exit
-  else if (ADetails^.Funds / ADetails^.TotalFunds) <= 0.15 then
+  else if (ADetails^.Funds / ADetails^.TotalFunds) >= 0.85 then
     Active:=True;
 end;
 
@@ -582,7 +582,7 @@ begin
     LMoonStrategy.OnlyProfit:=True;
     LMoonStrategy.MarketFee:=0.000;
     LMoonStrategy.AvoidChop:=True;
-    LMoonStrategy.MinProfit:=0.05; //set this to work with AvoidChop
+    LMoonStrategy.MinProfit:=0.004; //set this to work with AvoidChop
     LMoonStrategy.ActiveCriteria:=GetMoonCriteria;
     LMoonStrategy.ActiveCriteriaData:=@FParentConfig;
   end;

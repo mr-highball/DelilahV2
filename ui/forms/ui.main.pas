@@ -155,7 +155,9 @@ var
   I: Integer;
   LTimePerTick: Extended;
   LDelta: TArray<Extended>;
-  LAvg: Extended;
+  LAvg, LProjectedPrice: Extended;
+  LParentWindow: Cardinal;
+  LMinProfit: Single;
 begin
   Active:=False;
 
@@ -176,13 +178,48 @@ begin
     if LTickers[I].Time - LTickers[I - 1].Time > 0 then
       LDelta[I - 1]:=(LTickers[I].Price - LTickers[I - 1].Price) / MilliSecondsBetween(LTickers[I].Time, LTickers[I - 1].Time);
 
-  //now that we have all the deltas find the average and return true if positive
+  //now that we have all the deltas find average per tick, and use
+  //it to project if we'll turn a profit
   LAvg:=mean(LDelta) * LTimePerTick;
 
-  if LAvg > 0 then
-    Active:=True;
+  if LAvg < 0 then
+  begin
+    Main.LogInfo('Main::MoonRisingPrice::negative average acceleration per tick: ' + FloatToStr(LAvg));
+    Exit;
+  end;
 
   Main.LogInfo('Main::MoonRisingPrice::average acceleration per tick: ' + FloatToStr(LAvg));
+
+  //no need to project if the parent doesn't care about profit
+  if not PTierStrategyGDAX(ADetails.Data)^.OnlyProfit then
+  begin
+    Active:=True;
+    Main.LogInfo('Main::MoonRisingPrice::parent OnlyProfit is false, no projection');
+    Exit;
+  end;
+
+  //to project the price we need to look at the parent window's size
+  //and min profit, and see if with the current average accelaration, the profit
+  //"should" be reached
+  LParentWindow:=PTierStrategyGDAX(ADetails.Data)^.ChannelStrategy.WindowSizeInMilli;
+  LMinProfit:=PTierStrategyGDAX(ADetails.Data)^.MinProfit;
+  LProjectedPrice:=
+    //(ticksInWindow * averageAccel) + currentPrice = projected
+    (LParentWindow / LTimePerTick) * LAvg + ADetails^.Ticker^.Price;
+
+  Main.LogInfo('Main::MoonRisingPrice::projected price ' + FloatToStr(LProjectedPrice));
+
+  //find delta of current price and see if the percentage gain is at least
+  //the min profit (doesn't account for fees etc...)
+  LAvg:=LProjectedPrice - ADetails^.Ticker^.Price;//yeah yeah don't reuse variables
+  if (LAvg / ADetails^.Ticker^.Price) < LMinProfit then
+  begin
+    Main.LogInfo('Main::MoonRisingPrice::projected price is not high enough for min profit');
+    Exit;
+  end;
+
+  //otherwise all good to buy
+  Active:=True;
 end;
 
 procedure MoonSideBuy(Const ADetails : PActiveCriteriaDetails;
@@ -516,6 +553,8 @@ var
   LError:String;
   LConfigStrategy,
   LMoonStrategy:ITierStrategyGDAX;
+const
+  MOON_MIN_WINDOW = 20 * 60 * 1000;
 begin
   //clear chart source
   chart_source.Clear;
@@ -569,10 +608,16 @@ begin
       our parent strategy will almost never buy any coinage and miss
       out on fat stacks
     *)
-    LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=20 * 60 * 1000;
-    LMoonStrategy.SmallTierPerc:=0.01;
-    LMoonStrategy.MidTierPerc:=0.01;
-    LMoonStrategy.LargeTierPerc:=0.02;
+
+    //use 20% of parent size unless it's smaller than the min
+    if (FParentConfig.ChannelStrategy.WindowSizeInMilli * 0.2) >= MOON_MIN_WINDOW then
+      LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=Round(FParentConfig.ChannelStrategy.WindowSizeInMilli * 0.2)
+    else
+      LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=MOON_MIN_WINDOW;
+
+    LMoonStrategy.SmallTierPerc:=0.005;
+    LMoonStrategy.MidTierPerc:=0.005;
+    LMoonStrategy.LargeTierPerc:=0.05;
     LMoonStrategy.SmallTierSellPerc:=0;
     LMoonStrategy.MidTierSellPerc:=0;
     LMoonStrategy.LargeTierSellPerc:=0;
@@ -581,8 +626,8 @@ begin
     LMoonStrategy.OnlyLowerAAC:=False;
     LMoonStrategy.OnlyProfit:=True;
     LMoonStrategy.MarketFee:=0.000;
-    LMoonStrategy.AvoidChop:=True;
-    LMoonStrategy.MinProfit:=0.004; //set this to work with AvoidChop
+    LMoonStrategy.AvoidChop:=False;
+    LMoonStrategy.MinProfit:=0.004;
     LMoonStrategy.ActiveCriteria:=GetMoonCriteria;
     LMoonStrategy.ActiveCriteriaData:=@FParentConfig;
   end;

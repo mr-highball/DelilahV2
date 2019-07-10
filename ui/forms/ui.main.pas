@@ -90,7 +90,9 @@ type
     FUseMarketBuy,
     FUseMarketSell,
     FAvoidChop: Boolean;
-    FParentConfig: ITierStrategyGDAX;
+    FMidStrategy: ITierStrategyGDAX;
+    FAccelStrategy: ITierStrategyGDAX;
+    FAccelWindowFactor: Integer;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -108,6 +110,8 @@ type
     procedure LogError(Const AMessage:String);
     procedure LogInfo(Const AMessage:String);
     function GetMoonCriteria : TActiveCriteriaCallbackArray;
+    function GetMidCriteria : TActiveCriteriaCallbackArray;
+    function GetAccelCriteria : TActiveCriteriaCallbackArray;
   public
   end;
 
@@ -144,18 +148,41 @@ begin
   //below we check to see if we have a small inventory (more than 85% free funds)
   if ADetails^.TotalFunds < 0 then
     Exit
-  else if (ADetails^.Funds / ADetails^.TotalFunds) >= 0.85 then
+  //allocate up to 10% of funds to moon strategy
+  else if (ADetails^.Funds / ADetails^.TotalFunds) >= 0.90 then
     Active:=True;
+end;
+
+function GetAverageAccelPerTick(Const AStrategy : PTierStrategyGDAX;
+  Out TimePerTick : Extended) : Extended;
+var
+  LTickers: TTickers;
+  LDelta: TArray<Extended>;
+  I: Integer;
+begin
+  Result:=0;
+  TimePerTick:=0;
+  LTickers:=AStrategy^.ChannelStrategy.Tickers;
+
+  //we need at least two tickerrs
+  if LTickers.Count < 2 then
+    Exit;
+
+  //find the average time between each tick in the set so we can use it
+  //to normalize our average accel "per tick" as opposed to per msec
+  TimePerTick:=MilliSecondsBetween(LTickers[Pred(LTickers.Count)].Time, LTickers[0].Time) / LTickers.Count;
+  SetLength(LDelta,LTickers.Count - 1);
+  for I := 1 to Pred(LTickers.Count) do
+    if LTickers[I].Time - LTickers[I - 1].Time > 0 then
+      LDelta[I - 1]:=(LTickers[I].Price - LTickers[I - 1].Price) / MilliSecondsBetween(LTickers[I].Time, LTickers[I - 1].Time);
+
+  Result:=mean(LDelta) * TimePerTick;
 end;
 
 procedure MoonRisingPrice(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
-  LTickers: TTickers;
-  I: Integer;
-  LTimePerTick: Extended;
-  LDelta: TArray<Extended>;
-  LAvg, LProjectedPrice: Extended;
+  LAvg, LProjectedPrice, LTimePerTick: Extended;
   LParentWindow: Cardinal;
   LMinProfit: Single;
 begin
@@ -164,24 +191,7 @@ begin
   //if the price has steadily been rising using our configurable strategy
   //as the baseline, then go ahead and say we're "mooning". we'll use
   //average accel for this
-  LTickers:=PTierStrategyGDAX(ADetails.Data)^.ChannelStrategy.Tickers;
-
-  //we need at least two tickerrs
-  if LTickers.Count < 2 then
-    Exit;
-
-  //find the average time between each tick in the set so we can use it
-  //to normalize our average accel "per tick" as opposed to per msec
-  LTimePerTick:=MilliSecondsBetween(LTickers[Pred(LTickers.Count)].Time, LTickers[0].Time) / LTickers.Count;
-  SetLength(LDelta,LTickers.Count - 1);
-  for I := 1 to Pred(LTickers.Count) do
-    if LTickers[I].Time - LTickers[I - 1].Time > 0 then
-      LDelta[I - 1]:=(LTickers[I].Price - LTickers[I - 1].Price) / MilliSecondsBetween(LTickers[I].Time, LTickers[I - 1].Time);
-
-  //now that we have all the deltas find average per tick, and use
-  //it to project if we'll turn a profit
-  LAvg:=mean(LDelta) * LTimePerTick;
-
+  LAvg:=GetAverageAccelPerTick(PTierStrategyGDAX(ADetails^.Data),LTimePerTick);
   if LAvg < 0 then
   begin
     Main.LogInfo('Main::MoonRisingPrice::negative average acceleration per tick: ' + FloatToStr(LAvg));
@@ -191,7 +201,7 @@ begin
   Main.LogInfo('Main::MoonRisingPrice::average acceleration per tick: ' + FloatToStr(LAvg));
 
   //no need to project if the parent doesn't care about profit
-  if not PTierStrategyGDAX(ADetails.Data)^.OnlyProfit then
+  if not PTierStrategyGDAX(ADetails^.Data)^.OnlyProfit then
   begin
     Active:=True;
     Main.LogInfo('Main::MoonRisingPrice::parent OnlyProfit is false, no projection');
@@ -201,17 +211,17 @@ begin
   //to project the price we need to look at the parent window's size
   //and min profit, and see if with the current average accelaration, the profit
   //"should" be reached
-  LParentWindow:=PTierStrategyGDAX(ADetails.Data)^.ChannelStrategy.WindowSizeInMilli;
-  LMinProfit:=PTierStrategyGDAX(ADetails.Data)^.MinProfit;
-  LProjectedPrice:=
-    //(ticksInWindow * averageAccel) + currentPrice = projected
-    (LParentWindow / LTimePerTick) * LAvg + ADetails^.Ticker^.Price;
+  LParentWindow:=PTierStrategyGDAX(ADetails^.Data)^.ChannelStrategy.WindowSizeInMilli;
+  LMinProfit:=PTierStrategyGDAX(ADetails^.Data)^.MinProfit;
 
+  //(ticksInWindow * averageAccel) + currentPrice = projected
+  LProjectedPrice:=(LParentWindow / LTimePerTick) * LAvg + ADetails^.Ticker^.Price;
   Main.LogInfo('Main::MoonRisingPrice::projected price ' + FloatToStr(LProjectedPrice));
 
   //find delta of current price and see if the percentage gain is at least
   //the min profit (doesn't account for fees etc...)
   LAvg:=LProjectedPrice - ADetails^.Ticker^.Price;//yeah yeah don't reuse variables
+
   if (LAvg / ADetails^.Ticker^.Price) < LMinProfit then
   begin
     Main.LogInfo('Main::MoonRisingPrice::projected price is not high enough for min profit');
@@ -227,6 +237,27 @@ procedure MoonSideBuy(Const ADetails : PActiveCriteriaDetails;
 begin
   //moon strategy is only buy strategy
   Active:=ADetails^.IsBuy;
+end;
+
+procedure AccelDisableTrades(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+begin
+  //acceleration strategy will never make a trade
+  Active:=False;
+end;
+
+procedure MidAccelStratPositve(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+var
+  LAccel: PTierStrategyGDAX;
+  LTimePerTick, LAvg: Extended;
+begin
+  Active:=False;
+  LAccel:=PTierStrategyGDAX(ADetails.Data);
+
+  //find the average accel per tick and if we are postive, return true
+  LAvg:=GetAverageAccelPerTick(LAccel,LTimePerTick);
+  Active:=LAvg > 0;
 end;
 
 { TMain }
@@ -302,6 +333,7 @@ begin
   FOnlyLower:=json_main.ReadBoolean('only_lower',True);
   FAvoidChop:=json_main.ReadBoolean('avoid_chop',False);
   FMoonMan:=json_main.ReadBoolean('lunar_mission',False);
+  FAccelWindowFactor:=json_main.ReadInteger('accel_window_factor',4);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -309,7 +341,7 @@ var
   LError:String;
   LManager:IGDAXOrderManager;
 begin
-  FParentConfig:=nil;;
+  FMidStrategy:=nil;;
   FCompletedOrders:=0;
   //create an engine
   FEngine:=TDelilahImpl.Create;
@@ -323,7 +355,8 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  FParentConfig:=nil;
+  FMidStrategy:=nil;
+  FAccelStrategy:=nil;
 end;
 
 procedure TMain.json_mainSavingProperties(Sender: TObject);
@@ -360,6 +393,7 @@ begin
   json_main.WriteString('large_sell_perc',FloatToStr(FLargeSellPerc));
   json_main.WriteString('ignore_profit_perc',FloatToStr(FIgnoreProfitPerc));
   json_main.WriteString('gtfo_perc',FloatToStr(FGTFOPerc));
+  json_main.WriteInteger('accel_window_factor',FAccelWindowFactor);
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -585,8 +619,9 @@ begin
   LConfigStrategy.LimitFee:=FLimitFee;
   LConfigStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
   LConfigStrategy.GTFOPerc:=FGTFOPerc;
-  FParentConfig:=nil;
-  FParentConfig:=LConfigStrategy;
+  FMidStrategy:=nil;
+  FMidStrategy:=LConfigStrategy;
+  FMidStrategy.ActiveCriteria:=GetMidCriteria;
 
   //log some quick info for strategy
   LogInfo(
@@ -610,14 +645,14 @@ begin
     *)
 
     //use 20% of parent size unless it's smaller than the min
-    if (FParentConfig.ChannelStrategy.WindowSizeInMilli * 0.2) >= MOON_MIN_WINDOW then
-      LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=Round(FParentConfig.ChannelStrategy.WindowSizeInMilli * 0.2)
+    if (FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.2) >= MOON_MIN_WINDOW then
+      LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=Round(FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.2)
     else
       LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=MOON_MIN_WINDOW;
 
     LMoonStrategy.SmallTierPerc:=0.005;
     LMoonStrategy.MidTierPerc:=0.005;
-    LMoonStrategy.LargeTierPerc:=0.05;
+    LMoonStrategy.LargeTierPerc:=0.001;
     LMoonStrategy.SmallTierSellPerc:=0;
     LMoonStrategy.MidTierSellPerc:=0;
     LMoonStrategy.LargeTierSellPerc:=0;
@@ -629,7 +664,7 @@ begin
     LMoonStrategy.AvoidChop:=False;
     LMoonStrategy.MinProfit:=0.004;
     LMoonStrategy.ActiveCriteria:=GetMoonCriteria;
-    LMoonStrategy.ActiveCriteriaData:=@FParentConfig;
+    LMoonStrategy.ActiveCriteriaData:=@FMidStrategy;
   end;
 
   //add both config/moon strategies
@@ -641,6 +676,21 @@ begin
     FEngine.Strategies.Add(
       LMoonStrategy
     );
+
+  (*
+    as long as we have an acceleration factor above zero then
+    go ahead and make a strategy using this factor amount
+  *)
+  if FAccelWindowFactor > 0 then
+  begin
+    FAccelStrategy:=nil;
+    FAccelStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+    FAccelStrategy.ChannelStrategy.WindowSizeInMilli:=FMidStrategy.ChannelStrategy.WindowSizeInMilli * FAccelWindowFactor;
+    FAccelStrategy.ActiveCriteria:=GetAccelCriteria;
+
+    //add strategy to the engine
+    FEngine.Strategies.Add(FAccelStrategy);
+  end;
 
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
@@ -803,6 +853,24 @@ begin
   Result[1]:=MoonParentReady;
   Result[2]:=MoonLowInventory;
   Result[3]:=MoonRisingPrice;
+end;
+
+function TMain.GetMidCriteria: TActiveCriteriaCallbackArray;
+begin
+  SetLength(Result,0);
+  if FAccelWindowFactor < 1 then
+    Exit
+  else
+  begin
+    SetLength(Result,1);
+    Result[0]:=MidAccelStratPositve;
+  end;
+end;
+
+function TMain.GetAccelCriteria: TActiveCriteriaCallbackArray;
+begin
+  SetLength(Result,1);
+  Result[0]:=AccelDisableTrades;
 end;
 
 

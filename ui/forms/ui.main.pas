@@ -255,6 +255,10 @@ var
   LAccel: PTierStrategyGDAX;
   LTimePerTick, LAvg: Extended;
 begin
+  //this criteria is only checked during buy positions
+  if not ADetails^.IsBuy then
+    Exit;
+
   if not Assigned(ADetails^.Data) then
     Exit;
 
@@ -263,6 +267,7 @@ begin
 
   //find the average accel per tick and if we are postive, return true
   LAvg:=GetAverageAccelPerTick(LAccel,LTimePerTick);
+  Main.LogInfo('Main::MidAccelStratPositive::average acceleration per tick: ' + FloatToStr(LAvg));
   Active:=LAvg > 0;
 end;
 

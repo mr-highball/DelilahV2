@@ -186,6 +186,9 @@ var
   LParentWindow: Cardinal;
   LMinProfit: Single;
 begin
+  if not Assigned(ADetails^.Data) then
+    Exit;
+
   Active:=False;
 
   //if the price has steadily been rising using our configurable strategy
@@ -252,8 +255,11 @@ var
   LAccel: PTierStrategyGDAX;
   LTimePerTick, LAvg: Extended;
 begin
+  if not Assigned(ADetails^.Data) then
+    Exit;
+
   Active:=False;
-  LAccel:=PTierStrategyGDAX(ADetails.Data);
+  LAccel:=PTierStrategyGDAX(ADetails^.Data);
 
   //find the average accel per tick and if we are postive, return true
   LAvg:=GetAverageAccelPerTick(LAccel,LTimePerTick);
@@ -687,6 +693,9 @@ begin
     FAccelStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
     FAccelStrategy.ChannelStrategy.WindowSizeInMilli:=FMidStrategy.ChannelStrategy.WindowSizeInMilli * FAccelWindowFactor;
     FAccelStrategy.ActiveCriteria:=GetAccelCriteria;
+
+    //update our mid-tier strategy's data to this strategy
+    FMidStrategy.ActiveCriteriaData:=@FAccelStrategy;
 
     //add strategy to the engine
     FEngine.Strategies.Add(FAccelStrategy);

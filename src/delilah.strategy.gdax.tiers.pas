@@ -804,7 +804,7 @@ begin
         begin
           //this code is for a suspect bug in cb quote inc for small
           //coins (where min unit is whole number)
-          if RoundTo(LGDAXOrder.Product.BaseMinSize,-1) >= 1 then
+          if RoundTo(LMin,-1) >= 1 then
             LOrderSize:=Trunc(LOrderSize)
           else
             LOrderSize:=Trunc(LOrderSize / LMin) * LMin;

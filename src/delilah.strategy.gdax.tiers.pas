@@ -807,7 +807,7 @@ begin
           if RoundTo(LGDAXOrder.Product.BaseMinSize,-1) >= 1 then
             LOrderSize:=Trunc(LOrderSize)
           else
-            LOrderSize:=Trunc(LOrderSize / LGDAXOrder.Product.QuoteIncrement) * LGDAXOrder.Product.QuoteIncrement;
+            LOrderSize:=Trunc(LOrderSize / LMin) * LMin;
         end;
 
         //last catch to see if our calculation would be less than min

@@ -3,6 +3,7 @@ object Main: TMain
   Height = 503
   Top = 186
   Width = 646
+  Align = alRight
   Caption = 'SimpleBot v1.0.0'
   ClientHeight = 483
   ClientWidth = 646
@@ -104,33 +105,97 @@ object Main: TMain
     end
     object ts_log: TTabSheet
       Caption = 'Logging'
-      ClientHeight = 324
-      ClientWidth = 537
+      ClientHeight = 333
+      ClientWidth = 628
       ImageIndex = 2
       inline multi_log: TMultiLine
         Left = 5
-        Height = 314
+        Height = 248
         Top = 5
-        Width = 490
+        Width = 618
         Align = alClient
         BorderSpacing.Left = 5
         BorderSpacing.Top = 5
         BorderSpacing.Right = 5
         BorderSpacing.Bottom = 5
-        ClientHeight = 314
-        ClientWidth = 490
+        ClientHeight = 248
+        ClientWidth = 618
         inherited pnl_control: TPanel
-          Height = 244
-          Width = 480
+          Height = 178
+          Width = 608
         end
         inherited lbl_title: TLabel
-          Width = 480
+          Width = 608
         end
         inherited lbl_descr: TLabel
-          Width = 480
+          Width = 608
         end
         inherited lbl_author: TLabel
-          Width = 480
+          Width = 608
+        end
+      end
+      object grp_log_options: TGroupBox
+        Left = 0
+        Height = 75
+        Top = 258
+        Width = 628
+        Align = alBottom
+        Caption = 'Logging Options'
+        ClientHeight = 55
+        ClientWidth = 624
+        TabOrder = 1
+        object chk_log_info: TCheckBox
+          Left = 100
+          Height = 30
+          Top = 0
+          Width = 41
+          Align = alLeft
+          BorderSpacing.Left = 100
+          Caption = 'Info'
+          TabOrder = 0
+        end
+        object chk_log_warn: TCheckBox
+          AnchorSideLeft.Control = grp_log_options
+          AnchorSideLeft.Side = asrCenter
+          AnchorSideTop.Control = chk_log_info
+          AnchorSideTop.Side = asrCenter
+          Left = 277
+          Height = 19
+          Top = 6
+          Width = 70
+          Caption = 'Warnings'
+          TabOrder = 1
+        end
+        object chk_log_error: TCheckBox
+          Left = 474
+          Height = 30
+          Top = 0
+          Width = 50
+          Align = alRight
+          BorderSpacing.Right = 100
+          Caption = 'Errors'
+          TabOrder = 2
+        end
+        object pnl_log_clear: TPanel
+          Left = 0
+          Height = 25
+          Top = 30
+          Width = 624
+          Align = alBottom
+          BevelOuter = bvNone
+          ClientHeight = 25
+          ClientWidth = 624
+          TabOrder = 3
+          object btn_log_clear: TButton
+            Left = 549
+            Height = 25
+            Top = 0
+            Width = 75
+            Align = alRight
+            Caption = 'Clear'
+            OnClick = btn_log_clearClick
+            TabOrder = 0
+          end
         end
       end
     end

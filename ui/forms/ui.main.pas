@@ -24,12 +24,17 @@ type
     for the GDAX api and engine core classes.
   *)
   TMain = class(TForm)
+    btn_log_clear: TButton;
     chart_tools: TChartToolset;
     chart_toolsDataPointCrosshairTool1: TDataPointCrosshairTool;
     chart_toolsZoomMouseWheelTool1: TZoomMouseWheelTool;
     chart_source: TListChartSource;
     chart_ticker: TChart;
     chart_tickerLineSeries1: TLineSeries;
+    chk_log_info: TCheckBox;
+    chk_log_error: TCheckBox;
+    chk_log_warn: TCheckBox;
+    grp_log_options: TGroupBox;
     ignition_main: TIgnition;
     icons: TImageList;
     menu: TImageList;
@@ -45,6 +50,7 @@ type
     menu_main: TMainMenu;
     memo_licenses: TMemo;
     multi_log: TMultiLine;
+    pnl_log_clear: TPanel;
     pctrl_main: TPageControl;
     scroll_strategy: TScrollBox;
     status_main: TStatusBar;
@@ -54,6 +60,7 @@ type
     ts_log: TTabSheet;
     ts_strategy: TTabSheet;
     ts_auth: TTabSheet;
+    procedure btn_log_clearClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure json_mainRestoringProperties(Sender: TObject);
@@ -109,6 +116,7 @@ type
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
     procedure LogError(Const AMessage:String);
     procedure LogInfo(Const AMessage:String);
+    procedure LogWarn(Const AMessage:String);
     function GetMoonCriteria : TActiveCriteriaCallbackArray;
     function GetMidCriteria : TActiveCriteriaCallbackArray;
     function GetAccelCriteria : TActiveCriteriaCallbackArray;
@@ -357,11 +365,16 @@ begin
   //create an engine
   FEngine:=TDelilahImpl.Create;
   //since we are dealing with GDAX assign the order manager
-  LManager:=TGDAXOrderManagerImpl.Create(LogInfo,LogError,LogError);
+  LManager:=TGDAXOrderManagerImpl.Create(LogInfo,LogError,LogWarn);
   FEngine.OrderManager:=LManager;
   FEngine.OnStatus:=EngineStatus;
 
   InitControls;
+end;
+
+procedure TMain.btn_log_clearClick(Sender: TObject);
+begin
+  multi_log.Lines.Clear;
 end;
 
 procedure TMain.FormDestroy(Sender: TObject);
@@ -495,6 +508,9 @@ begin
     multi_log.Options:=multi_log.Options - [ucAuthor];
     multi_log.Title:='Strategy Logger';
     multi_log.Description:='logging for the strategy';
+    chk_log_error.Checked:=True;
+    chk_log_warn.Checked:=True;
+    chk_log_info.Checked:=True;
     //authenticator
     FAuth:=TAuthenticator.Create(Self);
     FAuth.Parent:=ts_auth;
@@ -848,16 +864,26 @@ end;
 
 procedure TMain.LogError(const AMessage: String);
 begin
-  multi_log.Lines.Append(
-    Format(LOG_ENTRY,['-ERROR-',DateTimeToStr(Now),AMessage])
-  );
+  if chk_log_error.Checked then
+    multi_log.Lines.Append(
+      Format(LOG_ENTRY,['-ERROR-',DateTimeToStr(Now),AMessage])
+    );
 end;
 
 procedure TMain.LogInfo(const AMessage: String);
 begin
-  multi_log.Lines.Append(
-    Format(LOG_ENTRY,['-INFO-',DateTimeToStr(Now),AMessage])
-  );
+  if chk_log_info.Checked then
+    multi_log.Lines.Append(
+      Format(LOG_ENTRY,['-INFO-',DateTimeToStr(Now),AMessage])
+    );
+end;
+
+procedure TMain.LogWarn(const AMessage: String);
+begin
+  if chk_log_warn.Checked then
+    multi_log.Lines.Append(
+      Format(LOG_ENTRY,['-WARN-',DateTimeToStr(Now),AMessage])
+    );
 end;
 
 function TMain.GetMoonCriteria: TActiveCriteriaCallbackArray;

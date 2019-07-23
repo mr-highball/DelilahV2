@@ -677,15 +677,16 @@ begin
     else
       LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=MOON_MIN_WINDOW;
 
-    LMoonStrategy.SmallTierPerc:=0.005;
-    LMoonStrategy.MidTierPerc:=0.005;
-    LMoonStrategy.LargeTierPerc:=0.001;
+    LMoonStrategy.SmallTierPerc:=FMidStrategy.SmallTierPerc * 0.20;
+    LMoonStrategy.MidTierPerc:=FMidStrategy.MidTierPerc * 0.20;
+    LMoonStrategy.LargeTierPerc:=FMidStrategy.LargeTierPerc * 0.20;
     LMoonStrategy.SmallTierSellPerc:=0;
     LMoonStrategy.MidTierSellPerc:=0;
     LMoonStrategy.LargeTierSellPerc:=0;
-    LMoonStrategy.UseMarketBuy:=True;
-    LMoonStrategy.UseMarketSell:=False;
-    LMoonStrategy.OnlyLowerAAC:=False;
+    LMoonStrategy.UseMarketBuy:=FMidStrategy.UseMarketBuy;
+    LMoonStrategy.UseMarketSell:=FMidStrategy.UseMarketSell;
+    LMoonStrategy.OnlyLowerAAC:=FMidStrategy.OnlyLowerAAC;
+    LMoonStrategy.MinReduction:=FMidStrategy.MinReduction;
     LMoonStrategy.OnlyProfit:=True;
     LMoonStrategy.MarketFee:=0.000;
     LMoonStrategy.AvoidChop:=False;

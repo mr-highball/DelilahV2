@@ -230,10 +230,10 @@ begin
   Main.LogInfo('Main::MoonRisingPrice::projected price ' + FloatToStr(LProjectedPrice));
 
   //find delta of current price and see if the percentage gain is at least
-  //the min profit (doesn't account for fees etc...)
+  //half min profit (doesn't account for fees etc...)
   LAvg:=LProjectedPrice - ADetails^.Ticker^.Price;//yeah yeah don't reuse variables
 
-  if (LAvg / ADetails^.Ticker^.Price) < LMinProfit then
+  if (LAvg / ADetails^.Ticker^.Price) < (LMinProfit / 2) then
   begin
     Main.LogInfo('Main::MoonRisingPrice::projected price is not high enough for min profit');
     Exit;
@@ -253,7 +253,7 @@ end;
 procedure AccelDisableTrades(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 begin
-  //acceleration strategy will never make a trade
+  //acceleration strategy can never do shit, errp beer
   Active:=False;
 end;
 
@@ -672,7 +672,7 @@ begin
     *)
 
     //use 20% of parent size unless it's smaller than the min
-    if (FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.2) >= MOON_MIN_WINDOW then
+    if (FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.20) >= MOON_MIN_WINDOW then
       LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=Round(FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.2)
     else
       LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=MOON_MIN_WINDOW;

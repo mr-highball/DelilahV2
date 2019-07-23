@@ -1116,7 +1116,9 @@ begin
   begin
     if AManager.Exists[FIDS[I]] then
     begin
-      if AManager.Status[FIDS[I]]<>omCompleted then
+      //only cancel if we have an active order
+      if AManager.Status[FIDS[I]] = omActive then
+        //if we fail, log it and don't clear the managed list yet
         if not AManager.Cancel(FIDS[I],LDetails,LError) then
         begin
           LogError('ClearOldPositions::' + LError);

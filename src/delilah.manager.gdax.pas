@@ -389,6 +389,32 @@ begin
       if not LDetails.Order.Get(LContent,LError) then
       begin
         LogError('DoGetStatus::' + LError);
+
+        //sometimes things get out of whack.. could be from a user cancelling,
+        //or who knows what spice, but this message means it definitely is cancelled
+        if LError.ToLower.IndexOf('notfound') >= 0 then
+        begin
+          LogWarning('DoGetStatus::order message "NotFound" detected, cancelling order');
+          Result:=omCanceled;
+
+          //get the ID
+          if not ID(ADetails,LID) then
+          begin
+            LError:='unable to fetch id for order details in ' + Self.Classname;
+            LogError('DoGetStatus::' + LError);
+            Exit;
+          end;
+
+          //notify listeners of status change
+          if LOldStatus <> Result then
+            DoOnStatus(LDetails,LID,LOldStatus,Result);
+
+          //gtfo
+          Exit;
+        end;
+
+        //may just be having networking problems... cat unplugged wifi...
+        //sorry future me, Sierra Nevada Summer Fest 2019 is cold and wet.
         Exit;
       end
       else

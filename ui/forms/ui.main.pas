@@ -156,8 +156,8 @@ begin
   //below we check to see if we have a small inventory (more than 85% free funds)
   if ADetails^.TotalFunds < 0 then
     Exit
-  //allocate up to 10% of funds to moon strategy
-  else if (ADetails^.Funds / ADetails^.TotalFunds) >= 0.90 then
+  //allocate up to 5% of funds to moon strategy
+  else if (ADetails^.Funds / ADetails^.TotalFunds) >= 0.95 then
     Active:=True;
 end;
 

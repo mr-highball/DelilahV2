@@ -655,7 +655,7 @@ begin
   BalanceOrder(AID,lsHold);
   BalanceOrder(AID,lsInvHold);
 
-  if ADetails.Size > 0 then
+  if (ADetails.Size > 0) and (ADetails.Price > 0) then
   begin
     //record entries to funds ledger
     if ADetails.OrderType=odBuy then
@@ -671,7 +671,7 @@ begin
         LID
       ).Balance;
     StoreLedgerID(AID,LID,lsStd);
-    LOldInv:=FInvLedger.Balance;
+    LOldInv:=Inventory;
 
     //record entries to inventory ledger
     if ADetails.OrderType=odBuy then
@@ -689,10 +689,10 @@ begin
     StoreLedgerID(AID,LID,lsStdInv);
 
     //now update the average aquisition cost for our inventory
-    if FInvLedger.Balance=0 then
+    if Inventory <= 0 then
       FAAC:=0
     //only update the aquistion cost if the balance has increased
-    else if LOldInv<Inventory then
+    else if LOldInv < Inventory then
       FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (Inventory);
   end;
 

@@ -262,27 +262,35 @@ begin
     //will check everything needed for continuing
     if not GDAXDetailsValid(ADetails,Error) then
       Exit;
+
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
     LID:=LDetails.Order.ID;
-    LogInfo(Format('DoCancel::starting cancel [OrderID]-%s',[LID]));
+    LogInfo(Format('DoCancel::Delete::about to delete [OrderID]-%s',[LID]));
 
     //attempt to delete the order assuming strategy has filled it out correctly
-    if (not LDetails.Order.Delete(LContent,Error))
-      and (not CancelCountCheck(LID))
-    then
+    if not LDetails.Order.Delete(LContent,Error) then
     begin
       LogError('DoCancel::Delete::failure with [Content]-'+LContent);
-      Exit;
+
+      //checks to see if this order exceeds the maximum cancel tries
+      LogError('DoCancel::CancelCheck::checking if [OrderID]-' + LID + ' exceeds cancel try limit');
+      if not CancelCountCheck(LID) then
+      begin
+        LogError('DoCancel::CancelCheck::[OrderID]-' + LID + ' still has retries left');
+        Exit;
+      end;
     end;
 
     //in the event of partial fills, we need to check if the fills
     //object returns anything, if so, we need to update the cancelled
     //order's properties (since cancelling an empty order removes the id
     //entirely from gdax)
+    LogInfo('DoCancel::FillsCheck::starting fills check for [OrderID]-' + LID);
     LFills:=TGDAXFillsImpl.Create;
     LFills.OrderID:=LID;
     LFills.Authenticator:=FAuth;
+
     if not LFills.Get(LContent,Error) then
     begin
       LogInfo(
@@ -375,9 +383,9 @@ begin
       Exit;
     end;
 
-    LDetails:=ADetails as IGDAXOrderDetails;
-    LOldStatus:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
-    LDetails.Order.Authenticator:=Authenticator;
+    LDetails := ADetails as IGDAXOrderDetails;
+    LOldStatus := GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
+    LDetails.Order.Authenticator := Authenticator;
 
     //avoid a web call for cancelled orders
     if LDetails.Order.OrderStatus <> stCancelled then
@@ -406,8 +414,11 @@ begin
           end;
 
           //notify listeners of status change
-          if LOldStatus <> Result then
+          if (LOldStatus <> Result) or (Result = omCanceled) then
+          begin
+            LogInfo('DoGetStatus::StatusChange::[ID]-' + LID + ' [OldStatus]-' + OrderManagerStatusToString(LOldStatus) + ' [NewStatus]-' + OrderManagerStatusToString(Result));
             DoOnStatus(LDetails,LID,LOldStatus,Result);
+          end;
 
           //gtfo
           Exit;
@@ -415,18 +426,24 @@ begin
 
         //may just be having networking problems... cat unplugged wifi...
         //sorry future me, Sierra Nevada Summer Fest 2019 is cold and wet.
+        //just set the result back to the old status and try again next year
+        Result := LOldStatus;
         Exit;
       end
       else
-        LogInfo('DoGetStatus::' + LContent);
+        LogInfo('DoGetStatus::ResponseContent::[Content]-' + LContent);
 
       if not ID(ADetails,LID) then
       begin
         LError:='unable to fetch id for order details in ' + Self.Classname;
         LogError('DoGetStatus::' + LError);
+        Result:=LOldStatus;
         Exit;
       end;
+
+      //map the gdax status to the order manager
       Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
+      LogInfo('DoGetStatus::OrderManagerStatus::[Status]-' + OrderManagerStatusToString(Result));
 
       //note: this code was added before changing the order status to
       //correclty report as "omCompleted" only if and order is settled.
@@ -441,25 +458,40 @@ begin
           //old status is used for status updates, always set this to active
           //in the case it is reported incorrectly as "completed"
           if LOldStatus = omCompleted then
-            LOldStatus:=omActive;
+            LOldStatus := omActive;
 
           //will check against max tries for settle count and return true if so
           if not SettleCountCheck(LDetails.Order.ID) then
-            Result:=omActive
+            Result := omActive
           else
-            Result:=omCompleted;
+            Result := omCompleted;
         end
         //cleanup if we have stored in settle map
         else if FSettleMap.IndexOf(LDetails.Order.ID) >= 0 then
           FSettleMap.Delete(FSettleMap.IndexOf(LDetails.Order.ID));
     end
     else
+    begin
+      LogInfo('DoGetStatus::CanceledOrder::OrderInfo::[PostBody]-' + LDetails.Order.PostBody);
       Result:=omCanceled;
+    end;
 
-    //notify listeners since base class does not handle status changes when
-    //fetching statuses (handles cancel, remove, place automatically)
-    if LOldStatus <> Result then
+    (*
+      notify listeners since base class does not handle status changes when
+      fetching statuses (handles cancel, remove, place automatically).
+
+      also noting:
+      we check if result is Canceled as well, because
+      when a call uses CancelOrder, this manager updates the order status
+      directly for the next time getStatus is called, and since we initialize
+      Result to canceled, we could miss notifying since it will look like
+      the status didn't change
+    *)
+    if (LOldStatus <> Result) or (Result = omCanceled) then
+    begin
+      LogInfo('DoGetStatus::StatusChange::[ID]-' + LID + ' [OldStatus]-' + OrderManagerStatusToString(LOldStatus) + ' [NewStatus]-' + OrderManagerStatusToString(Result));
       DoOnStatus(LDetails,LID,LOldStatus,Result);
+    end;
   except on E:Exception do
   begin
     LError:=E.Message;

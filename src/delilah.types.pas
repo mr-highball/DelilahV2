@@ -334,8 +334,23 @@ type
     function Stop:Boolean;overload;
   end;
 
+const
 
+  OrderManagerStatusArray : array[Ord(omActive) .. Ord(omCanceled)] of string =
+  (
+    'omActive',
+    'omCompleted',
+    'omPendingCancel',
+    'omCanceled'
+  );
+
+  function OrderManagerStatusToString(Const AStatus : TOrderManagerStatus) : String;
 implementation
+
+function OrderManagerStatusToString(const AStatus: TOrderManagerStatus) : String;
+begin
+  Result := OrderManagerStatusArray[Ord(AStatus)];
+end;
 
 end.
 

@@ -32,6 +32,7 @@ type
     FAuth: IGDAXAuthenticator;
     FSettleMap,
     FCancelMap: TFPGMap<String,Integer>;
+    FLastRefresh: TDateTime;
     function GetAuth: IGDAXAuthenticator;
     procedure SetAuth(Const AValue: IGDAXAuthenticator);
     function SettleCountCheck(Const AID:String):Boolean;
@@ -538,9 +539,10 @@ end;
 constructor TGDAXOrderManagerImpl.Create;
 begin
   inherited Create;
-  FAuth:=TGDAXAuthenticatorImpl.Create;
-  FSettleMap:=TFPGMap<String,Integer>.Create;
-  FCancelMap:=TFPGMap<String,Integer>.Create;
+  FAuth := TGDAXAuthenticatorImpl.Create;
+  FSettleMap := TFPGMap<String,Integer>.Create;
+  FCancelMap := TFPGMap<String,Integer>.Create;
+  FLastRefresh := Now;
 end;
 
 destructor TGDAXOrderManagerImpl.Destroy;

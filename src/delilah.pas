@@ -32,7 +32,6 @@ type
       TLedgerPairList = TFPGList<TLedgerPair>;
       TOrderLedgerMap = TFPGMapObject<String,TLedgerPairList>;
   strict private
-    FLastRefresh: TDateTime;
     FFunds: Extended;
     FCompound: Boolean;
     FFundsLedger: IExtendedLedger;
@@ -809,7 +808,6 @@ begin
   FOldPlace:=nil;
   FOldRemove:=nil;
   FOldStatus:=nil;
-  FLastRefresh:=Now;
 end;
 
 destructor TDelilahImpl.Destroy;

@@ -32,6 +32,7 @@ type
       TLedgerPairList = TFPGList<TLedgerPair>;
       TOrderLedgerMap = TFPGMapObject<String,TLedgerPairList>;
   strict private
+    FLastRefresh: TDateTime;
     FFunds: Extended;
     FCompound: Boolean;
     FFundsLedger: IExtendedLedger;
@@ -721,13 +722,15 @@ var
 begin
   Result:=False;
   try
-    //before calling down to the strategies we need to refresh our manager
-    if not FOrderManager.Refresh(Error) then
-      Exit;
-
     //simply iterate strategies and attempt to feed, they are responsible
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do
+    begin
+      //before calling down to the strategies we need to refresh our manager
+      if not FOrderManager.Refresh(Error) then
+        Exit;
+
+      //after refreshing, feed the next strategy ticker information
       if not FStrategies[I].Feed(
         ATicker,
         FOrderManager,
@@ -737,6 +740,7 @@ begin
         Error
       ) then
         Exit;
+    end;
     Result:=True;
   except on E:Exception do
     Error:=E.Message;
@@ -805,6 +809,7 @@ begin
   FOldPlace:=nil;
   FOldRemove:=nil;
   FOldStatus:=nil;
+  FLastRefresh:=Now;
 end;
 
 destructor TDelilahImpl.Destroy;

@@ -60,7 +60,8 @@ uses
   delilah.order.gdax,
   gdax.api.fills,
   gdax.api.time,
-  math;
+  math,
+  dateutils;
 
 { TGDAXOrderManagerImpl }
 
@@ -282,6 +283,8 @@ begin
       end;
     end;
 
+    LogInfo('DoCancel::Delete::[Content]-' + LContent);
+
     //in the event of partial fills, we need to check if the fills
     //object returns anything, if so, we need to update the cancelled
     //order's properties (since cancelling an empty order removes the id
@@ -358,7 +361,8 @@ begin
       LogInfo('DoCancel::PartialFound::new [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
     end;
 
-    //the order has been cancelled, so update the status
+    //the call to delete was successful so update the status,
+    //and let a call to refresh handle the rest
     LDetails.Order.OrderStatus:=stCancelled;
     Result:=True;
   except on E:Exception do
@@ -398,11 +402,11 @@ begin
       begin
         LogError('DoGetStatus::' + LError);
 
-        //sometimes things get out of whack.. could be from a user cancelling,
-        //or who knows what spice, but this message means it definitely is cancelled
+        //canceled orders are actually removed from the order book, so this
+        //is the current way to determine a completely canceled order
         if LError.ToLower.IndexOf('notfound') >= 0 then
         begin
-          LogWarning('DoGetStatus::order message "NotFound" detected, cancelling order');
+          LogWarning('DoGetStatus::order message "NotFound" detected, canceling order');
           Result:=omCanceled;
 
           //get the ID
@@ -504,6 +508,16 @@ function TGDAXOrderManagerImpl.DoRefresh(out Error: String): Boolean;
 var
   I:Integer;
 begin
+  //introduce an artificial delay between refreshes to avoid throttling
+  if MilliSecondsBetween(Now, FLastRefresh) < 350 then
+  begin
+    LogInfo('DoRefresh::last refresh was quicker than threshold, sleeping for 350');
+    Sleep(350);
+  end;
+
+  //update the last refresh
+  FLastRefresh := Now;
+
   LogInfo('DoRefresh::[OrderCount]-' + IntToStr(Orders.Count));
 
   //right now, we will just go through the listing of orders and check
@@ -514,6 +528,7 @@ begin
   try
     for I:=0 to Pred(Orders.Count) do
       Status[Orders.Keys[I]];
+
     Result:=True;
   except on E:Exception do
     Error:=E.Message;

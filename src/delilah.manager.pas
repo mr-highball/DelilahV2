@@ -261,19 +261,20 @@ begin
   try
     if not Self.Details(AID,Details,Error) then
       Exit;
+
     LOldStatus:=DoGetStatus(Details);
+
     //can only perform a cancel request on active orders
-    if LOldStatus<>omActive then
+    if LOldStatus <> omActive then
     begin
       Error:='status of order id: ' + AID + ' is not omActive';
       Exit;
     end;
+
     //call to child for cancel
     if not DoCancel(Details,Error) then
       Exit;
-    //for cancelling, we can raise the event since DoCancel is assumed to
-    //block until the status is changed to cancel
-    DoOnStatus(Details,AID,LOldStatus,omCanceled);
+
     //success
     Result:=True;
   except on E:Exception do

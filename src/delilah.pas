@@ -9,6 +9,8 @@ uses
 
 type
 
+  TEngineLogEvent = procedure(Const AMessage:String) of object;
+  
   { TDelilahImpl }
   (*
     base implementation for IDelilah
@@ -31,6 +33,8 @@ type
 
       TLedgerPairList = TFPGList<TLedgerPair>;
       TOrderLedgerMap = TFPGMapObject<String,TLedgerPairList>;
+    const
+      LOG_PREFIX = 'Engine::';
   strict private
     FFunds: Extended;
     FCompound: Boolean;
@@ -49,6 +53,9 @@ type
     FOldStatus: TOrderStatusEvent;
     FOrderLedger: TOrderLedgerMap;
     FAAC: Extended;
+    FOnInfo: TEngineLogEvent;
+    FOnError: TEngineLogEvent;
+    FOnWarn: TEngineLogEvent;
     function GetAAC: Extended;
     function GetAvailableInventory: Extended;
     function GetInventoryHolds: Extended;
@@ -85,6 +92,12 @@ type
     procedure DoStatus(Const ADetails:IOrderDetails;Const AID:String;
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
   strict protected
+    //logging methods
+    procedure LogInfo(Const AMessage:String);
+    procedure LogError(Const AMessage:String);
+    procedure LogWarning(Const AMessage:String);
+    
+  
     procedure SetState(Const AState:TEngineState);
     (*
       stores a ledger id and order id pair in order to lookup the source ledger
@@ -126,7 +139,8 @@ type
     function Start:Boolean;overload;
     function Stop(Out Error:String):Boolean;overload;
     function Stop:Boolean;overload;
-    constructor Create;virtual;
+    constructor Create;virtual; overload;
+    constructor Create(Const AOnInfo,AOnError,AOnWarn:TEngineLogEvent);virtual; overload;
     destructor Destroy; override;
   end;
 
@@ -152,6 +166,24 @@ begin
 end;
 
 { TDelilahImpl }
+
+procedure TDelilahImpl.LogInfo(const AMessage: String);
+begin
+  if Assigned(FOnInfo) then
+    FOnInfo(Self.Classname + '::' + AMessage);
+end;
+
+procedure TDelilahImpl.LogError(const AMessage: String);
+begin
+  if Assigned(FOnError) then
+    FOnError(Self.Classname + '::' + AMessage);
+end;
+
+procedure TDelilahImpl.LogWarning(const AMessage: String);
+begin
+  if Assigned(FOnWarn) then
+    FOnWarn(Self.Classname + '::' + AMessage);
+end;
 
 procedure TDelilahImpl.SetInventoryLedger(const AValue: IExtendedLedger);
 begin
@@ -502,18 +534,27 @@ end;
 
 procedure TDelilahImpl.DoStatus(const ADetails: IOrderDetails;
   const AID: String; const AOldStatus, ANewStatus: TOrderManagerStatus);
+const
+  PREFIX = LOG_PREFIX + 'DoStatus::';
 begin
-  case ANewStatus of
+  LogInfo(PREFIX + 'starting status handler');
+  
+  case ANewStatus of    
     //when an order is marked as canceled/completed call down to complete order
     omCanceled,omCompleted:
       begin
+        LogInfo(PREFIX + 'status changed, starting CompleteOrder for [ID]-' + AID);
         CompleteOrder(ADetails,AID);
       end;
+    else
+      LogInfo(PREFIX + 'status changed, but not canceled or completed [Old]-' + OrderManagerStatusToString(AOldStatus) + ' [New]-' + OrderManagerStatusToString(ANewStatus));
   end;
   if Assigned(FOldStatus) then
     FOldStatus(ADetails,AID,AOldStatus,ANewStatus);
   if Assigned(FOnStatus) then
     FOnStatus(ADetails,AID,AOldStatus,ANewStatus);
+    
+  LogInfo(PREFIX + 'finished status handler');
 end;
 
 procedure TDelilahImpl.SetState(const AState: TEngineState);
@@ -564,6 +605,8 @@ end;
 
 procedure TDelilahImpl.BalanceOrder(const AOrderID: String;
   const ALedgerSource: TLedgerSource);
+const 
+  PREFIX = LOG_PREFIX + 'BalanceOrder::';
 var
   I:Integer;
   LIndexes:TArray<Integer>;
@@ -574,66 +617,127 @@ var
   LType:TLedgerType;
   LBal:Extended;
 begin
+  LogInfo(PREFIX + 'starting');  
   LBal:=0;
+  
   //check to see if we even have this order id recorded, and if not everything
   //should be properly balanced
-  I:=FOrderLedger.IndexOf(AOrderID);
-  if I<0 then
+  I := FOrderLedger.IndexOf(AOrderID);
+  
+  if I < 0 then
+  begin
+    LogWarning('could not find [ID]-' + AOrderID + ' in order ledger');
     Exit;
-  LOwned:=FOrderLedger.Data[I];
+  end;
+  
+  //get the owned list
+  LOwned := FOrderLedger.Data[I];
+  
   //if the owned list contains no pairs, we should also be balanced
-  if LOwned.Count<1 then
+  if LOwned.Count < 1 then
+  begin
+    LogInfo('owned count is zero (no pairs)');
     Exit;
+  end;
+  
   //create a local ledger list for adding all pairs for a given source
-  LList:=TLedgerPairList.Create;
+  LList := TLedgerPairList.Create;
   try
-    for I:=0 to Pred(LOwned.Count) do
-    begin
-      LPair:=LOwned[I];
-      if LPair.Source=ALedgerSource then
+    try
+      LogInfo('iterating owned');
+      for I:=0 to Pred(LOwned.Count) do
       begin
-        LList.Add(LPair);
-        //store the index for removal later
-        SetLength(LIndexes,Succ(Length(LIndexes)));
-        LIndexes[High(LIndexes)]:=I;
+        LPair:=LOwned[I];
+        
+        if LPair.Source = ALedgerSource then
+        begin
+          LList.Add(LPair);
+          
+          //store the index for removal later
+          SetLength(LIndexes,Succ(Length(LIndexes)));
+          LIndexes[High(LIndexes)]:=I;
+        end;
       end;
-    end;
-    //no matching ledger pairs for source, safe to exit
-    if LList.Count<0 then
-      Exit;
-    //get a reference to the source ledger
-    case ALedgerSource of
-      lsHold: LLedger:=FHoldsLedger;
-      lsStd: LLedger:=FFundsLedger;
-      lsInvHold: LLedger:=FHoldsInvLedger;
-      lsStdInv: LLedger:=FInvLedger;
-    end;
-    //for each record we need to add a balancing entry to the source
-    for I:=0 to Pred(LList.Count) do
-    begin
-      //below makes the assumption our ledger wasn't flattened or tampered with
-      //by an outside source...
-      try
-        LPair:=LList[I];
-        //if we are credit entry, then we need to debit
-        if LLedger[LPair.ID].LedgerType=ltCredit then
-          LBal:=LLedger.RecordEntry(
-            LLedger[LPair.ID].Entry,
-            ltDebit
-          ).Balance
-        //otherwise record a credit
-        else
-          LBal:=LLedger.RecordEntry(
-            LLedger[LPair.ID].Entry,
-            ltCredit
-          ).Balance;
-      finally
-        //todo - currently just swallowing any exception which would occur, address
+      
+      //no matching ledger pairs for source, safe to exit
+      if LList.Count < 0 then
+      begin
+        LogWarning('no mathching ledger pairs');
+        Exit;
       end;
-    end;
-    //now for all of the indexes, remove from the lookup list
-    for I:=0 to High(LIndexes) do
-      LOwned.Delete(LIndexes[I]);
+      
+      //get a reference to the source ledger
+      LogInfo('finding ledger source');
+      case ALedgerSource of
+        lsHold: 
+          begin            
+            LLedger := FHoldsLedger;
+            LogInfo('[LedgerSource]-holds ledger');
+          end;
+        lsStd: 
+          begin
+            LLedger := FFundsLedger;
+            LogInfo('[LedgerSource]-funds ledger');
+          end;
+        lsInvHold: 
+          begin
+            LLedger := FHoldsInvLedger;
+            LogInfo('[LedgerSource]-holds inventory ledger');
+          end;
+        lsStdInv: 
+          begin 
+            LLedger := FInvLedger;
+            LogInfo('[LedgerSource]-inventory ledger');
+          end;
+      end;
+           
+      //for each record we need to add a balancing entry to the source
+      LogInfo('Balancing::starting');
+      
+      for I := 0 to Pred(LList.Count) do
+      begin
+        //below makes the assumption our ledger wasn't flattened or tampered with
+        //by an outside source...
+        try
+          LPair := LList[I];
+          
+          //if we are credit entry, then we need to debit
+          if LLedger[LPair.ID].LedgerType = ltCredit then
+          begin
+            LBal:=LLedger.RecordEntry(
+              LLedger[LPair.ID].Entry,
+              ltDebit
+            ).Balance
+            
+            LogInfo(PREFIX + 'Balancing::record debit, [entry]-' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]-' + FloatToStr(LBal));
+          end
+          //otherwise record a credit
+          else
+          begin
+            LBal := LLedger.RecordEntry(
+              LLedger[LPair.ID].Entry,
+              ltCredit
+            ).Balance;
+            
+            LogInfo(PREFIX + 'Balancing::record credit, [entry]-' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]-' + FloatToStr(LBal));
+          end;
+        except on E : Exception do
+          LogError(PREFIX + 'Balancing::' + E.Message);
+        end;
+      end;
+      
+      LogInfo('Balancing::finished');
+      
+      //now for all of the indexes, remove from the lookup list
+      LogInfo('about to remove from owned [count]-' + IntToStr(Length(LIndexes)));
+      
+      for I:=0 to High(LIndexes) do
+        LOwned.Delete(LIndexes[I]);
+      
+      LogInfo(PREFIX + 'finished');
+    except on E : Exception do
+      LogError(PREFIX + E.Message);
+    end;    
   finally
     LList.Free;
   end;
@@ -641,15 +745,22 @@ end;
 
 procedure TDelilahImpl.CompleteOrder(const ADetails: IOrderDetails;
   const AID: String);
+const
+  PREFIX = LOG_PREFIX + 'CompleteOrder::';
 var
   LID:String;
   LOldInv:Extended;
   LBal:Extended;
 begin
+  LogInfo(PREFIX + 'starting for [ID]-' + AID);
   LBal:=0;
+  
   //nothing to complete if we aren't managing this order
   if not FOrderManager.Exists[AID] then
+  begin
+    LogWarning(PREFIX + 'ID not found in order manager');
     Exit;
+  end;
 
   //balance the hold ledgers
   BalanceOrder(AID,lsHold);
@@ -659,33 +770,49 @@ begin
   begin
     //record entries to funds ledger
     if ADetails.OrderType = odBuy then
+    begin
       LBal:=FFundsLedger.RecordEntry(
         ADetails.Price * ADetails.Size,
         ltDebit,
         LID
       ).Balance
+      LogInfo(PREFIX + 'FundsLedger::buy side, new balance [balance]-' + FloatToStr(LBal));
+    end
     else
+    begin
       LBal:=FFundsLedger.RecordEntry(
         ADetails.Price * ADetails.Size,
         ltCredit,
         LID
       ).Balance;
-    StoreLedgerID(AID,LID,lsStd);
+      LogInfo(PREFIX + 'FundsLedger::sell side, new balance [balance]-' + FloatToStr(LBal));
+    end;
+    
+    //store the id
+    StoreLedgerID(AID, LID, lsStd);
     LOldInv:=Inventory;
+    
+    LogInfo('[OldInventory]-' + FloatToStr(LOldInv));
 
     //record entries to inventory ledger
     if ADetails.OrderType = odBuy then
+    begin
       LBal:=FInvLedger.RecordEntry(
         ADetails.Size,
         ltCredit,
         LID
       ).Balance
+      LogInfo(PREFIX + 'InvLedger::buy side, new balance [balance]-' + FloatToStr(LBal));
+    end
     else
+    begin
       LBal:=FInvLedger.RecordEntry(
         ADetails.Size,
         ltDebit,
         LID
       ).Balance;
+      LogInfo(PREFIX + 'InvLedger::sell side, new balance [balance]-' + FloatToStr(LBal));
+    end;
     StoreLedgerID(AID,LID,lsStdInv);
 
     //now update the average aquisition cost for our inventory
@@ -696,11 +823,22 @@ begin
       and the price * size would be non-zero
     *)
     else if (LOldInv < Inventory) and (ADetails.Price > 0) then
+    begin
+      LogInfo('AACUpdate::[OldAAC]-' + FloatToStr(FAAC));
+      
+      //update the aac
       FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (Inventory);
-  end;
+      
+      LogInfo('AACUpdate::[AAC]-' + FloatToStr(FAAC));
+    end;
+  end
+  else
+    LogWarning(PREFIX + 'size is zero or lower [size]-' + FloatToStr(ADetails.Size));
 
   //lastly remove this order from the manager since we no longer need it tracked
   FOrderManager.Delete(AID);
+  
+  LogInfo(PREFIX + 'finished for [ID]-' + AID);
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;
@@ -808,6 +946,18 @@ begin
   FOldPlace:=nil;
   FOldRemove:=nil;
   FOldStatus:=nil;
+  FOnInfo:=nil;
+  FOnError:=nil;
+  FOnWarn:=nil;
+end;
+
+constructor TDelilahImpl.Create(const AOnInfo, AOnError,
+  AOnWarn: TEngineLogEvent);
+begin
+  inherited;
+  FOnInfo:=AOnInfo;
+  FOnError:=AOnError;
+  FOnWarn:=AOnWarn;
 end;
 
 destructor TDelilahImpl.Destroy;
@@ -817,6 +967,9 @@ begin
   FHoldsLedger:=nil;
   FHoldsInvLedger:=nil;
   FFundsLedger:=nil;
+  FOnInfo:=nil;
+  FOnError:=nil;
+  FOnWarn:=nil;
   FOrderLedger.Free;
   inherited Destroy;
 end;

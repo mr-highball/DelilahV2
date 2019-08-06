@@ -136,11 +136,14 @@ var
   LError:String;
 begin
   Result:=omCanceled;
+
   //simple exist check first
   if not Exists[AID] then
     Exit(omCanceled);
+
   if not Details(AID,LDetails,LError) then
     raise Exception.Create(LError);
+
   //call to child for status
   Result:=DoGetStatus(LDetails);
 end;

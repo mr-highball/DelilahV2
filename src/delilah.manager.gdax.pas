@@ -130,7 +130,7 @@ begin
   if not LTime.Get(LContent,LError) then
     Exit;
 
-  LogInfo('CancelCountCheck::starting, time check passed order-' + AID);
+  LogInfo('CancelCountCheck::starting, time check passed [order]-' + AID);
 
   //if the id doesn't exist, then we aren't tracking and we need to
   if I < 0 then
@@ -401,22 +401,39 @@ begin
       //attempt to get the order assuming strategy has filled it out correctly
       if not LDetails.Order.Get(LContent,LError) then
       begin
-        LogError('DoGetStatus::' + LError);
+        LogError('DoGetStatus::GetFailure::' + LError);
 
         //canceled orders are actually removed from the order book, so this
         //is the current way to determine a completely canceled order
         if LError.ToLower.IndexOf('notfound') >= 0 then
         begin
-          LogWarning('DoGetStatus::order message "NotFound" detected, canceling order');
-          Result:=omCanceled;
+          LogWarning('DoGetStatus::NotFound::order message "NotFound" detected, checking for cancel retry count');
 
           //get the ID
           if not ID(ADetails,LID) then
           begin
             LError:='unable to fetch id for order details in ' + Self.Classname;
-            LogError('DoGetStatus::' + LError);
+            LogError('DoGetStatus::NotFound::' + LError);
             Exit;
           end;
+
+          //checks to see if this order exceeds the maximum cancel tries
+          LogError('DoGetStatus::NotFound::CancelCheck::checking if [OrderID]-' + LID + ' exceeds cancel try limit');
+          if not CancelCountCheck(LID) then
+          begin
+            Result:=LOldStatus;
+            LogError('DoGetStatus::NotFound::CancelCheck::[OrderID]-' + LID + ' still has retries left');
+            Exit;
+          end
+          else
+            LogWarning('DoGetStatus::NotFound::CancelCheck::[OrderID]-' + LID + ' used all cancel retries');
+
+          //cleanup if order is in the cancel map
+          if FCancelMap.IndexOf(LID) >= 0 then
+            FCancelMap.Delete(FCancelMap.IndexOf(LID));
+
+          //mark as a canceled order
+          Result:=omCanceled;
 
           //notify listeners of status change
           if (LOldStatus <> Result) or (Result = omCanceled) then
@@ -483,7 +500,7 @@ begin
 
     (*
       notify listeners since base class does not handle status changes when
-      fetching statuses (handles cancel, remove, place automatically).
+      fetching statuses (handles remove, place automatically).
 
       also noting:
       we check if result is Canceled as well, because
@@ -510,7 +527,8 @@ var
   I:Integer;
 begin
   //introduce an artificial delay between refreshes to avoid throttling
-  if MilliSecondsBetween(Now, FLastRefresh) < 350 then
+  if (MilliSecondsBetween(Now, FLastRefresh) < 350)
+    and (Orders.Count > 0) then
   begin
     LogInfo('DoRefresh::last refresh was quicker than threshold, sleeping for 350');
     Sleep(350);

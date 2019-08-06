@@ -363,9 +363,9 @@ begin
   FMidStrategy:=nil;;
   FCompletedOrders:=0;
   //create an engine
-  FEngine:=TDelilahImpl.Create;
+  FEngine:=TDelilahImpl.Create(LogInfo, LogError, LogWarn);
   //since we are dealing with GDAX assign the order manager
-  LManager:=TGDAXOrderManagerImpl.Create(LogInfo,LogError,LogWarn);
+  LManager:=TGDAXOrderManagerImpl.Create(LogInfo, LogError, LogWarn);
   FEngine.OrderManager:=LManager;
   FEngine.OnStatus:=EngineStatus;
 

@@ -388,9 +388,17 @@ begin
       Exit;
     end;
 
+    //cast to gdax specifics
     LDetails := ADetails as IGDAXOrderDetails;
     LOldStatus := GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
     LDetails.Order.Authenticator := Authenticator;
+
+    //get the ID
+    if not ID(ADetails, LID) then
+    begin
+      LogWarning('DoGetStatus::id does not exist for order');
+      Exit;
+    end;
 
     //avoid a web call for cancelled orders
     if LDetails.Order.OrderStatus <> stCancelled then
@@ -408,14 +416,6 @@ begin
         if LError.ToLower.IndexOf('notfound') >= 0 then
         begin
           LogWarning('DoGetStatus::NotFound::order message "NotFound" detected, checking for cancel retry count');
-
-          //get the ID
-          if not ID(ADetails,LID) then
-          begin
-            LError:='unable to fetch id for order details in ' + Self.Classname;
-            LogError('DoGetStatus::NotFound::' + LError);
-            Exit;
-          end;
 
           //checks to see if this order exceeds the maximum cancel tries
           LogError('DoGetStatus::NotFound::CancelCheck::checking if [OrderID]-' + LID + ' exceeds cancel try limit');
@@ -455,14 +455,6 @@ begin
       else
         LogInfo('DoGetStatus::ResponseContent::[Content]-' + LContent);
 
-      if not ID(ADetails,LID) then
-      begin
-        LError:='unable to fetch id for order details in ' + Self.Classname;
-        LogError('DoGetStatus::' + LError);
-        Result:=LOldStatus;
-        Exit;
-      end;
-
       //map the gdax status to the order manager
       Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
       LogInfo('DoGetStatus::OrderManagerStatus::[Status]-' + OrderManagerStatusToString(Result));
@@ -483,13 +475,13 @@ begin
             LOldStatus := omActive;
 
           //will check against max tries for settle count and return true if so
-          if not SettleCountCheck(LDetails.Order.ID) then
+          if not SettleCountCheck(LID) then
             Result := omActive
           else
             Result := omCompleted;
         end
         //cleanup if we have stored in settle map
-        else if FSettleMap.IndexOf(LDetails.Order.ID) >= 0 then
+        else if FSettleMap.IndexOf(LID) >= 0 then
           FSettleMap.Delete(FSettleMap.IndexOf(LDetails.Order.ID));
     end
     else
@@ -525,6 +517,7 @@ end;
 function TGDAXOrderManagerImpl.DoRefresh(out Error: String): Boolean;
 var
   I:Integer;
+  LKeys : TStringList;
 begin
   //introduce an artificial delay between refreshes to avoid throttling
   if (MilliSecondsBetween(Now, FLastRefresh) < 350)
@@ -543,15 +536,26 @@ begin
   //the status. this will count against gdax private endpoint limit, so
   //if the strategy stores a lot of orders, this may cause a problem. could
   //potentially sort by price and only refresh up to a certain price?
-  Result:=False;
+  Result := False;
+  LKeys := TStringList.Create;
   try
-    for I:=0 to Pred(Orders.Count) do
-      Status[Orders.Keys[I]];
+    //get a temporary list of keys since status triggers events that
+    //we can't control
+    for I := 0 to Pred(Orders.Count) do
+      LKeys.Add(Orders.Keys[I]);
 
+    //now update the status
+    for I := 0 to Pred(LKeys.Count) do
+      Status[LKeys[I]];
+
+    //success
     Result:=True;
   except on E:Exception do
     Error:=E.Message;
   end;
+
+  //free keys
+  LKeys.Free;
 end;
 
 constructor TGDAXOrderManagerImpl.Create;

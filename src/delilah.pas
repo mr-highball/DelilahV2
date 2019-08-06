@@ -454,65 +454,79 @@ begin
 end;
 
 procedure TDelilahImpl.DoPlace(const ADetails: IOrderDetails; const AID: String);
+const
+  PREFIX = LOG_PREFIX + 'DoPlace::';
 var
   LID:String;
   LStatus:TOrderManagerStatus;
   LBal,
   LEntry:Extended;
 begin
+  LogInfo(PREFIX + 'starting');
   LBal:=0;
-  LStatus:=FOrderManager.Status[AID];
-  case LStatus of
-    //active orders are considered to be on "hold" until they have been completed
-    omActive:
-      begin
-        //record an entry into the holds ledger
-        if ADetails.OrderType=odBuy then
-        begin
-          LEntry:=ADetails.Price * ADetails.Size;
-          LBal:=FHoldsLedger.RecordEntry(
-            LEntry,
-            ltDebit,
-            LID
-          ).Balance
-        end
-        else
-        begin
-          LEntry:=ADetails.Price * ADetails.Size;
-          LBal:=FHoldsLedger.RecordEntry(
-            LEntry,
-            ltCredit,
-            LID
-          ).Balance;
-        end;
-        //now store the ledger id associated with this order id
-        StoreLedgerID(AID,LID,lsHold);
-        //record an entry for the holds inventory
-        if ADetails.OrderType=odBuy then
-        begin
-          LEntry:=ADetails.Size;
-          LBal:=FHoldsInvLedger.RecordEntry(
-            ADetails.Size,
-            ltCredit,
-            LID
-          ).Balance
-        end
-        else
-        begin
-          LEntry:=ADetails.Size;
-          LBal:=FHoldsInvLedger.RecordEntry(
-            ADetails.Size,
-            ltDebit,
-            LID
-          ).Balance;
-        end;
-        StoreLedgerID(AID,LID,lsInvHold)
-      end;
+
+  //record an entry into the holds ledger
+  if ADetails.OrderType = odBuy then
+  begin
+    LEntry := ADetails.Price * ADetails.Size;
+    LBal := FHoldsLedger.RecordEntry(
+      LEntry,
+      ltDebit,
+      LID
+    ).Balance;
+
+    LogInfo(PREFIX + 'HoldsLedger::buy detected recording debit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+  end
+  else
+  begin
+    LEntry := ADetails.Price * ADetails.Size;
+    LBal:=FHoldsLedger.RecordEntry(
+      LEntry,
+      ltCredit,
+      LID
+    ).Balance;
+
+    LogInfo(PREFIX + 'HoldsLedger::sell detected recording credit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
   end;
+
+  //now store the ledger id associated with this order id
+  StoreLedgerID(AID, LID, lsHold);
+
+  //record an entry for the holds inventory
+  if ADetails.OrderType = odBuy then
+  begin
+    LEntry := ADetails.Size;
+    LBal:=FHoldsInvLedger.RecordEntry(
+      ADetails.Size,
+      ltCredit,
+      LID
+    ).Balance;
+
+    LogInfo(PREFIX + 'InvHoldsLedger::buy detected recording credit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+  end
+  else
+  begin
+    LEntry := ADetails.Size;
+    LBal := FHoldsInvLedger.RecordEntry(
+      ADetails.Size,
+      ltDebit,
+      LID
+    ).Balance;
+
+    LogInfo(PREFIX + 'InvHoldsLedger::sell detected recording debit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+  end;
+
+  //store to ledger
+  StoreLedgerID(AID, LID, lsInvHold);
+
+  //raise "old" events if any
   if Assigned(FOldPlace) then
     FOldPlace(ADetails,AID);
+
   if Assigned(FOnPlace) then
     FOnPlace(ADetails,AID);
+
+  LogInfo(PREFIX + 'finished');
 end;
 
 procedure TDelilahImpl.DoRemove(const ADetails: IOrderDetails; const AID: String);
@@ -707,7 +721,7 @@ begin
             LBal:=LLedger.RecordEntry(
               LLedger[LPair.ID].Entry,
               ltDebit
-            ).Balance
+            ).Balance;
             
             LogInfo(PREFIX + 'Balancing::record debit, [entry]-' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]-' + FloatToStr(LBal));
           end
@@ -775,7 +789,8 @@ begin
         ADetails.Price * ADetails.Size,
         ltDebit,
         LID
-      ).Balance
+      ).Balance;
+
       LogInfo(PREFIX + 'FundsLedger::buy side, new balance [balance]-' + FloatToStr(LBal));
     end
     else
@@ -785,6 +800,7 @@ begin
         ltCredit,
         LID
       ).Balance;
+
       LogInfo(PREFIX + 'FundsLedger::sell side, new balance [balance]-' + FloatToStr(LBal));
     end;
     
@@ -801,7 +817,8 @@ begin
         ADetails.Size,
         ltCredit,
         LID
-      ).Balance
+      ).Balance;
+
       LogInfo(PREFIX + 'InvLedger::buy side, new balance [balance]-' + FloatToStr(LBal));
     end
     else
@@ -859,14 +876,14 @@ var
 begin
   Result:=False;
   try
+    //before calling down to the strategies we need to refresh our manager
+    if not FOrderManager.Refresh(Error) then
+      Exit;
+
     //simply iterate strategies and attempt to feed, they are responsible
     //for the rest of the logic in our base class engine
     for I:=0 to Pred(FStrategies.Count) do
     begin
-      //before calling down to the strategies we need to refresh our manager
-      if not FOrderManager.Refresh(Error) then
-        Exit;
-
       //after refreshing, feed the next strategy ticker information
       if not FStrategies[I].Feed(
         ATicker,
@@ -954,7 +971,7 @@ end;
 constructor TDelilahImpl.Create(const AOnInfo, AOnError,
   AOnWarn: TEngineLogEvent);
 begin
-  inherited;
+  Create;
   FOnInfo:=AOnInfo;
   FOnError:=AOnError;
   FOnWarn:=AOnWarn;

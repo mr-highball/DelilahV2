@@ -20,14 +20,17 @@ type
     ['{2C57FC56-B252-4B05-9808-C33322970279}']
     //property methods
     function GetPrice: Extended;
+    function GetFees: Extended;
     function GetSize: Extended;
     function GetType: TOrderDetailsType;
+    procedure SetFees(Const AValue: Extended);
     procedure SetPrice(Const AValue: Extended);
     procedure SetSize(Const AValue: Extended);
     procedure SetType(Const AValue: TOrderDetailsType);
     //properties
     property Size : Extended read GetSize write SetSize;
     property Price : Extended read GetPrice write SetPrice;
+    property Fees : Extended read GetFees write SetFees;
     property OrderType : TOrderDetailsType read GetType write SetType;
   end;
 

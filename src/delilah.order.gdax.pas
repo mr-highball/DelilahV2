@@ -34,9 +34,11 @@ type
     function DoGetPrice: Extended; override;
     function DoGetSize: Extended; override;
     function DoGetType: TOrderDetailsType; override;
+    function DoGetFees: Extended; override;
     procedure DoSetPrice(const AValue: Extended); override;
     procedure DoSetSize(const AValue: Extended); override;
     procedure DoSetType(const AValue: TOrderDetailsType); override;
+    procedure DoSetFees(const AValue: Extended); override;
   public
     property Order : IGDAXOrder read GetOrder write SetOrder;
     constructor Create(Const AOrder:IGDAXOrder); overload;
@@ -62,44 +64,22 @@ function TGDAXOrderDetailsImpl.DoGetPrice: Extended;
 begin
   if not Assigned(FOrder) then
     Exit(0);
+
   (*
     below we are using the ExecutedValue which is only present on orders
     after 2016, but is the cumulative (size * price), so we don't have to make
-    a second call to the fills endpoint. only market orders will have fill fees
-    as of writing this, but this accounts if coinbase decides to charge for
-    limit orders as well
+    a second call to the fills endpoint
   *)
-
-  //for buy orders we need to add the fees to price to show higher cost
-  if FOrder.Side=osBuy then
+  if (FOrder.OrderStatus = stSettled) or (FOrder.OrderStatus = stCancelled)
+  then
   begin
-    if (FOrder.OrderStatus=stSettled)
-      or ((FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0))
-    then
-    begin
-      if FOrder.FilledSized > 0 then
-        Result:=((FOrder.ExecutedValue + Abs(FOrder.FillFees)) / FOrder.FilledSized)
-      else
-        Result:=0;
-    end
+    if FOrder.FilledSized > 0 then
+      Result:=(FOrder.ExecutedValue / FOrder.FilledSized)
     else
-      Result:=FOrder.Price + Abs(FOrder.FillFees);
+      Result:=0;
   end
-  //but for sell orders we need to subtract any fees to show reduction in profit
   else
-  begin
-    if (FOrder.OrderStatus=stSettled)
-      or ((FOrder.OrderStatus=stCancelled) and (FOrder.FilledSized > 0))
-    then
-    begin
-      if FOrder.FilledSized > 0 then
-        Result:=((FOrder.ExecutedValue - Abs(FOrder.FillFees)) / FOrder.FilledSized)
-      else
-        Result:=0;
-    end
-    else
-       Result:=FOrder.Price - Abs(FOrder.FillFees);
-  end;
+    Result:=FOrder.Price;
 end;
 
 function TGDAXOrderDetailsImpl.DoGetSize: Extended;
@@ -124,6 +104,14 @@ begin
     Result:=odSell;
 end;
 
+function TGDAXOrderDetailsImpl.DoGetFees: Extended;
+begin
+  if not Assigned(FOrder) then
+    raise Exception.Create('GDAX order not assigned in ' + Self.Classname);
+
+  Result := Abs(FOrder.FillFees);
+end;
+
 procedure TGDAXOrderDetailsImpl.DoSetPrice(const AValue: Extended);
 begin
   if not Assigned(FOrder) then
@@ -146,6 +134,14 @@ begin
     FOrder.Side:=osBuy
   else
     FOrder.Side:=osSell;
+end;
+
+procedure TGDAXOrderDetailsImpl.DoSetFees(const AValue: Extended);
+begin
+  if not Assigned(FOrder) then
+    raise Exception.Create('GDAX order not assigned in ' + Self.Classname);
+
+  FOrder.FillFees := AValue;
 end;
 
 

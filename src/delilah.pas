@@ -786,7 +786,7 @@ begin
     if ADetails.OrderType = odBuy then
     begin
       LBal:=FFundsLedger.RecordEntry(
-        ADetails.Price * ADetails.Size,
+        ADetails.Price * ADetails.Size + ADetails.Fees,
         ltDebit,
         LID
       ).Balance;
@@ -796,7 +796,7 @@ begin
     else
     begin
       LBal:=FFundsLedger.RecordEntry(
-        ADetails.Price * ADetails.Size,
+        ADetails.Price * ADetails.Size - ADetails.Fees,
         ltCredit,
         LID
       ).Balance;
@@ -843,9 +843,13 @@ begin
     begin
       LogInfo('AACUpdate::[OldAAC]-' + FloatToStr(FAAC));
       
-      //update the aac
-      FAAC:=((FAAC * LOldInv) + (ADetails.Price * ADetails.Size)) / (Inventory);
-      
+      //update the aac for buy orders by adding fees (the actual cost)
+      if ADetails.OrderType = odBuy then
+        FAAC:=((FAAC * LOldInv) + ((ADetails.Price + ADetails.Fees) * ADetails.Size)) / (Inventory)
+      //sell orders we need to subtract the fees
+      else
+        FAAC:=((FAAC * LOldInv) + ((ADetails.Price - ADetails.Fees) * ADetails.Size)) / (Inventory);
+
       LogInfo('AACUpdate::[AAC]-' + FloatToStr(FAAC));
     end;
   end

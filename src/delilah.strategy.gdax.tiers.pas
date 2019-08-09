@@ -857,6 +857,7 @@ begin
             //figure the amount of currency we would receive minus the fees
             LOrderSellTot:=(LOrderSize * LTicker.Ticker.Ask) - (FMarketFee * LOrderSize * LTicker.Ticker.Ask);
             LGDAXOrder.OrderType:=otMarket;
+            LGDAXOrder.Price:=LTicker.Ticker.Ask;
             LogInfo('DoFeed::SellMode::using market sell, with OnlyProfit, total sell amount would be ' + FloatToStr(LOrderSellTot));
           end
           else
@@ -888,10 +889,10 @@ begin
           if FUseMarketSell then
             LGDAXOrder.OrderType:=otMarket
           else
-          begin
             LGDAXOrder.OrderType:=otLimit;
-            LGDAXOrder.Price:=LTicker.Ticker.Ask;
-          end;
+
+          //set the price
+          LGDAXOrder.Price:=LTicker.Ticker.Ask;
         end;
 
         //set the order side to sell
@@ -993,10 +994,10 @@ begin
         if FUseMarketBuy then
           LGDAXOrder.OrderType:=otMarket
         else
-        begin
           LGDAXOrder.OrderType:=otLimit;
-          LGDAXOrder.Price:=LTicker.Ticker.Bid;
-        end;
+
+        //set the price
+        LGDAXOrder.Price:=LTicker.Ticker.Bid;
 
         //set the order up for buying
         LGDAXOrder.Side:=osBuy;

@@ -38,8 +38,8 @@ type
     function SettleCountCheck(Const AID:String):Boolean;
     function CancelCountCheck(Const AID:String):Boolean;
     const
-      MAX_SETTLE_COUNT = 20;
-      MAX_CANCEL_COUNT = 20;
+      MAX_SETTLE_COUNT = 200;
+      MAX_CANCEL_COUNT = 200;
   strict protected
     function GDAXDetailsValid(Const ADetails:IOrderDetails;Out Error:String):Boolean;
     function GDAXStatusToEngineStatus(Const AStatus:TOrderStatus):TOrderManagerStatus;

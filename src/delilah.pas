@@ -845,10 +845,10 @@ begin
       
       //update the aac for buy orders by adding fees (the actual cost)
       if ADetails.OrderType = odBuy then
-        FAAC := FAAC * LOldInv + (ADetails.Price * ADetails.Size + ADetails.Fees) / Inventory
+        FAAC := (FAAC * LOldInv + (ADetails.Price * ADetails.Size + ADetails.Fees)) / Inventory
       //sell orders we need to subtract the fees
       else
-        FAAC := FAAC * LOldInv + (ADetails.Price * ADetails.Size  - ADetails.Fees) / Inventory;
+        FAAC := (FAAC * LOldInv + (ADetails.Price * ADetails.Size  - ADetails.Fees)) / Inventory;
 
       LogInfo('AACUpdate::[AAC]-' + FloatToStr(FAAC));
     end;

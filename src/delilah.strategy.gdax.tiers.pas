@@ -1147,6 +1147,133 @@ var
   LAvgAnc,
   LAvgDev,
   LChopInd: Single;
+type
+  TRange = record
+    Lower,
+    Upper,
+    StdDev,
+    Percent : Single;
+    Count : Integer;
+  end;
+  TRanges = TArray<TRange>;
+
+  (*
+    build the range array from the channels and tickers collected
+  *)
+  procedure BuildRanges(out Ranges : TRanges; out Coverage : Single);
+  var
+    I, J, LFound : Integer;
+    LRange : TRange;
+    LTickers : TTickers;
+  begin
+    SetLength(Ranges, FChannel.Count);
+    LFound := 0;
+
+    //add all the ranges found in the channels
+    for I := 0 to Pred(FChannel.Count) do
+    begin
+      //update
+      LRange.Count := 0;
+      LRange.Lower := FChannel.ByIndex[I].Lower;
+      LRange.Upper := FChannel.ByIndex[I].Upper;
+
+      //channels are defined below and above the mean, so we need to find
+      //if this is a "lower" or "upper" style channel, and use the appropriate
+      //std dev property in that case
+      if Abs(FChannel.ByIndex[I].UpperStdDev) > Abs(FChannel.ByIndex[I].LowerStdDev) then
+        LRange.StdDev := Abs(FChannel.ByIndex[I].UpperStdDev)
+      else
+        LRange.StdDev := Abs(FChannel.ByIndex[I].LowerStdDev);
+
+      //insert to array
+      Ranges[I] := LRange;
+    end;
+
+    //now add to the distribution by comparing the tickers price to the range
+    LTickers := FChannel.Tickers;
+    for I := 0 to Pred(LTickers.Count) do
+      for J := 0 to High(Ranges) do
+      begin
+        LRange := Ranges[J];
+
+        //check if ticker price is between the range
+        if (LTickers[I].Price <= LRange.Upper)
+          and (LTickers[I].Price <= LRange.Upper)
+        then
+        begin
+          //found, so increment count
+          Inc(LRange.Count);
+
+          //update array value
+          Ranges[J] := LRange;
+
+          Inc(LFound);
+
+          //get out of range loop
+          Break;
+        end;
+      end;
+
+    //find the coverage
+    for I := 0 to High(Ranges) do
+    begin
+      LRange := Ranges[I];
+      LRange.Percent := (LRange.Count / LFound) * 100;
+      Ranges[I] := LRange;
+    end;
+
+    //update coverage
+    Coverage := (LFound / LTickers.Count) * 100;
+  end;
+
+  (*
+    sorts all readings into channel based populations. will count
+    the total occurences and "adjust" the deviation so that
+    it can be used for subtracting fees from. if this turns out to be
+    stupid, then perhaps using a confidence interval might work?
+  *)
+  function AdjustedDeviation(const AStdDev : Single) : Single;
+  var
+    LRanges : TRanges;
+    LCoverage : Single;
+    I : Integer;
+    LDistributions : String;
+  begin
+    Result := 0;
+
+    //build the range array (distribution)
+    BuildRanges(LRanges, LCoverage);
+
+    //get the aggregated result
+    LDistributions := '';
+    for I := 0 to High(LRanges) do
+    begin
+      Result := Result + ((AStdDev * LRanges[I].StdDev) * LRanges[I].Percent);
+      LDistributions := LDistributions + Format(
+        '[Range]-(L->U) %f .. %f [StdDev]-%f [Count]-%s [Percent]-%f' + ' ',
+        [
+          LRanges[I].Lower,
+          LRanges[I].Upper,
+          LRanges[I].StdDev,
+          IntToStr(LRanges[I].Count),
+          LRanges[I].Percent
+        ]
+      );
+    end;
+
+    LogInfo(LDistributions);
+
+    //divide by the coverage to get the adjusted deviation
+    Result := Result / LCoverage;
+
+    LogInfo(
+      Format(
+        'ChoppyWaters::AdjustedDeviation::[Coverage]-%f [Dev]-%f [AdjustedDev]-%f',
+        [LCoverage, AStdDev, Result]
+      )
+    );
+  end;
+
 begin
   Result := False;
   LChopInd := 0;
@@ -1198,7 +1325,8 @@ begin
     LChopInd := LChopInd + LimitFee;
 
   //now use the fee to see what the "round trip" (buy/sell) would result in
-  LChopInd := (LAvgDev / LAvgAnc) - LChopInd;
+  //after adjusting the deviation according to our distribution
+  LChopInd := AdjustedDeviation(LAvgDev) / LAvgAnc - LChopInd;
 
   LogInfo('ChoppyWaters::[ChopIndicator]-' + FloatToStr(LChopInd));
 

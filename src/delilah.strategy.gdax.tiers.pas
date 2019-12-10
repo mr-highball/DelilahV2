@@ -306,7 +306,7 @@ type
       clears managed positions by cancelling those not completed
     *)
     procedure ClearOldPositions(Const AManager:IOrderManager);
-    function ChoppyWaters : Boolean;
+    function ChoppyWaters(const ASell : Boolean) : Boolean;
     function ActiveCriteriaCheck(Const ADetails : PActiveCriteriaDetails) : Boolean;
   public
 
@@ -844,6 +844,15 @@ begin
             LSize = psGTFO
           );
 
+        //before doing any other calcs/comparisons, see if we are in
+        //choppy conditions, if so get out
+        if FAvoidChop and ChoppyWaters(True) then
+        begin
+          LogInfo('DoFeed::SellMode::choppy waters cap''n, gon hold off from sellin.');
+          PositionSuccess;
+          Exit(True);
+        end;
+
         if LAllowLoss then
           LogInfo('DoFeed::SellMode::OnlyProfit is on and conditions were right to allow selling at a loss');
 
@@ -943,7 +952,7 @@ begin
 
         //before doing any other calcs/comparisons, see if we are in
         //choppy conditions, if so get out
-        if FAvoidChop and ChoppyWaters then
+        if FAvoidChop and ChoppyWaters(False) then
         begin
           LogInfo('DoFeed::BuyMode::choppy waters cap''n, gon hold off from buyin.');
           PositionSuccess;
@@ -1132,18 +1141,20 @@ begin
   FIDS.Clear;
 end;
 
-function TTierStrategyGDAXImpl.ChoppyWaters: Boolean;
+function TTierStrategyGDAXImpl.ChoppyWaters(const ASell : Boolean): Boolean;
 var
   I: Integer;
   LAvgAnc,
   LAvgDev,
   LChopInd: Single;
-const
-  CHOP_MAGIC = 0.002;
 begin
-  Result:=False;
+  Result := False;
+  LChopInd := 0;
+  LAvgAnc:=0;
+  LAvgDev:=0;
 
   LogInfo('ChoppyWaters::starting');
+
   //if we don't care about choppy market, then exit
   if not FAvoidChop then
   begin
@@ -1152,15 +1163,15 @@ begin
   end;
 
   //find the average anchor price and deviation
-  LAvgAnc:=0;
-  LAvgDev:=0;
   for I := 0 to Pred(FChannel.Count) do
   begin
-    LAvgAnc:=LAvgAnc + FChannel.ByIndex[I].AnchorPrice;
-    LAvgDev:=LAvgDev + FChannel.ByIndex[I].StdDev;
+    LAvgAnc := LAvgAnc + FChannel.ByIndex[I].AnchorPrice;
+    LAvgDev := LAvgDev + FChannel.ByIndex[I].StdDev;
   end;
-  LAvgAnc:=LAvgAnc / FChannel.Count;
-  LAvgDev:=LAvgDev / FChannel.Count;
+
+  LAvgAnc := LAvgAnc / FChannel.Count;
+  LAvgDev := LAvgDev / FChannel.Count;
+
   LogInfo(
     Format(
       'ChoppyWaters::[AvgAnchor]-%s [AvgDeviation]-%s',
@@ -1168,21 +1179,31 @@ begin
     )
   );
 
-  //now that we have the averages we need to find the largest of
-  //this calc, or the magic chop calc
+  //find the total fees, once we have this we can see if the market is "choppy"
+  //(doesn't mean profit can be reached
+  //just means we won't be burning our ass in rapid succession)
   if UseMarketBuy then
-    LChopInd:=((MarketFee * LAvgAnc) + (MinProfit * LAvgAnc)) / 2
+    LChopInd := MarketFee
+  //limit buy
   else
-    LChopInd:=((LimitFee * LAvgAnc) + (MinProfit * LAvgAnc)) / 2;
+    LChopInd := LimitFee;
 
-  if (CHOP_MAGIC * LAvgAnc) > LChopInd then
-  begin
-    LogInfo('ChoppyWaters::magic chop greater than calc');
-    LChopInd:=CHOP_MAGIC * LAvgAnc;
-  end;
+  { allow fall through to account for both sides }
 
-  LogInfo('ChoppyWaters::deviation must be greater than [ChopIndicator]-' + FloatToStr(LChopInd));
-  Result:=LAvgDev < LChopInd;
+  //market sell
+  if UseMarketSell then
+    LChopInd := LChopInd + MarketFee
+  //limit sell
+  else
+    LChopInd := LChopInd + LimitFee;
+
+  //now use the fee to see what the "round trip" (buy/sell) would result in
+  LChopInd := (LAvgDev / LAvgAnc) - LChopInd;
+
+  LogInfo('ChoppyWaters::[ChopIndicator]-' + FloatToStr(LChopInd));
+
+  //as long as the delta is greater than zero, there is a chance for some profit
+  Result:=LChopInd > 0;
 end;
 
 function TTierStrategyGDAXImpl.ActiveCriteriaCheck(

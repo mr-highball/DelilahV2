@@ -306,7 +306,7 @@ type
       clears managed positions by cancelling those not completed
     *)
     procedure ClearOldPositions(Const AManager:IOrderManager);
-    function ChoppyWaters(const ASell : Boolean) : Boolean;
+    function ChoppyWaters : Boolean;
     function ActiveCriteriaCheck(Const ADetails : PActiveCriteriaDetails) : Boolean;
   public
 
@@ -846,7 +846,7 @@ begin
 
         //before doing any other calcs/comparisons, see if we are in
         //choppy conditions, if so get out
-        if FAvoidChop and ChoppyWaters(True) then
+        if FAvoidChop and ChoppyWaters then
         begin
           LogInfo('DoFeed::SellMode::choppy waters cap''n, gon hold off from sellin.');
           PositionSuccess;
@@ -952,7 +952,7 @@ begin
 
         //before doing any other calcs/comparisons, see if we are in
         //choppy conditions, if so get out
-        if FAvoidChop and ChoppyWaters(False) then
+        if FAvoidChop and ChoppyWaters then
         begin
           LogInfo('DoFeed::BuyMode::choppy waters cap''n, gon hold off from buyin.');
           PositionSuccess;
@@ -1141,7 +1141,7 @@ begin
   FIDS.Clear;
 end;
 
-function TTierStrategyGDAXImpl.ChoppyWaters(const ASell : Boolean): Boolean;
+function TTierStrategyGDAXImpl.ChoppyWaters: Boolean;
 var
   I: Integer;
   LAvgAnc,

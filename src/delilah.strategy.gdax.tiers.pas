@@ -1331,7 +1331,8 @@ begin
   LogInfo('ChoppyWaters::[ChopIndicator]-' + FloatToStr(LChopInd));
 
   //as long as the delta is greater than zero, there is a chance for some profit
-  Result:=LChopInd > 0;
+  //so return choppy when we aren't
+  Result:=LChopInd < 0;
 end;
 
 function TTierStrategyGDAXImpl.ActiveCriteriaCheck(

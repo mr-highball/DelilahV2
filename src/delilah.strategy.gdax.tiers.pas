@@ -551,23 +551,23 @@ begin
   //todo - these numbers are "magic" right now, should break them out
   //into a properties maybe
 
-  LGTFO:=FChannel.Add(GTFO,-3.5,-4)[GTFO];
+  LGTFO:=FChannel.Add(GTFO,-4,-4.5)[GTFO];
   LGTFO.OnLower:=GTFOLow;
   LGTFO.OnUpper:=GTFOUp;
 
-  LLargeBuy:=FChannel.Add(LARGE_BUY,-2,-3)[LARGE_BUY];
+  LLargeBuy:=FChannel.Add(LARGE_BUY,-2.3,-3)[LARGE_BUY];
   LLargeBuy.OnLower:=LargeBuyUp;
   LLargeBuy.OnUpper:=LargeBuyLow;
 
-  LSmallBuy:=FChannel.Add(SMALL_BUY,0,-1)[SMALL_BUY];
+  LSmallBuy:=FChannel.Add(SMALL_BUY,-0.5,-1.5)[SMALL_BUY];
   LSmallBuy.OnUpper:=SmallBuyUp;
   LSmallBuy.OnLower:=SmallBuyLow;
 
-  LSmallSell:=FChannel.Add(SMALL_SELL,1,0)[SMALL_SELL];
+  LSmallSell:=FChannel.Add(SMALL_SELL,1.5,0.5)[SMALL_SELL];
   LSmallSell.OnUpper:=SmallSellUp;
   LSmallSell.OnLower:=SmallSellLow;
 
-  LLargeSell:=FChannel.Add(LARGE_SELL,3,2)[LARGE_SELL];
+  LLargeSell:=FChannel.Add(LARGE_SELL,3,2.3)[LARGE_SELL];
   LLargeSell.OnUpper:=LargeSellUp;
   LLargeSell.OnLower:=LargeSellLow;
 end;

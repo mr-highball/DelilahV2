@@ -1,0 +1,171 @@
+unit mock.manager;
+
+{$mode delphi}
+
+interface
+
+uses
+  Classes,
+  SysUtils,
+  delilah.types,
+  gdax.api.consts,
+  delilah.manager,
+  delilah.manager.gdax;
+
+type
+
+  { IMockOrderManager }
+  (*
+    order manager for the GDAX crypto currency exchange
+  *)
+  IMockOrderManager = interface(IOrderManager)
+    ['{0F58D00E-7D26-447B-B246-C70AE651670C}']
+    //property methods
+    function GetFee: Single;
+    procedure SetFee(const AValue: Single);
+
+    //properties
+    property FeePercentage : Single read GetFee write SetFee;
+  end;
+
+  { TMockOrderManagerImpl }
+  (*
+    base implementation of a mock order manager
+  *)
+  TMockOrderManagerImpl = class(TOrderManagerImpl, IMockOrderManager)
+  strict private
+    FFee : Single;
+  strict protected
+    function GDAXDetailsValid(Const ADetails:IOrderDetails;Out Error:String):Boolean;
+    function GDAXStatusToEngineStatus(Const AStatus:TOrderStatus):TOrderManagerStatus;
+
+    function DoPlace(const ADetails: IOrderDetails;
+      out Error: String): Boolean; override;
+    function DoCancel(const ADetails: IOrderDetails;
+      out Error: String): Boolean; override;
+    function DoGetStatus(const ADetails: IOrderDetails): TOrderManagerStatus;override;
+    function DoRefresh(out Error: String): Boolean; override;
+  protected
+    function GetFee: Single;
+    procedure SetFee(const AValue: Single);
+  public
+    property FeePercentage : Single read GetFee write SetFee;
+
+    constructor Create; override;
+    destructor Destroy; override;
+  end;
+
+implementation
+uses
+  delilah.order.gdax,
+  math,
+  dateutils;
+
+{ TMockOrderManagerImpl }
+
+
+function TMockOrderManagerImpl.GDAXDetailsValid(const ADetails: IOrderDetails;
+  out Error: String): Boolean;
+var
+  LDetails:IGDAXOrderDetails;
+begin
+  Result:=False;
+  if not Assigned(ADetails) then
+  begin
+    Error:='order details nil or invalid';
+    Exit;
+  end;
+  if not (ADetails is IGDAXOrderDetails) then
+  begin
+    Error:='order details is not IGDAXOrderDetails';
+    Exit;
+  end;
+  LDetails:=ADetails as IGDAXOrderDetails;
+  if not Assigned(LDetails.Order) then
+  begin
+    Error:='gdax not assigned in order details';
+    Exit;
+  end;
+  Result:=True;
+end;
+
+function TMockOrderManagerImpl.GDAXStatusToEngineStatus(
+  const AStatus: TOrderStatus): TOrderManagerStatus;
+begin
+  Result:=omCanceled;
+  //map the gdax status as best we can to the engine statuses
+  case AStatus of
+    stActive,stPending,stOpen,stDone: Result:=omActive;
+    stCancelled,stRejected,stUnknown: Result:=omCanceled;
+    stSettled: Result:=omCompleted;
+  end;
+end;
+
+function TMockOrderManagerImpl.DoPlace(const ADetails: IOrderDetails;
+  out Error: String): Boolean;
+var
+  LDetails:IGDAXOrderDetails;
+begin
+  Result:=False;
+  try
+    //will check everything needed for continuing
+    if not GDAXDetailsValid(ADetails,Error) then
+      Exit;
+
+    LDetails:=ADetails as IGDAXOrderDetails;
+
+    //set the details to appear completely filled. we could do more complicated
+    //things such as checking for limit orders, waiting until price hits, etc...
+    //but this is the easiest thing to do in order to get a ballpark estimate
+    LDetails.Order.FilledSized := LDetails.Order.Size;
+    LDetails.Order.FillFees := FFee * LDetails.Order.FilledSized;
+    LDetails.Order.OrderStatus := stDone;
+
+    Result:=True;
+  except on E:Exception do
+    Error:=E.Message;
+  end;
+end;
+
+function TMockOrderManagerImpl.DoCancel(const ADetails: IOrderDetails;
+  out Error: String): Boolean;
+begin
+  //in this mock manager, all orders will fill immediately
+  Result := False;
+  Error := 'mock manager fills immediately';
+end;
+
+function TMockOrderManagerImpl.DoGetStatus(const ADetails: IOrderDetails): TOrderManagerStatus;
+begin
+  Result := GDAXStatusToEngineStatus(IGDAXOrderDetails(ADetails).Order.OrderStatus);
+end;
+
+function TMockOrderManagerImpl.DoRefresh(out Error: String): Boolean;
+begin
+  Result := True;
+end;
+
+function TMockOrderManagerImpl.GetFee: Single;
+begin
+  Result := FFee;
+end;
+
+procedure TMockOrderManagerImpl.SetFee(const AValue: Single);
+begin
+  FFee := AValue;
+end;
+
+constructor TMockOrderManagerImpl.Create;
+begin
+  inherited Create;
+  FFee := 0;
+end;
+
+destructor TMockOrderManagerImpl.Destroy;
+begin
+
+  inherited Destroy;
+end;
+
+end.
+

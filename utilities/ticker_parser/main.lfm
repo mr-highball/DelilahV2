@@ -1,0 +1,214 @@
+object TickerParser: TTickerParser
+  Left = 996
+  Height = 616
+  Top = 398
+  Width = 1013
+  Caption = 'Ticker Parse'
+  ClientHeight = 616
+  ClientWidth = 1013
+  DesignTimePPI = 192
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  LCLVersion = '2.0.2.0'
+  object pctrl_main: TPageControl
+    Left = 0
+    Height = 616
+    Top = 0
+    Width = 1013
+    ActivePage = Simulate
+    Align = alClient
+    TabIndex = 2
+    TabOrder = 0
+    object ts_load: TTabSheet
+      Caption = 'Load'
+      ClientHeight = 558
+      ClientWidth = 997
+      object edit_directory: TEdit
+        AnchorSideLeft.Control = ts_load
+        AnchorSideTop.Control = ts_load
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        Left = 50
+        Height = 40
+        Top = 50
+        Width = 797
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 50
+        BorderSpacing.Top = 50
+        BorderSpacing.Right = 150
+        TabOrder = 0
+        TextHint = 'C:\'
+      end
+      object btn_open_picker: TSpeedButton
+        AnchorSideLeft.Control = edit_directory
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = edit_directory
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        Left = 847
+        Height = 44
+        Top = 50
+        Width = 50
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 100
+        Caption = '...'
+        OnClick = btn_open_pickerClick
+      end
+      object pnl_ctrls: TPanel
+        Left = 0
+        Height = 100
+        Top = 458
+        Width = 997
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 997
+        TabOrder = 1
+        object btn_load: TButton
+          AnchorSideTop.Control = pnl_ctrls
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls
+          AnchorSideRight.Side = asrBottom
+          Left = 839
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Load'
+          OnClick = btn_loadClick
+          TabOrder = 0
+        end
+      end
+    end
+    object ts_csv: TTabSheet
+      Caption = 'CSV'
+      ClientHeight = 558
+      ClientWidth = 997
+      object pnl_ctrls1: TPanel
+        Left = 0
+        Height = 100
+        Top = 458
+        Width = 997
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 997
+        TabOrder = 0
+        object btn_save_csv: TButton
+          AnchorSideTop.Control = pnl_ctrls1
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls1
+          AnchorSideRight.Side = asrBottom
+          Left = 839
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Save'
+          OnClick = btn_save_csvClick
+          TabOrder = 0
+        end
+      end
+      object edit_directory_csv: TEdit
+        AnchorSideLeft.Control = ts_load
+        AnchorSideTop.Control = ts_load
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        Left = 50
+        Height = 40
+        Top = 50
+        Width = 797
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 50
+        BorderSpacing.Top = 50
+        BorderSpacing.Right = 150
+        TabOrder = 1
+        TextHint = 'C:\'
+      end
+      object btn_open_picker_csv: TSpeedButton
+        AnchorSideLeft.Control = edit_directory_csv
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = edit_directory_csv
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        Left = 847
+        Height = 44
+        Top = 50
+        Width = 50
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 100
+        Caption = '...'
+        OnClick = btn_open_picker_csvClick
+      end
+    end
+    object Simulate: TTabSheet
+      Caption = 'Simulate'
+      ClientHeight = 558
+      ClientWidth = 997
+      object pnl_ctrls_simulate: TPanel
+        Left = 0
+        Height = 100
+        Top = 458
+        Width = 997
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 997
+        TabOrder = 0
+        object btn_save_simulate: TButton
+          AnchorSideTop.Control = pnl_ctrls_simulate
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls_simulate
+          AnchorSideRight.Side = asrBottom
+          Left = 839
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Simulate'
+          OnClick = btn_save_simulateClick
+          TabOrder = 0
+        end
+      end
+      object edit_funds: TEdit
+        Left = 32
+        Height = 40
+        Top = 40
+        Width = 272
+        TabOrder = 1
+        TextHint = 'funds'
+      end
+      object edit_fee_perc: TEdit
+        Left = 32
+        Height = 40
+        Top = 112
+        Width = 272
+        TabOrder = 2
+        TextHint = 'fee %'
+      end
+      object progress_simulate: TProgressBar
+        AnchorSideLeft.Control = Simulate
+        AnchorSideTop.Control = pnl_ctrls_simulate
+        AnchorSideRight.Control = Simulate
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = pnl_ctrls_simulate
+        Left = 50
+        Height = 40
+        Top = 398
+        Width = 897
+        Anchors = [akLeft, akRight, akBottom]
+        BorderSpacing.Left = 50
+        BorderSpacing.Right = 50
+        BorderSpacing.Bottom = 20
+        TabOrder = 3
+      end
+    end
+  end
+  object dialog_directory: TSelectDirectoryDialog
+    left = 832
+    top = 160
+  end
+end

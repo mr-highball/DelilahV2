@@ -22,10 +22,16 @@ type
     ['{0F58D00E-7D26-447B-B246-C70AE651670C}']
     //property methods
     function GetFee: Single;
+    function GetSellPrice: Single;
+    procedure SetBuyPrice(const AValue: Single);
     procedure SetFee(const AValue: Single);
+    procedure SetSellPrice(const AValue: Single);
+    function GetBuyPrice: Single;
 
     //properties
     property FeePercentage : Single read GetFee write SetFee;
+    property BuyPrice : Single read GetBuyPrice write SetBuyPrice;
+    property SellPrice : Single read GetSellPrice write SetSellPrice;
   end;
 
   { TMockOrderManagerImpl }
@@ -34,7 +40,13 @@ type
   *)
   TMockOrderManagerImpl = class(TOrderManagerImpl, IMockOrderManager)
   strict private
+    FBuyPrice: Single;
     FFee : Single;
+    FSellPrice: Single;
+    function GetBuyPrice: Single;
+    function GetSellPrice: Single;
+    procedure SetBuyPrice(const AValue: Single);
+    procedure SetSellPrice(const AValue: Single);
   strict protected
     function GDAXDetailsValid(Const ADetails:IOrderDetails;Out Error:String):Boolean;
     function GDAXStatusToEngineStatus(Const AStatus:TOrderStatus):TOrderManagerStatus;
@@ -50,6 +62,8 @@ type
     procedure SetFee(const AValue: Single);
   public
     property FeePercentage : Single read GetFee write SetFee;
+    property BuyPrice : Single read GetBuyPrice write SetBuyPrice;
+    property SellPrice : Single read GetSellPrice write SetSellPrice;
 
     constructor Create; override;
     destructor Destroy; override;
@@ -63,6 +77,25 @@ uses
 
 { TMockOrderManagerImpl }
 
+function TMockOrderManagerImpl.GetBuyPrice: Single;
+begin
+  Result := FBuyPrice;
+end;
+
+function TMockOrderManagerImpl.GetSellPrice: Single;
+begin
+  Result := FSellPrice;
+end;
+
+procedure TMockOrderManagerImpl.SetBuyPrice(const AValue: Single);
+begin
+  FBuyPrice := AValue;
+end;
+
+procedure TMockOrderManagerImpl.SetSellPrice(const AValue: Single);
+begin
+  FSellPrice := AValue;
+end;
 
 function TMockOrderManagerImpl.GDAXDetailsValid(const ADetails: IOrderDetails;
   out Error: String): Boolean;
@@ -119,7 +152,19 @@ begin
     //but this is the easiest thing to do in order to get a ballpark estimate
     LDetails.Order.FilledSized := LDetails.Order.Size;
     LDetails.Order.FillFees := FFee * LDetails.Order.FilledSized;
-    LDetails.Order.OrderStatus := stDone;
+    LDetails.Order.OrderStatus := stSettled;
+    LDetails.Order.Settled := True;
+
+    if ADetails.OrderType = odBuy then
+    begin
+      LDetails.Order.Price := FBuyPrice;
+      LDetails.Order.ExecutedValue := FBuyPrice * LDetails.Order.FilledSized;
+    end
+    else
+    begin
+      LDetails.Order.Price := FSellPrice;
+      LDetails.Order.ExecutedValue := FSellPrice * LDetails.Order.FilledSized;
+    end;
 
     Result:=True;
   except on E:Exception do
@@ -136,8 +181,16 @@ begin
 end;
 
 function TMockOrderManagerImpl.DoGetStatus(const ADetails: IOrderDetails): TOrderManagerStatus;
+var
+  LID: String;
 begin
   Result := GDAXStatusToEngineStatus(IGDAXOrderDetails(ADetails).Order.OrderStatus);
+
+  if Result = omCompleted then
+  begin
+    ID(ADetails, LID);
+    DoOnStatus(ADetails, LID, omActive, omCompleted);
+  end;
 end;
 
 function TMockOrderManagerImpl.DoRefresh(out Error: String): Boolean;

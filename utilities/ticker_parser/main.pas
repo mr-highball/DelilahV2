@@ -21,20 +21,38 @@ uses
   delilah.ticker,
   mock.manager,
   delilah.types,
-  delilah;
+  delilah, ledger;
 
 type
 
   { TTickerLoader }
-  //todo - this was stupid to do, api already has an exposed load method
-  //       so whenever cleaning this up comes up around, just remove this type
+
   TTickerLoader = class(TGDAXTickerImpl)
   private
+    FAAC: Extended;
+    FFunds: Extended;
+    FInv: Extended;
     FJSON : String;
+    FIsBuy,
+    FIsSell : Boolean;
+    FProf: Extended;
+    function GetIsBuy: Boolean;
+    function GetIsSell: Boolean;
     function GetJSON: String;
+    procedure SetIsBuy(AValue: Boolean);
+    procedure SetIsSell(AValue: Boolean);
   public
     property JSON : String read GetJSON;
+    property IsBuy : Boolean read GetIsBuy write SetIsBuy;
+    property IsSell : Boolean read GetIsSell write SetIsSell;
+    property Funds : Extended read FFunds write FFunds;
+    property Inventory : Extended read FInv write FInv;
+    property AAC : Extended read FAAC write FAAC;
+    property Profit : Extended read FProf write FProf;
+
     procedure Load(const AJSON : String);
+
+    constructor Create; override;
   end;
 
   TTickerList = TFPGInterfacedObjectList<TTickerLoader>;
@@ -49,10 +67,13 @@ type
     btn_open_picker_csv: TSpeedButton;
     btn_save_csv: TButton;
     btn_save_simulate: TButton;
+    btn_cance_simulate: TButton;
+    edit_product: TEdit;
     edit_funds: TEdit;
     edit_directory: TEdit;
     edit_directory_csv: TEdit;
     edit_fee_perc: TEdit;
+    edit_product_min: TEdit;
     pctrl_main: TPageControl;
     pnl_ctrls: TPanel;
     btn_open_picker: TSpeedButton;
@@ -61,8 +82,9 @@ type
     pnl_ctrls_simulate: TPanel;
     progress_simulate: TProgressBar;
     Simulate: TTabSheet;
-    ts_csv: TTabSheet;
+    ts_export: TTabSheet;
     ts_load: TTabSheet;
+    procedure btn_cance_simulateClick(Sender: TObject);
     procedure btn_loadClick(Sender: TObject);
     procedure btn_open_pickerClick(Sender: TObject);
     procedure btn_open_picker_csvClick(Sender: TObject);
@@ -72,8 +94,12 @@ type
     procedure FormDestroy(Sender: TObject);
   strict private
     FTickers : TTickerList;
+    FCancelSim : Boolean;
+    FCurrentSimIndex : Integer;
+    FCurrentEngine : IDelilah;
 
-    function GetStrategy : IStrategy;
+    procedure LoadStrategies(const AStrategies : TStrategies);
+    procedure MonitorOrderPlace(Const ADetails:IOrderDetails; Const AID:String);
   strict protected
     procedure SaveCSV;
     procedure SimulateStrategy;
@@ -89,6 +115,7 @@ var
 implementation
 uses
   FileUtil,
+  strutils,
   delilah.ticker.gdax,
   delilah.strategy.gdax.sample,
   gdax.api.products;
@@ -133,7 +160,9 @@ begin
   FTickers.Free;
 end;
 
-function TTickerParser.GetStrategy: IStrategy;
+procedure TTickerParser.LoadStrategies(const AStrategies : TStrategies);
+var
+  LStrategy : IStrategy;
 
   function GetSample : IStrategy;
   var
@@ -146,7 +175,34 @@ function TTickerParser.GetStrategy: IStrategy;
   end;
 
 begin
-  Result := GetSample;
+  LStrategy := GetSample;
+  AStrategies.Add(LStrategy);
+end;
+
+procedure TTickerParser.MonitorOrderPlace(const ADetails: IOrderDetails;
+  const AID: String);
+var
+  LFunds, LInventory, LTickPrice, LAAC: Extended;
+  LFundsLed: Extended;
+begin
+  if ADetails.OrderType = odBuy then
+    FTickers[FCurrentSimIndex].IsBuy := True
+  else
+    FTickers[FCurrentSimIndex].IsSell := True;
+
+  //ripped from simple bot main form
+  LFunds := FCurrentEngine.Funds;
+  LInventory := FCurrentEngine.AvailableInventory;
+  LTickPrice := FTickers[FCurrentSimIndex].Price;
+  LAAC := FCurrentEngine.AAC;
+  LFundsLed := FCurrentEngine.FundsLedger.Balance;
+
+  //update engine info
+  FTickers[FCurrentSimIndex].Funds := LFundsLed;
+  FTickers[FCurrentSimIndex].Inventory := LInventory;
+  FTickers[FCurrentSimIndex].AAC := LAAC;
+
+  FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LFunds;
 end;
 
 procedure TTickerParser.SaveCSV;
@@ -162,8 +218,15 @@ begin
       'ask' + ',' +
       'bid' + ',' +
       'size' + ',' +
-      'volume' + ','+
-      'time'
+      'volume' + ',' +
+      'time' + ',' +
+      'is_position' + ',' +
+      'is_buy' + ',' +
+      'is_sell' + ',' +
+      'funds' + ',' +
+      'inventory' + ',' +
+      'aac' + ',' +
+      'profit'
     );
 
     //output csv rows
@@ -174,7 +237,14 @@ begin
         FloatToStr(FTickers[I].Bid) + ',' +
         FloatToStr(FTickers[I].Size) + ',' +
         FloatToStr(FTickers[I].Volume) + ',' +
-        FloatToStr(FTickers[I].Time)
+        FloatToStr(FTickers[I].Time) + ',' +
+        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, '1', '') + ',' +
+        IfThen(FTickers[I].IsBuy, '1', '') + ',' +
+        IfThen(FTickers[I].IsSell, '1', '') + ',' +
+        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].Funds)) + ',' +
+        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].Inventory)) + ',' +
+        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].AAC)) + ',' +
+        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].Profit))
       );
 
     LOutput.SaveToFile(edit_directory_csv.Text);
@@ -187,7 +257,6 @@ end;
 procedure TTickerParser.SimulateStrategy;
 var
   LEngine: IDelilah;
-  LStrategy : IStrategy;
   LManager : IMockOrderManager;
   LStep: Int64;
   I: Integer;
@@ -196,19 +265,23 @@ var
   LLoader: TTickerLoader;
   LProduct : IGDAXProduct;
 begin
+  FCancelSim := False;
+  FCurrentSimIndex := -1;
+
   //create the product that the tickers represent
   //todo - make this configurable or just load from api
-  LProduct := TGDAXProductImpl.Create
-  LProduct.BaseCurrency := 'USD';
+  LProduct := TGDAXProductImpl.Create;
+  LProduct.BaseCurrency := Copy(edit_product.Text, Pos('-', edit_product.Text), Length(edit_product.Text));
   LProduct.BaseMaxSize := 100000;
-  LProduct.BaseMinSize := 0.0001;
-  LProduct.ID := 'BTC-USD';
+  LProduct.BaseMinSize := StrToFloatDef(edit_product_min.Text, 0.001);
+  LProduct.ID := edit_product.Text;
   LProduct.QuoteIncrement := LProduct.BaseMinSize;
-  LProduct.LoadFromJSON();
 
   //create and setup engine
   LEngine := TDelilahImpl.Create;
+  LEngine.OnPlace := MonitorOrderPlace;
   LEngine.Funds := StrToIntDef(edit_funds.Text, 1000);
+  FCurrentEngine := LEngine;
 
   //create and setup order manager
   LManager := TMockOrderManagerImpl.Create;
@@ -216,21 +289,32 @@ begin
   LEngine.OrderManager := LManager;
 
   //get the strategy to use for simulation and add to the engine
-  LStrategy := GetStrategy;
-  LEngine.Strategies.Add(LStrategy);
+  LoadStrategies(LEngine.Strategies);
 
   progress_simulate.Position := 0;
   LStep := Trunc(FTickers.Count / 20);
   for I := 0 to Pred(FTickers.Count) do
   begin
-    //feed with the current ticker by copying first
+    if FCancelSim then
+      Break;
+
+    //manager needs the buy and sell prices
+    LManager.BuyPrice := FTickers[I].Bid;
+    LManager.SellPrice := FTickers[I].Ask;
+
+    //initialize a ticker to feed to the engine
     LLoader := TTickerLoader.Create;
     LLoader.LoadFromJSON(FTickers[I].JSON, LError);
     LTicker := TGDAXTickerImpl.Create(LLoader);
     LTicker.Ticker.Product := LProduct;
 
+    //set the current index so we know what row to append metrics to
+    FCurrentSimIndex := I;
+
+    //feed the engine and make some money
     LEngine.Feed(LTicker, LError);
 
+    //update the progress and process ui messages
     if (I > 0) and (I mod LStep = 0) then
     begin
       progress_simulate.StepBy(5);
@@ -240,6 +324,11 @@ begin
     if I mod 200 = 0 then
       Application.ProcessMessages;
   end;
+
+  if FCancelSim then
+    ShowMessage('Simulation Cancelled :(')
+  else
+    ShowMessage('Simulation Finished!');
 end;
 
 procedure TTickerParser.PickFiles;
@@ -253,6 +342,7 @@ begin
   try
     LSearch.Search(edit_directory.Text);
     LoadFiles(LFiles);
+    Application.ProcessMessages;
   finally
     LFiles.Free;
     LSearch.Free;
@@ -262,6 +352,12 @@ end;
 procedure TTickerParser.btn_loadClick(Sender: TObject);
 begin
   PickFiles;
+  ShowMessage('Finished Loading');
+end;
+
+procedure TTickerParser.btn_cance_simulateClick(Sender: TObject);
+begin
+  FCancelSim := True;
 end;
 
 procedure TTickerParser.LoadFiles(const AFiles: TStrings);
@@ -306,6 +402,26 @@ begin
   Result := FJSON;
 end;
 
+function TTickerLoader.GetIsBuy: Boolean;
+begin
+  Result := FIsBuy;
+end;
+
+function TTickerLoader.GetIsSell: Boolean;
+begin
+  Result := FIsSell;
+end;
+
+procedure TTickerLoader.SetIsBuy(AValue: Boolean);
+begin
+  FIsBuy := AValue;
+end;
+
+procedure TTickerLoader.SetIsSell(AValue: Boolean);
+begin
+  FIsSell := AValue;
+end;
+
 procedure TTickerLoader.Load(const AJSON: String);
 var
   LError: string;
@@ -314,6 +430,17 @@ begin
     Raise Exception.Create(LError);
 
   FJSON := AJSON;
+end;
+
+constructor TTickerLoader.Create;
+begin
+  inherited Create;
+  FIsSell := False;
+  FIsBuy := False;
+  FAAC := 0;
+  FInv := 0;
+  FFunds := 0;
+  FProf := 0;
 end;
 
 end.

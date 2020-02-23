@@ -3,7 +3,7 @@ object TickerParser: TTickerParser
   Height = 616
   Top = 398
   Width = 1013
-  Caption = 'Ticker Parse'
+  Caption = 'Strategy Analyzer'
   ClientHeight = 616
   ClientWidth = 1013
   DesignTimePPI = 192
@@ -17,7 +17,7 @@ object TickerParser: TTickerParser
     Width = 1013
     ActivePage = Simulate
     Align = alClient
-    TabIndex = 2
+    TabIndex = 1
     TabOrder = 0
     object ts_load: TTabSheet
       Caption = 'Load'
@@ -81,8 +81,125 @@ object TickerParser: TTickerParser
         end
       end
     end
-    object ts_csv: TTabSheet
-      Caption = 'CSV'
+    object Simulate: TTabSheet
+      Caption = 'Simulate'
+      ClientHeight = 558
+      ClientWidth = 997
+      object pnl_ctrls_simulate: TPanel
+        Left = 0
+        Height = 100
+        Top = 458
+        Width = 997
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 997
+        TabOrder = 0
+        object btn_save_simulate: TButton
+          AnchorSideTop.Control = pnl_ctrls_simulate
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls_simulate
+          AnchorSideRight.Side = asrBottom
+          Left = 839
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Simulate'
+          OnClick = btn_save_simulateClick
+          TabOrder = 0
+        end
+        object btn_cance_simulate: TButton
+          AnchorSideLeft.Control = pnl_ctrls_simulate
+          AnchorSideTop.Control = pnl_ctrls_simulate
+          AnchorSideTop.Side = asrCenter
+          Left = 8
+          Height = 50
+          Top = 25
+          Width = 150
+          BorderSpacing.Left = 8
+          Caption = 'Cancel'
+          OnClick = btn_cance_simulateClick
+          TabOrder = 1
+        end
+      end
+      object edit_funds: TEdit
+        Left = 32
+        Height = 40
+        Top = 40
+        Width = 272
+        TabOrder = 1
+        Text = '1000'
+        TextHint = 'funds'
+      end
+      object edit_fee_perc: TEdit
+        AnchorSideLeft.Control = edit_funds
+        AnchorSideTop.Control = edit_funds
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_funds
+        AnchorSideRight.Side = asrBottom
+        Left = 32
+        Height = 40
+        Top = 90
+        Width = 272
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 10
+        TabOrder = 2
+        Text = '0.2'
+        TextHint = 'fee %'
+      end
+      object progress_simulate: TProgressBar
+        AnchorSideLeft.Control = Simulate
+        AnchorSideTop.Control = pnl_ctrls_simulate
+        AnchorSideRight.Control = Simulate
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = pnl_ctrls_simulate
+        Left = 50
+        Height = 40
+        Top = 398
+        Width = 897
+        Anchors = [akLeft, akRight, akBottom]
+        BorderSpacing.Left = 50
+        BorderSpacing.Right = 50
+        BorderSpacing.Bottom = 20
+        TabOrder = 3
+      end
+      object edit_product: TEdit
+        AnchorSideLeft.Control = edit_fee_perc
+        AnchorSideTop.Control = edit_fee_perc
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_fee_perc
+        AnchorSideRight.Side = asrBottom
+        Left = 32
+        Height = 40
+        Top = 140
+        Width = 272
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 10
+        TabOrder = 4
+        Text = 'BTC-USD'
+        TextHint = 'product ID'
+      end
+      object edit_product_min: TEdit
+        AnchorSideLeft.Control = edit_product
+        AnchorSideTop.Control = edit_product
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_product
+        AnchorSideRight.Side = asrBottom
+        Left = 32
+        Height = 40
+        Top = 190
+        Width = 272
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 10
+        TabOrder = 5
+        Text = '0.001'
+        TextHint = 'min size'
+      end
+    end
+    object ts_export: TTabSheet
+      Caption = 'Export'
       ClientHeight = 558
       ClientWidth = 997
       object pnl_ctrls1: TPanel
@@ -133,77 +250,15 @@ object TickerParser: TTickerParser
         AnchorSideTop.Control = edit_directory_csv
         AnchorSideRight.Control = ts_load
         AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Side = asrBottom
         Left = 847
         Height = 44
         Top = 50
         Width = 50
-        Anchors = [akTop, akRight]
+        Anchors = [akTop, akRight, akBottom]
         BorderSpacing.Right = 100
         Caption = '...'
         OnClick = btn_open_picker_csvClick
-      end
-    end
-    object Simulate: TTabSheet
-      Caption = 'Simulate'
-      ClientHeight = 558
-      ClientWidth = 997
-      object pnl_ctrls_simulate: TPanel
-        Left = 0
-        Height = 100
-        Top = 458
-        Width = 997
-        Align = alBottom
-        BevelOuter = bvNone
-        ClientHeight = 100
-        ClientWidth = 997
-        TabOrder = 0
-        object btn_save_simulate: TButton
-          AnchorSideTop.Control = pnl_ctrls_simulate
-          AnchorSideTop.Side = asrCenter
-          AnchorSideRight.Control = pnl_ctrls_simulate
-          AnchorSideRight.Side = asrBottom
-          Left = 839
-          Height = 50
-          Top = 25
-          Width = 150
-          Anchors = [akTop, akRight]
-          BorderSpacing.Right = 8
-          Caption = 'Simulate'
-          OnClick = btn_save_simulateClick
-          TabOrder = 0
-        end
-      end
-      object edit_funds: TEdit
-        Left = 32
-        Height = 40
-        Top = 40
-        Width = 272
-        TabOrder = 1
-        TextHint = 'funds'
-      end
-      object edit_fee_perc: TEdit
-        Left = 32
-        Height = 40
-        Top = 112
-        Width = 272
-        TabOrder = 2
-        TextHint = 'fee %'
-      end
-      object progress_simulate: TProgressBar
-        AnchorSideLeft.Control = Simulate
-        AnchorSideTop.Control = pnl_ctrls_simulate
-        AnchorSideRight.Control = Simulate
-        AnchorSideRight.Side = asrBottom
-        AnchorSideBottom.Control = pnl_ctrls_simulate
-        Left = 50
-        Height = 40
-        Top = 398
-        Width = 897
-        Anchors = [akLeft, akRight, akBottom]
-        BorderSpacing.Left = 50
-        BorderSpacing.Right = 50
-        BorderSpacing.Bottom = 20
-        TabOrder = 3
       end
     end
   end

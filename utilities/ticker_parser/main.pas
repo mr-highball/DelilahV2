@@ -21,7 +21,9 @@ uses
   delilah.ticker,
   mock.manager,
   delilah.types,
-  delilah, ledger;
+  delilah,
+  ledger,
+  ui.strategy;
 
 type
 
@@ -63,11 +65,14 @@ type
     into spreadsheet readable formats
   *)
   TTickerParser = class(TForm)
+    btn_edit_strategy: TButton;
     btn_load: TButton;
     btn_open_picker_csv: TSpeedButton;
     btn_save_csv: TButton;
     btn_save_simulate: TButton;
     btn_cance_simulate: TButton;
+    btn_add_strategy: TButton;
+    chk_sample: TCheckBox;
     edit_product: TEdit;
     edit_funds: TEdit;
     edit_directory: TEdit;
@@ -81,10 +86,13 @@ type
     pnl_ctrls1: TPanel;
     pnl_ctrls_simulate: TPanel;
     progress_simulate: TProgressBar;
+    scroll_strategies: TScrollBox;
     Simulate: TTabSheet;
     ts_export: TTabSheet;
     ts_load: TTabSheet;
+    procedure btn_add_strategyClick(Sender: TObject);
     procedure btn_cance_simulateClick(Sender: TObject);
+    procedure btn_edit_strategyClick(Sender: TObject);
     procedure btn_loadClick(Sender: TObject);
     procedure btn_open_pickerClick(Sender: TObject);
     procedure btn_open_picker_csvClick(Sender: TObject);
@@ -94,12 +102,19 @@ type
     procedure FormDestroy(Sender: TObject);
   strict private
     FTickers : TTickerList;
+    FStrategies : TStrategies;
     FCancelSim : Boolean;
     FCurrentSimIndex : Integer;
     FCurrentEngine : IDelilah;
+    FStrategyList : TFPGObjectList<TCheckBox>;
 
+    function GetStrategies: TStrategies;
+    procedure ConfigureNewStrategy(const AName : String = '';
+      const AStrategy : IStrategy = nil);
     procedure LoadStrategies(const AStrategies : TStrategies);
     procedure MonitorOrderPlace(Const ADetails:IOrderDetails; Const AID:String);
+    procedure SaveNewStrategy(const ASender : TConfigureStrategy; const AName : String;
+      const AStrategy : IStrategy);
   strict protected
     procedure SaveCSV;
     procedure SimulateStrategy;
@@ -107,6 +122,7 @@ type
     procedure PickFiles;
     procedure LoadFiles(const AFiles : TStrings);
   public
+    property Strategies : TStrategies read GetStrategies;
   end;
 
 var
@@ -118,7 +134,9 @@ uses
   strutils,
   delilah.ticker.gdax,
   delilah.strategy.gdax.sample,
-  gdax.api.products;
+  gdax.api.products,
+  ui.strategyconfig,
+  ui.strategy.tiers;
 
 {$R *.lfm}
 
@@ -152,17 +170,23 @@ end;
 procedure TTickerParser.FormCreate(Sender: TObject);
 begin
   FTickers := TTickerList.Create;
+  FStrategies := TStrategies.Create;
+  FStrategyList := TFPGObjectList<TCheckBox>.Create;
   pctrl_main.ActivePage := ts_load;
+  progress_simulate.Visible := False;
 end;
 
 procedure TTickerParser.FormDestroy(Sender: TObject);
 begin
   FTickers.Free;
+  FStrategies.Free;
 end;
+
 
 procedure TTickerParser.LoadStrategies(const AStrategies : TStrategies);
 var
   LStrategy : IStrategy;
+  I: Integer;
 
   function GetSample : IStrategy;
   var
@@ -175,8 +199,39 @@ var
   end;
 
 begin
-  LStrategy := GetSample;
-  AStrategies.Add(LStrategy);
+  if chk_sample.Checked then
+  begin
+    LStrategy := GetSample;
+    AStrategies.Add(LStrategy);
+  end;
+
+  //add checked strategies
+  for I := 0 to Pred(FStrategyList.Count) do
+    if FStrategyList[I].Checked then
+      AStrategies.Add(FStrategies[FStrategyList[I].Tag]);
+end;
+
+function TTickerParser.GetStrategies: TStrategies;
+begin
+  Result := FStrategies;
+end;
+
+procedure TTickerParser.ConfigureNewStrategy(const AName : String; const AStrategy : IStrategy = nil);
+var
+  LConfig : TStrategyHolder;
+begin
+  LConfig := TStrategyHolder.Create(nil);
+  LConfig.Config := TConfigureTiers.Create(nil);
+  LConfig.Position := poMainFormCenter;
+  LConfig.Config.OnSave := SaveNewStrategy;
+
+  if Assigned(AStrategy) then
+  begin
+    LConfig.Config.edit_name.Text := AName;
+    LConfig.Config.Strategy := AStrategy;
+  end;
+
+  LConfig.ShowModal;
 end;
 
 procedure TTickerParser.MonitorOrderPlace(const ADetails: IOrderDetails;
@@ -203,6 +258,34 @@ begin
   FTickers[FCurrentSimIndex].AAC := LAAC;
 
   FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LFunds;
+end;
+
+procedure TTickerParser.SaveNewStrategy(const ASender: TConfigureStrategy;
+  const AName: String; const AStrategy: IStrategy);
+var
+  I: Integer;
+  LCheck: TCheckBox;
+begin
+  //remove if exists
+  for I := 0 to Pred(FStrategyList.Count) do
+    if FStrategyList[I].Caption = AName then
+    begin
+      FStrategies.Delete(FStrategyList[I].Tag);
+      FStrategyList[I].Parent := nil;
+      FStrategyList.Delete(I);
+      Break;
+    end;
+
+  //add the configured strategy to the list, as well as parent it
+  LCheck := TCheckBox.Create(nil);
+  LCheck.Name := 'CheckBoxStrat' + IntToStr(Succ(FStrategies.Count));
+  LCheck.Caption := AName;
+  LCheck.Tag := FStrategies.Add(AStrategy);
+  LCheck.Align := alTop;
+  LCheck.Parent := scroll_strategies;
+
+  //add to list
+  FStrategyList.Add(LCheck);
 end;
 
 procedure TTickerParser.SaveCSV;
@@ -265,6 +348,8 @@ var
   LLoader: TTickerLoader;
   LProduct : IGDAXProduct;
 begin
+  progress_simulate.Visible := True;
+
   FCancelSim := False;
   FCurrentSimIndex := -1;
 
@@ -281,6 +366,7 @@ begin
   LEngine := TDelilahImpl.Create;
   LEngine.OnPlace := MonitorOrderPlace;
   LEngine.Funds := StrToIntDef(edit_funds.Text, 1000);
+  LEngine.Compound := True;
   FCurrentEngine := LEngine;
 
   //create and setup order manager
@@ -329,6 +415,8 @@ begin
     ShowMessage('Simulation Cancelled :(')
   else
     ShowMessage('Simulation Finished!');
+
+  progress_simulate.Visible := False;
 end;
 
 procedure TTickerParser.PickFiles;
@@ -358,6 +446,20 @@ end;
 procedure TTickerParser.btn_cance_simulateClick(Sender: TObject);
 begin
   FCancelSim := True;
+end;
+
+procedure TTickerParser.btn_edit_strategyClick(Sender: TObject);
+var
+  I: Integer;
+begin
+  for I := 0 to Pred(FStrategyList.Count) do
+    if FStrategyList[I].Checked then
+      ConfigureNewStrategy(FStrategyList[I].Caption, FStrategies[FStrategyList[I].Tag]);
+end;
+
+procedure TTickerParser.btn_add_strategyClick(Sender: TObject);
+begin
+  ConfigureNewStrategy;
 end;
 
 procedure TTickerParser.LoadFiles(const AFiles: TStrings);

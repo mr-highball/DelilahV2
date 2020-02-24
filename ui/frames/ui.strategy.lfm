@@ -1,0 +1,72 @@
+object ConfigureStrategy: TConfigureStrategy
+  Left = 0
+  Height = 475
+  Top = 0
+  Width = 918
+  ClientHeight = 475
+  ClientWidth = 918
+  DesignTimePPI = 192
+  ParentFont = False
+  TabOrder = 0
+  DesignLeft = 1032
+  DesignTop = 414
+  object pnl_ctrls: TPanel
+    Left = 0
+    Height = 100
+    Top = 375
+    Width = 918
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 100
+    ClientWidth = 918
+    TabOrder = 0
+    object btn_save: TButton
+      AnchorSideTop.Control = pnl_ctrls
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = pnl_ctrls
+      AnchorSideRight.Side = asrBottom
+      Left = 760
+      Height = 50
+      Top = 25
+      Width = 150
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 8
+      Caption = 'Save'
+      OnClick = btn_saveClick
+      TabOrder = 0
+    end
+  end
+  object scroll_controls: TScrollBox
+    Left = 0
+    Height = 275
+    Top = 100
+    Width = 918
+    HorzScrollBar.Page = 1
+    VertScrollBar.Page = 1
+    Align = alClient
+    TabOrder = 1
+  end
+  object pnl_name: TPanel
+    Left = 0
+    Height = 100
+    Top = 0
+    Width = 918
+    Align = alTop
+    BevelOuter = bvNone
+    ClientHeight = 100
+    ClientWidth = 918
+    TabOrder = 2
+    object edit_name: TEdit
+      AnchorSideLeft.Control = pnl_name
+      AnchorSideLeft.Side = asrCenter
+      AnchorSideTop.Control = pnl_name
+      AnchorSideTop.Side = asrCenter
+      Left = 309
+      Height = 40
+      Top = 30
+      Width = 300
+      TabOrder = 0
+      TextHint = 'Name...'
+    end
+  end
+end

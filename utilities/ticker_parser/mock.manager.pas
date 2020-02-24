@@ -184,7 +184,7 @@ function TMockOrderManagerImpl.DoGetStatus(const ADetails: IOrderDetails): TOrde
 var
   LID: String;
 begin
-  Result := GDAXStatusToEngineStatus(IGDAXOrderDetails(ADetails).Order.OrderStatus);
+  Result := GDAXStatusToEngineStatus((ADetails as IGDAXOrderDetails).Order.OrderStatus);
 
   if Result = omCompleted then
   begin

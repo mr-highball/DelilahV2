@@ -1,0 +1,21 @@
+object StrategyHolder: TStrategyHolder
+  Left = 974
+  Height = 774
+  Top = 282
+  Width = 1119
+  Caption = 'Configure'
+  ClientHeight = 774
+  ClientWidth = 1119
+  Color = clWhite
+  DesignTimePPI = 192
+  LCLVersion = '2.0.2.0'
+  object pnl_config: TPanel
+    Left = 0
+    Height = 774
+    Top = 0
+    Width = 1119
+    Align = alClient
+    BevelOuter = bvNone
+    TabOrder = 0
+  end
+end

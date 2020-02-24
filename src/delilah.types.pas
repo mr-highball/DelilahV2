@@ -194,7 +194,7 @@ type
       Const AFunds,AInventory,AAAC:Extended;Out Error:String):Boolean;
   end;
 
-  TStrategies = TFPGList<IStrategy>;
+  TStrategies = TFPGInterfacedObjectList<IStrategy>;
 
   (*
     state of delilah engine

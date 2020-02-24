@@ -1,28 +1,28 @@
 object TickerParser: TTickerParser
   Left = 996
-  Height = 616
+  Height = 648
   Top = 398
-  Width = 1013
+  Width = 1021
   Caption = 'Strategy Analyzer'
-  ClientHeight = 616
-  ClientWidth = 1013
+  ClientHeight = 648
+  ClientWidth = 1021
   DesignTimePPI = 192
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '2.0.2.0'
   object pctrl_main: TPageControl
     Left = 0
-    Height = 616
+    Height = 648
     Top = 0
-    Width = 1013
+    Width = 1021
     ActivePage = Simulate
     Align = alClient
     TabIndex = 1
     TabOrder = 0
     object ts_load: TTabSheet
       Caption = 'Load'
-      ClientHeight = 558
-      ClientWidth = 997
+      ClientHeight = 590
+      ClientWidth = 1005
       object edit_directory: TEdit
         AnchorSideLeft.Control = ts_load
         AnchorSideTop.Control = ts_load
@@ -31,7 +31,7 @@ object TickerParser: TTickerParser
         Left = 50
         Height = 40
         Top = 50
-        Width = 797
+        Width = 805
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Left = 50
         BorderSpacing.Top = 50
@@ -45,11 +45,13 @@ object TickerParser: TTickerParser
         AnchorSideTop.Control = edit_directory
         AnchorSideRight.Control = ts_load
         AnchorSideRight.Side = asrBottom
-        Left = 847
-        Height = 44
+        AnchorSideBottom.Control = edit_directory
+        AnchorSideBottom.Side = asrCenter
+        Left = 855
+        Height = 40
         Top = 50
         Width = 50
-        Anchors = [akTop, akRight]
+        Anchors = [akTop, akRight, akBottom]
         BorderSpacing.Right = 100
         Caption = '...'
         OnClick = btn_open_pickerClick
@@ -57,19 +59,19 @@ object TickerParser: TTickerParser
       object pnl_ctrls: TPanel
         Left = 0
         Height = 100
-        Top = 458
-        Width = 997
+        Top = 490
+        Width = 1005
         Align = alBottom
         BevelOuter = bvNone
         ClientHeight = 100
-        ClientWidth = 997
+        ClientWidth = 1005
         TabOrder = 1
         object btn_load: TButton
           AnchorSideTop.Control = pnl_ctrls
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = pnl_ctrls
           AnchorSideRight.Side = asrBottom
-          Left = 839
+          Left = 847
           Height = 50
           Top = 25
           Width = 150
@@ -83,24 +85,24 @@ object TickerParser: TTickerParser
     end
     object Simulate: TTabSheet
       Caption = 'Simulate'
-      ClientHeight = 558
-      ClientWidth = 997
+      ClientHeight = 590
+      ClientWidth = 1005
       object pnl_ctrls_simulate: TPanel
         Left = 0
         Height = 100
-        Top = 458
-        Width = 997
+        Top = 490
+        Width = 1005
         Align = alBottom
         BevelOuter = bvNone
         ClientHeight = 100
-        ClientWidth = 997
+        ClientWidth = 1005
         TabOrder = 0
         object btn_save_simulate: TButton
           AnchorSideTop.Control = pnl_ctrls_simulate
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = pnl_ctrls_simulate
           AnchorSideRight.Side = asrBottom
-          Left = 839
+          Left = 847
           Height = 50
           Top = 25
           Width = 150
@@ -157,8 +159,8 @@ object TickerParser: TTickerParser
         AnchorSideBottom.Control = pnl_ctrls_simulate
         Left = 50
         Height = 40
-        Top = 398
-        Width = 897
+        Top = 430
+        Width = 905
         Anchors = [akLeft, akRight, akBottom]
         BorderSpacing.Left = 50
         BorderSpacing.Right = 50
@@ -197,27 +199,91 @@ object TickerParser: TTickerParser
         Text = '0.001'
         TextHint = 'min size'
       end
+      object scroll_strategies: TScrollBox
+        AnchorSideLeft.Control = Simulate
+        AnchorSideTop.Control = Simulate
+        AnchorSideRight.Control = Simulate
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = progress_simulate
+        Left = 400
+        Height = 342
+        Top = 8
+        Width = 597
+        HorzScrollBar.Page = 210
+        VertScrollBar.Page = 36
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        BorderSpacing.Left = 400
+        BorderSpacing.Top = 8
+        BorderSpacing.Right = 8
+        BorderSpacing.Bottom = 80
+        ClientHeight = 338
+        ClientWidth = 593
+        TabOrder = 6
+        object chk_sample: TCheckBox
+          Left = 0
+          Height = 36
+          Top = 0
+          Width = 593
+          Align = alTop
+          Caption = 'Sample Strategy'
+          Checked = True
+          State = cbChecked
+          TabOrder = 0
+        end
+      end
+      object btn_add_strategy: TButton
+        AnchorSideTop.Control = scroll_strategies
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = scroll_strategies
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = progress_simulate
+        Left = 897
+        Height = 50
+        Top = 355
+        Width = 100
+        Anchors = [akRight, akBottom]
+        BorderSpacing.Bottom = 25
+        Caption = 'Add...'
+        OnClick = btn_add_strategyClick
+        TabOrder = 7
+      end
+      object btn_edit_strategy: TButton
+        AnchorSideTop.Control = scroll_strategies
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = btn_add_strategy
+        AnchorSideBottom.Control = progress_simulate
+        Left = 789
+        Height = 50
+        Top = 355
+        Width = 100
+        Anchors = [akRight, akBottom]
+        BorderSpacing.Right = 8
+        BorderSpacing.Bottom = 25
+        Caption = 'Edit'
+        OnClick = btn_edit_strategyClick
+        TabOrder = 8
+      end
     end
     object ts_export: TTabSheet
       Caption = 'Export'
-      ClientHeight = 558
-      ClientWidth = 997
+      ClientHeight = 590
+      ClientWidth = 1005
       object pnl_ctrls1: TPanel
         Left = 0
         Height = 100
-        Top = 458
-        Width = 997
+        Top = 490
+        Width = 1005
         Align = alBottom
         BevelOuter = bvNone
         ClientHeight = 100
-        ClientWidth = 997
+        ClientWidth = 1005
         TabOrder = 0
         object btn_save_csv: TButton
           AnchorSideTop.Control = pnl_ctrls1
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = pnl_ctrls1
           AnchorSideRight.Side = asrBottom
-          Left = 839
+          Left = 847
           Height = 50
           Top = 25
           Width = 150
@@ -236,7 +302,7 @@ object TickerParser: TTickerParser
         Left = 50
         Height = 40
         Top = 50
-        Width = 797
+        Width = 805
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Left = 50
         BorderSpacing.Top = 50
@@ -250,9 +316,10 @@ object TickerParser: TTickerParser
         AnchorSideTop.Control = edit_directory_csv
         AnchorSideRight.Control = ts_load
         AnchorSideRight.Side = asrBottom
-        AnchorSideBottom.Side = asrBottom
-        Left = 847
-        Height = 44
+        AnchorSideBottom.Control = edit_directory_csv
+        AnchorSideBottom.Side = asrCenter
+        Left = 855
+        Height = 40
         Top = 50
         Width = 50
         Anchors = [akTop, akRight, akBottom]

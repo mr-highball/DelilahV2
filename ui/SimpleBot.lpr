@@ -1,6 +1,6 @@
 program SimpleBot;
 
-{$mode objfpc}{$H+}
+{$mode delphi}{$H+}
 
 uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}

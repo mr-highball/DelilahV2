@@ -6,6 +6,7 @@ object ConfigureStrategy: TConfigureStrategy
   ClientHeight = 475
   ClientWidth = 918
   DesignTimePPI = 192
+  LCLVersion = '2.0.2.0'
   ParentFont = False
   TabOrder = 0
   DesignLeft = 1032

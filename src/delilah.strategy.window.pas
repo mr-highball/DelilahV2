@@ -83,6 +83,7 @@ type
     FCleanPerc: Single;
     FCleanThresh: Single;
     FSize: Cardinal;
+  protected
     function GetAverage: Extended;
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;

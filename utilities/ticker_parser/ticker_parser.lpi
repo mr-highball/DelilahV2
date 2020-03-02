@@ -109,7 +109,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="9">
       <Unit0>
         <Filename Value="ticker_parser.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -136,6 +136,7 @@
         <Filename Value="..\..\ui\forms\ui.strategyconfig.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="StrategyHolder"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit4>
       <Unit5>
@@ -145,6 +146,26 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="..\..\ui\frames\ui.strategy.acceleration.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ConfigureAcceleration"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\..\ui\frames\ui.strategy.acceleration.gdax.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ConfigureAccelerationGDAX"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\..\ui\forms\ui.strategypicker.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="StrategyPicker"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit8>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

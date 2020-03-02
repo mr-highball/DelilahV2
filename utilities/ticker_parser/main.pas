@@ -135,8 +135,13 @@ uses
   delilah.ticker.gdax,
   delilah.strategy.gdax.sample,
   gdax.api.products,
+  ui.strategypicker,
   ui.strategyconfig,
-  ui.strategy.tiers;
+  ui.strategy.tiers,
+  ui.strategy.acceleration.gdax
+  {$IFDEF WINDOWS}
+  ,JwaWindows
+  {$ENDIF};
 
 {$R *.lfm}
 
@@ -218,46 +223,39 @@ end;
 
 procedure TTickerParser.ConfigureNewStrategy(const AName : String; const AStrategy : IStrategy = nil);
 var
+  LPicker : TStrategyPicker;
   LConfig : TStrategyHolder;
 begin
-  LConfig := TStrategyHolder.Create(nil);
-  LConfig.Config := TConfigureTiers.Create(nil);
-  LConfig.Position := poMainFormCenter;
-  LConfig.Config.OnSave := SaveNewStrategy;
+  LPicker := TStrategyPicker.Create(nil);
+  LPicker.Position := poMainFormCenter;
 
-  if Assigned(AStrategy) then
+  if LPicker.ShowModal = mrOK then
   begin
-    LConfig.Config.edit_name.Text := AName;
-    LConfig.Config.Strategy := AStrategy;
+    LConfig := TStrategyHolder.Create(nil);
+    LConfig.Config := LPicker.Config.Create(nil);
+    LConfig.Position := poMainFormCenter;
+    LConfig.Config.OnSave := SaveNewStrategy;
+
+    if Assigned(AStrategy) then
+    begin
+      LConfig.Config.edit_name.Text := AName;
+      LConfig.Config.Strategy := AStrategy;
+    end;
+
+    LConfig.ShowModal;
+    LConfig.Free;
   end;
 
-  LConfig.ShowModal;
+  LPicker.Free;
 end;
 
 procedure TTickerParser.MonitorOrderPlace(const ADetails: IOrderDetails;
   const AID: String);
-var
-  LFunds, LInventory, LTickPrice, LAAC: Extended;
-  LFundsLed: Extended;
 begin
   if ADetails.OrderType = odBuy then
     FTickers[FCurrentSimIndex].IsBuy := True
   else
     FTickers[FCurrentSimIndex].IsSell := True;
-
-  //ripped from simple bot main form
-  LFunds := FCurrentEngine.Funds;
-  LInventory := FCurrentEngine.AvailableInventory;
-  LTickPrice := FTickers[FCurrentSimIndex].Price;
-  LAAC := FCurrentEngine.AAC;
-  LFundsLed := FCurrentEngine.FundsLedger.Balance;
-
-  //update engine info
-  FTickers[FCurrentSimIndex].Funds := LFundsLed;
-  FTickers[FCurrentSimIndex].Inventory := LInventory;
-  FTickers[FCurrentSimIndex].AAC := LAAC;
-
-  FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LFunds;
 end;
 
 procedure TTickerParser.SaveNewStrategy(const ASender: TConfigureStrategy;
@@ -324,10 +322,10 @@ begin
         IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, '1', '') + ',' +
         IfThen(FTickers[I].IsBuy, '1', '') + ',' +
         IfThen(FTickers[I].IsSell, '1', '') + ',' +
-        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].Funds)) + ',' +
-        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].Inventory)) + ',' +
-        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].AAC)) + ',' +
-        IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, FloatToStr(FTickers[I].Profit))
+        FloatToStr(FTickers[I].Funds) + ',' +
+        FloatToStr(FTickers[I].Inventory) + ',' +
+        FloatToStr(FTickers[I].AAC) + ',' +
+        FloatToStr(FTickers[I].Profit)
       );
 
     LOutput.SaveToFile(edit_directory_csv.Text);
@@ -347,6 +345,8 @@ var
   LError: string;
   LLoader: TTickerLoader;
   LProduct : IGDAXProduct;
+  LFunds, LInventory, LTickPrice, LAAC: Extended;
+  LFundsLed: Extended;
 begin
   progress_simulate.Visible := True;
 
@@ -381,6 +381,10 @@ begin
   LStep := Trunc(FTickers.Count / 20);
   for I := 0 to Pred(FTickers.Count) do
   begin
+    {$IFDEF WINDOWS}
+    SetThreadExecutionState(ES_CONTINUOUS OR ES_SYSTEM_REQUIRED OR DWORD($00000040));
+    {$ENDIF}
+
     if FCancelSim then
       Break;
 
@@ -399,6 +403,20 @@ begin
 
     //feed the engine and make some money
     LEngine.Feed(LTicker, LError);
+
+    //ripped from simple bot main form
+    LFunds := FCurrentEngine.Funds;
+    LInventory := FCurrentEngine.AvailableInventory;
+    LTickPrice := FTickers[FCurrentSimIndex].Price;
+    LAAC := FCurrentEngine.AAC;
+    LFundsLed := FCurrentEngine.FundsLedger.Balance;
+
+    //update engine info
+    FTickers[FCurrentSimIndex].Funds := LFundsLed;
+    FTickers[FCurrentSimIndex].Inventory := LInventory;
+    FTickers[FCurrentSimIndex].AAC := LAAC;
+
+    FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LFunds;
 
     //update the progress and process ui messages
     if (I > 0) and (I mod LStep = 0) then

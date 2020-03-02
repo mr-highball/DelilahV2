@@ -1,0 +1,135 @@
+inherited ConfigureAcceleration: TConfigureAcceleration
+  Height = 678
+  Width = 951
+  ClientHeight = 678
+  ClientWidth = 951
+  inherited pnl_ctrls: TPanel
+    Top = 578
+    Width = 951
+    ClientWidth = 951
+    inherited btn_save: TButton
+      Left = 793
+    end
+  end
+  inherited scroll_controls: TScrollBox
+    Height = 478
+    Width = 951
+    HorzScrollBar.Page = 360
+    VertScrollBar.Page = 336
+    ClientHeight = 474
+    ClientWidth = 947
+    object edit_window_size: TEdit[0]
+      AnchorSideLeft.Control = scroll_controls
+      AnchorSideTop.Control = scroll_controls
+      AnchorSideRight.Control = scroll_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 8
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 100
+      BorderSpacing.Top = 8
+      BorderSpacing.Right = 100
+      TabOrder = 0
+      TextHint = 'Window Size (MSecs)'
+    end
+    object edit_lead_starting_percent: TEdit[1]
+      AnchorSideLeft.Control = scroll_controls
+      AnchorSideTop.Control = edit_window_size
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = scroll_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 56
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 100
+      BorderSpacing.Top = 8
+      BorderSpacing.Right = 100
+      TabOrder = 1
+      TextHint = 'Leading Start Percent'
+    end
+    object edit_lead_end_percent: TEdit[2]
+      AnchorSideLeft.Control = edit_lead_starting_percent
+      AnchorSideTop.Control = edit_lead_starting_percent
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_lead_starting_percent
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 104
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 2
+      TextHint = 'Lead End Percent'
+    end
+    object edit_pos_percent: TEdit[3]
+      AnchorSideLeft.Control = edit_lead_starting_percent
+      AnchorSideTop.Control = edit_lead_end_percent
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_lead_starting_percent
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 152
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 3
+      TextHint = 'Position Percent'
+    end
+    object edit_risky_pos_percent: TEdit[4]
+      AnchorSideLeft.Control = edit_lead_starting_percent
+      AnchorSideTop.Control = edit_pos_percent
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_lead_starting_percent
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 200
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 4
+      TextHint = 'Risky Position Percent'
+    end
+    object edit_cross_thresh: TEdit[5]
+      AnchorSideLeft.Control = edit_lead_starting_percent
+      AnchorSideTop.Control = edit_risky_pos_percent
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_lead_starting_percent
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 248
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 5
+      TextHint = 'Cross Threshold Percent (Open)'
+    end
+    object edit_cross_down_thresh: TEdit[6]
+      AnchorSideTop.Control = edit_cross_thresh
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 296
+      Width = 717
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 6
+      TextHint = 'Cross Down Threshold Percent (Close)'
+    end
+  end
+  inherited pnl_name: TPanel
+    Width = 951
+    ClientWidth = 951
+    inherited edit_name: TEdit
+      Left = 325
+    end
+  end
+end

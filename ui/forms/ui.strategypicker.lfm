@@ -1,0 +1,62 @@
+object StrategyPicker: TStrategyPicker
+  Left = 978
+  Height = 617
+  Top = 405
+  Width = 914
+  Caption = 'Strategy Picker'
+  ClientHeight = 617
+  ClientWidth = 914
+  Color = clWhite
+  DesignTimePPI = 192
+  LCLVersion = '2.0.2.0'
+  object pnl_ctrls: TPanel
+    Left = 0
+    Height = 100
+    Top = 517
+    Width = 914
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 100
+    ClientWidth = 914
+    TabOrder = 0
+    object btn_ok: TButton
+      AnchorSideTop.Control = pnl_ctrls
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = pnl_ctrls
+      AnchorSideRight.Side = asrBottom
+      Left = 756
+      Height = 50
+      Top = 25
+      Width = 150
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 8
+      Caption = 'Ok'
+      ModalResult = 1
+      TabOrder = 0
+    end
+  end
+  object radio_options: TRadioGroup
+    Left = 0
+    Height = 517
+    Top = 0
+    Width = 914
+    Align = alClient
+    AutoFill = True
+    Caption = 'Strategies'
+    ChildSizing.LeftRightSpacing = 6
+    ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+    ChildSizing.EnlargeVertical = crsHomogenousChildResize
+    ChildSizing.ShrinkHorizontal = crsScaleChilds
+    ChildSizing.ShrinkVertical = crsScaleChilds
+    ChildSizing.Layout = cclLeftToRightThenTopToBottom
+    ChildSizing.ControlsPerLine = 1
+    ClientHeight = 480
+    ClientWidth = 910
+    ItemIndex = 0
+    Items.Strings = (
+      'Tiers (GDAX)'
+      'Acceleration (GDAX)'
+    )
+    TabOrder = 1
+  end
+end

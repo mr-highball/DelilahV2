@@ -51,6 +51,8 @@ type
     destructor Destroy; override;
   end;
 
+  TConfigureStrategyClass = class of TConfigureStrategy;
+
 implementation
 uses
   Dialogs;

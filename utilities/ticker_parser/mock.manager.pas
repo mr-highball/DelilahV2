@@ -151,7 +151,6 @@ begin
     //things such as checking for limit orders, waiting until price hits, etc...
     //but this is the easiest thing to do in order to get a ballpark estimate
     LDetails.Order.FilledSized := LDetails.Order.Size;
-    LDetails.Order.FillFees := FFee * LDetails.Order.FilledSized;
     LDetails.Order.OrderStatus := stSettled;
     LDetails.Order.Settled := True;
 
@@ -159,11 +158,13 @@ begin
     begin
       LDetails.Order.Price := FBuyPrice;
       LDetails.Order.ExecutedValue := FBuyPrice * LDetails.Order.FilledSized;
+      LDetails.Order.FillFees := FFee * (LDetails.Order.FilledSized * FBuyPrice);
     end
     else
     begin
       LDetails.Order.Price := FSellPrice;
       LDetails.Order.ExecutedValue := FSellPrice * LDetails.Order.FilledSized;
+      LDetails.Order.FillFees := FFee * (LDetails.Order.FilledSized * FSellPrice);
     end;
 
     Result:=True;

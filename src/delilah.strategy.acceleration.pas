@@ -341,6 +341,10 @@ begin
         if not AManager.Place(LDetails, LID, Error) then
           Exit;
 
+        //check to include risky position size to the new position
+        if (FPosition = apRisky) and (Assigned(FPositionDetails)) then
+          LDetails.Size := LDetails.Size + FPositionDetails.Size;
+
         //update internals to taking position
         FPosition := LPos;
         FPositionDetails := LDetails;

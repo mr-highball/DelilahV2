@@ -315,14 +315,19 @@ begin
     //log the state for users
     LogInfo(Format('acceleration indicators [in-position]:%s [lagging]:%f [leading]:%f', [BoolToStr(LInPosition, True), LLagging, LLeading]));
 
-    //if we aren't then clear some internal vars and check if we need to open one
-    if not LInPosition then
+    //if we aren't then check if we need to open one
+    if (not LInPosition) or (FPosition = apRisky) then
     begin
-      FPosition := apNone;
-      FPositionDetails := nil;
-
+      //check if we should take a position
       if GetTakePosition(LLeading, LLagging, LPos, LFunds) then
       begin
+        //if we already have a risky position, don't take another one
+        if (FPosition = apRisky) and (LPos = apRisky) then
+        begin
+          LogInfo('risky position detected, but already in position');
+          Exit(True);
+        end;
+
         LDetails := TakePosition(ATicker, LPos, LFunds, LInPosition, Error);
 
         //if the call to take is declined, then warn and exit gracefully
@@ -341,53 +346,52 @@ begin
         FPositionDetails := LDetails;
 
         LogInfo('position taken');
+        Exit(True);
       end;
     end
+
     //otherwise we need to see if we need to close
-    else
+    if GetClosePosition(LLeading, LLagging) then
     begin
-      if GetClosePosition(LLeading, LLagging) then
+      LFunds := FPositionDetails.Size;
+
+      //bounds checking for inventory (can't sell more than we have)
+      if LFunds > AInventory then
+        LFunds := AInventory;
+
+      if LFunds < GetMinOrderSize(ATicker) then
       begin
-        LFunds := FPositionDetails.Size;
-
-        //bounds checking for inventory (can't sell more than we have)
-        if LFunds > AInventory then
-          LFunds := AInventory;
-
-        if LFunds < GetMinOrderSize(ATicker) then
-        begin
-          FPositionDetails := nil;
-          FPosition := apNone;
-          LogInfo('in-position but inventory less than min, closing without order');
-          Exit(True);
-        end;
-
-        //get the details for closing this position
-        LDetails := ClosePosition(
-          ATicker,
-          LFunds,
-          FPositionDetails,
-          LInPosition,
-          Error
-        );
-
-        //if the call to take is declined, then warn and exit gracefully
-        if not LInPosition then
-        begin
-          LogWarning(Format('ClosePosition declined for [reason]:%s', [Error]));
-          Exit(True);
-        end;
-
-        //try to place the order
-        if not AManager.Place(LDetails, LID, Error) then
-          Exit;
-
-        //reset internals, position closed
-        FPosition := apNone;
         FPositionDetails := nil;
-
-        LogInfo('position closed');
+        FPosition := apNone;
+        LogInfo('in-position but inventory less than min, closing without order');
+        Exit(True);
       end;
+
+      //get the details for closing this position
+      LDetails := ClosePosition(
+        ATicker,
+        LFunds,
+        FPositionDetails,
+        LInPosition,
+        Error
+      );
+
+      //if the call to take is declined, then warn and exit gracefully
+      if not LInPosition then
+      begin
+        LogWarning(Format('ClosePosition declined for [reason]:%s', [Error]));
+        Exit(True);
+      end;
+
+      //try to place the order
+      if not AManager.Place(LDetails, LID, Error) then
+        Exit;
+
+      //reset internals, position closed
+      FPosition := apNone;
+      FPositionDetails := nil;
+
+      LogInfo('position closed');
     end;
 
     //success

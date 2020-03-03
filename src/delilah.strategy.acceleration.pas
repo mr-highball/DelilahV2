@@ -348,7 +348,7 @@ begin
         LogInfo('position taken');
         Exit(True);
       end;
-    end
+    end;
 
     //otherwise we need to see if we need to close
     if GetClosePosition(LLeading, LLagging) then

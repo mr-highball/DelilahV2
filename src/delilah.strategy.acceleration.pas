@@ -360,7 +360,8 @@ begin
       LFunds := FPositionDetails.Size;
 
       //bounds checking for inventory (can't sell more than we have)
-      if LFunds > AInventory then
+      //also making sure we don't leave "dust"
+      if (LFunds > AInventory) or (AInventory - LFunds < LMin) then
         LFunds := AInventory;
 
       if LFunds < GetMinOrderSize(ATicker) then

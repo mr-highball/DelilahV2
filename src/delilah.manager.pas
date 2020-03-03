@@ -225,19 +225,28 @@ begin
     //make sure the details is valid
     if not Assigned(ADetails) then
       raise Exception.Create('details is unassigned');
+
     //notify on before place and see if we can continue
     LAllow:=True;
     DoOnBeforePlace(ADetails,LAllow,Error);
+
     if not LAllow then
       Exit;
+
     //call down to children to see if placing the order was successful
     if not DoPlace(ADetails,Error) then
       Exit;
+
     //generate a guid and store the reference
     ID:=TGuid.NewGuid.ToString();
     FOrders.Add(ID,ADetails);
+
     //notify order place
     DoOnPlace(ADetails,ID);
+
+    //request status after a successful order place
+    Status[ID];
+
     //success
     Result:=True;
   except on E:Exception do

@@ -33,7 +33,7 @@ var
 implementation
 uses
   ui.strategy.tiers,
-  ui.strategy.acceleration;
+  ui.strategy.acceleration.gdax;
 
 {$R *.lfm}
 
@@ -44,7 +44,7 @@ begin
   if radio_options.ItemIndex <= 0 then
     Result := TConfigureTiers
   else
-    Result := TConfigureAcceleration;
+    Result := TConfigureAccelerationGDAX;
 end;
 
 end.

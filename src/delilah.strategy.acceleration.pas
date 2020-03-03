@@ -220,9 +220,9 @@ var
   LLagging, LLeading: Single;
   LInPosition: Boolean;
   LPos : TAccelPosition;
-  LID: String;
   LFunds : Extended;
   LDetails: IOrderDetails;
+  LID: String;
 
   (*
     helper to determine if we should take a position
@@ -300,10 +300,20 @@ begin
     );
 
     //determine if we are in a position
-    LInPosition := (FPosition in [apFull, apRisky]) and (AInventory > GetMinOrderSize(ATicker));
+    LInPosition := (FPosition in [apFull, apRisky]) and (Assigned(FPositionDetails));
+
+    if LInPosition then
+    begin
+      if AInventory < GetMinOrderSize(ATicker) then
+      begin
+        LInPosition := False;
+        FPosition := apNone;
+        FPositionDetails := nil;
+      end;
+    end;
 
     //log the state for users
-    LogInfo(Format('acceleration indicators [in-position]:%s [lagging]:%d [leading]:%d', [BoolToStr(LInPosition, True), LLagging, LLeading]));
+    LogInfo(Format('acceleration indicators [in-position]:%s [lagging]:%f [leading]:%f', [BoolToStr(LInPosition, True), LLagging, LLeading]));
 
     //if we aren't then clear some internal vars and check if we need to open one
     if not LInPosition then
@@ -311,7 +321,7 @@ begin
       FPosition := apNone;
       FPositionDetails := nil;
 
-      if GetTakePosition(LLagging, LLeading, LPos, LFunds) then
+      if GetTakePosition(LLeading, LLagging, LPos, LFunds) then
       begin
         LDetails := TakePosition(ATicker, LPos, LFunds, LInPosition, Error);
 

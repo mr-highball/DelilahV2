@@ -45,13 +45,15 @@ function TGDAXAccelerationStrategyImpl.TakePosition(const ATicker: ITicker;
 var
   LOrder : IGDAXOrder;
   LTicker: ITickerGDAX;
-  LMin: Extended;
+  LMin, LBid: Extended;
 begin
+  Result := nil;
   IsPosition := False;
   LMin := GetMinOrderSize(ATicker);
 
   //cast the ticker
   LTicker := ATicker as ITickerGDAX;
+  LBid := LTicker.Ticker.Bid;
 
   //create and initialize an order
   LOrder := TGDAXOrderImpl.Create;
@@ -59,7 +61,7 @@ begin
   LOrder.OrderType := otMarket; //for now to ensure we get the position always do market
   LOrder.Side := osBuy;
   LOrder.Price := LTicker.Ticker.Bid;
-  LOrder.Size := Trunc(ASize / LTicker.Ticker.Bid / LMin) * LMin;
+  LOrder.Size := Trunc(ASize / LBid / LMin) * LMin;
 
   if LOrder.Size < LMin then
   begin
@@ -78,21 +80,23 @@ function TGDAXAccelerationStrategyImpl.ClosePosition(const ATicker: ITicker;
 var
   LOrder : IGDAXOrder;
   LTicker: ITickerGDAX;
-  LMin: Extended;
+  LMin, LAsk: Extended;
 begin
+  Result := nil;
   IsClose := False;
   LMin := GetMinOrderSize(ATicker);
 
   //cast the ticker
   LTicker := ATicker as ITickerGDAX;
+  LAsk := LTicker.Ticker.Ask;
 
   //create and initialize an order
   LOrder := TGDAXOrderImpl.Create;
   LOrder.Product := LTicker.Ticker.Product;
   LOrder.OrderType := otMarket; //for now to ensure we get the position always do market
   LOrder.Side := osSell;
-  LOrder.Price := LTicker.Ticker.Ask;
-  LOrder.Size := Trunc(ASize / LTicker.Ticker.Ask / LMin) * LMin;
+  LOrder.Price := LAsk;
+  LOrder.Size := Trunc(ASize / LMin) * LMin; //trunc dust
 
   if LOrder.Size < LMin then
   begin

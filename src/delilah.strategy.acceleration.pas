@@ -29,6 +29,7 @@ type
   *)
   IAccelerationStrategy = interface(IWindowStrategy)
     ['{42E20828-B673-4B7A-82DF-3AFA08BFE4C4}']
+
     //property methods
     function GetLeadEnd: Single;
     function GetLeadStart: Single;
@@ -43,6 +44,8 @@ type
     procedure SetRiskyPerc(const AValue: Single);
     procedure SetThresh(const AValue: Single);
     procedure SetThreshDown(const AValue: Single);
+    function GetCurLag: Single;
+    function GetCurLead: Single;
 
     //properties
 
@@ -91,6 +94,16 @@ type
       the current "state" this strategy is in
     *)
     property Position : TAccelPosition read GetPosition;
+
+    (*
+      the current lagging acceleration average
+    *)
+    property CurLagAccel : Single read GetCurLag;
+
+    (*
+      the current leading acceleration average
+    *)
+    property CurLeadAccel : Single read GetCurLead;
   end;
 
   { TAccelerationStrategyImpl }
@@ -110,10 +123,14 @@ type
     FPosPercent,
     FRiskyPerc,
     FThresh,
-    FThreshDown: Single;
+    FThreshDown,
+    FLag,
+    FLead: Single;
     FPosition : TAccelPosition;
     FPositionDetails : IOrderDetails;
   protected
+    function GetCurLag: Single;
+    function GetCurLead: Single;
     function GetPosition: TAccelPosition;
     function GetLeadEnd: Single;
     function GetLeadStart: Single;
@@ -182,6 +199,8 @@ type
     property CrossThresholdPercent : Single read GetThresh write SetThresh;
     property CrossDownThresholdPercent : Single read GetThreshDown write SetThreshDown;
     property Position : TAccelPosition read GetPosition;
+    property CurLagAccel : Single read GetCurLag;
+    property CurLeadAccel : Single read GetCurLead;
 
     constructor Create; override;
     destructor Destroy; override;
@@ -298,6 +317,10 @@ begin
       Abs(Trunc(Tickers.Count * FLeadStart)),
       Abs(Trunc(Tickers.Count * FLeadEnd))
     );
+
+    //update internal (could probably just use internal vars here)
+    FLag := LLagging;
+    FLead := LLeading;
 
     //determine if we are in a position
     LInPosition := (FPosition in [apFull, apRisky]) and (Assigned(FPositionDetails));
@@ -422,6 +445,16 @@ destructor TAccelerationStrategyImpl.Destroy;
 begin
   FPositionDetails := nil;
   inherited Destroy;
+end;
+
+function TAccelerationStrategyImpl.GetCurLag: Single;
+begin
+  Result := FLag
+end;
+
+function TAccelerationStrategyImpl.GetCurLead: Single;
+begin
+  Result := FLead;
 end;
 
 function TAccelerationStrategyImpl.GetPosition: TAccelPosition;

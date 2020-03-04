@@ -268,7 +268,6 @@ begin
   for I := 0 to Pred(FStrategyList.Count) do
     if FStrategyList[I].Caption = AName then
     begin
-      FStrategies.Delete(FStrategyList[I].Tag);
       FStrategyList[I].Parent := nil;
       FStrategyList.Delete(I);
       Break;

@@ -126,6 +126,7 @@ type
     FThreshDown,
     FLag,
     FLead: Single;
+    FPosSize : Extended;
     FPosition : TAccelPosition;
     FPositionDetails : IOrderDetails;
   protected
@@ -249,6 +250,7 @@ var
   function GetTakePosition(const ALeadAccel, ALagAccel : Single;
     out Position : TAccelPosition; out Funds : Extended) : Boolean;
   begin
+    Position := apNone;
     Result := ALeadAccel >= (ALagAccel * (1 + FThresh));
 
     if not Result then
@@ -292,6 +294,13 @@ var
     Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown));
   end;
 
+  procedure ClearPosition;
+  begin
+    FPosSize := 0;
+    FPositionDetails := nil;
+    FPosition := apNone;
+  end;
+
 begin
   try
     //call down to base to feed the window
@@ -308,6 +317,8 @@ begin
       Exit(True);
     end;
 
+    LMin := GetMinOrderSize(ATicker);
+
     //calculate the lagging acceleration
     LLagging := GetAverageAcceleratePerTick(Tickers);
 
@@ -323,17 +334,18 @@ begin
     FLead := LLeading;
 
     //determine if we are in a position
-    LInPosition := (FPosition in [apFull, apRisky]) and (Assigned(FPositionDetails));
+    LInPosition := (FPosition in [apFull, apRisky]) and (FPosSize >= LMin);
 
     if LInPosition then
     begin
-      if AInventory < GetMinOrderSize(ATicker) then
+      if AInventory < LMin then
       begin
         LInPosition := False;
-        FPosition := apNone;
-        FPositionDetails := nil;
+        ClearPosition;
       end;
-    end;
+    end
+    else
+      ClearPosition;
 
     //log the state for users
     LogInfo(Format('acceleration indicators [in-position]:%s [lagging]:%f [leading]:%f', [BoolToStr(LInPosition, True), LLagging, LLeading]));
@@ -365,8 +377,11 @@ begin
           Exit;
 
         //check to include risky position size to the new position
-        if (FPosition = apRisky) and (Assigned(FPositionDetails)) then
-          LDetails.Size := LDetails.Size + FPositionDetails.Size;
+        if FPosition = apRisky then
+          FPosSize := FPosSize + LDetails.Size
+        //otherwise good to just set the size
+        else
+          FPosSize := LDetails.Size;
 
         //update internals to taking position
         FPosition := LPos;
@@ -378,16 +393,17 @@ begin
     end;
 
     //otherwise we need to see if we need to close
-    if GetClosePosition(LLeading, LLagging) then
+    if LInPosition and GetClosePosition(LLeading, LLagging)
+    then
     begin
-      LFunds := FPositionDetails.Size;
+      LFunds := FPosSize;
 
       //bounds checking for inventory (can't sell more than we have)
       //also making sure we don't leave "dust"
       if (LFunds > AInventory) or (AInventory - LFunds < LMin) then
         LFunds := AInventory;
 
-      if LFunds < GetMinOrderSize(ATicker) then
+      if LFunds < LMin then
       begin
         FPositionDetails := nil;
         FPosition := apNone;
@@ -416,8 +432,7 @@ begin
         Exit;
 
       //reset internals, position closed
-      FPosition := apNone;
-      FPositionDetails := nil;
+      ClearPosition;
 
       LogInfo('position closed');
     end;
@@ -432,6 +447,9 @@ end;
 constructor TAccelerationStrategyImpl.Create;
 begin
   inherited Create;
+  FLag := 0;
+  FLead := 0;
+  FPosSize := 0;
   FPositionDetails := nil;
   FLeadEnd := 1.0;
   FLeadStart := 0.5;

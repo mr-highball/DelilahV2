@@ -46,11 +46,9 @@ var
 begin
   Result := 0;
 
-  //need the average time per tick to calculate the acceleration
-  LTimePerTick := GetAverageTimePerTick(ATickers, AStart, AEnd);
-
-  if LTimePerTick <= 0 then
-    Exit;
+  //set locals
+  LStart := AStart;
+  LEnd := AEnd;
 
   //bounds checking on markers
   if AStart < 0 then
@@ -58,6 +56,12 @@ begin
 
   if (AEnd < 0) or (AEnd >= ATickers.Count) then
     LEnd := Pred(ATickers.Count);
+
+  //need the average time per tick to calculate the acceleration
+  LTimePerTick := GetAverageTimePerTick(ATickers, LStart, LEnd);
+
+  if LTimePerTick <= 0 then
+    Exit;
 
   //aggregate the accelerations
   Result := (ATickers[1].Price - ATickers[0].Price) / LTimePerTick;
@@ -76,6 +80,10 @@ var
   LEnd, I: Integer;
 begin
   Result := 0;
+
+  //set locals
+  LStart := AStart;
+  LEnd := AEnd;
 
   //need at least 2 tickers to have a diff between them
   if ATickers.Count <= 2 then

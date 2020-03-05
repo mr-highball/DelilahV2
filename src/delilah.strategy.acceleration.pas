@@ -251,7 +251,12 @@ var
     out Position : TAccelPosition; out Funds : Extended) : Boolean;
   begin
     Position := apNone;
-    Result := ALeadAccel >= (ALagAccel * (1 + FThresh));
+
+    //in both negative and positve cases we need to check if lead accel meets the threshold
+    if ALagAccel > 0 then
+      Result := ALeadAccel >= (ALagAccel + (FThresh * ALagAccel))
+    else
+      Result := ALeadAccel >= (ALagAccel - (FThresh * ALagAccel));
 
     if not Result then
       Exit;
@@ -291,7 +296,10 @@ var
   *)
   function GetClosePosition(const ALeadAccel, ALagAccel : Single) : Boolean;
   begin
-    Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown));
+    if ALagAccel > 0 then
+      Result := ALeadAccel <= (ALagAccel - (FThreshDown * ALagAccel))
+    else
+      Result := ALeadAccel <= (ALagAccel + (FThreshDown * ALagAccel))
   end;
 
   procedure ClearPosition;

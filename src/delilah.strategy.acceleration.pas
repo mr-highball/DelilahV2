@@ -272,7 +272,7 @@ var
     begin
       Funds := FPosPercent * AFunds;
 
-      if Funds < 0 then
+      if Funds <= 0 then
         Exit(False);
 
       if Funds > AFunds then
@@ -306,6 +306,9 @@ var
   begin
     Result := False;
 
+    if FPosition = apNone then
+      Exit;
+
     //avoid outliers approaching very close to zero
     if (ALagAccel <> 0)
       and (Abs(ALeadAccel) > MIN_LAG) //check to make sure we have a higher lead
@@ -319,7 +322,7 @@ var
     if ALagAccel > 0 then
       Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown))
     else
-      Result := ALeadAccel <= (ALagAccel * (1 + FThreshDown))
+      Result := ALeadAccel <= (ALagAccel * (1 + FThreshDown));
   end;
 
   procedure ClearPosition;
@@ -417,7 +420,7 @@ begin
         FPosition := LPos;
         FPositionDetails := LDetails;
 
-        LogInfo('position taken');
+        LogInfo(Format('position taken new position [size]:%f', [FPosSize]));
         Exit(True);
       end;
     end;
@@ -430,13 +433,12 @@ begin
 
       //bounds checking for inventory (can't sell more than we have)
       //also making sure we don't leave "dust"
-      if (LFunds > AInventory) or (AInventory - LFunds < LMin) then
+      if (LFunds > AInventory) or ((AInventory - LFunds) < LMin) then
         LFunds := AInventory;
 
       if LFunds < LMin then
       begin
-        FPositionDetails := nil;
-        FPosition := apNone;
+        ClearPosition;
         LogInfo('in-position but inventory less than min, closing without order');
         Exit(True);
       end;

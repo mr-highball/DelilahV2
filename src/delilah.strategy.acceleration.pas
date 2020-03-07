@@ -243,28 +243,32 @@ var
   LFunds : Extended;
   LDetails: IOrderDetails;
   LID: String;
+  LLeadStart, LLeadEnd: Int64;
 
   (*
     helper to determine if we should take a position
   *)
   function GetTakePosition(const ALeadAccel, ALagAccel : Single;
     out Position : TAccelPosition; out Funds : Extended) : Boolean;
+  const
+    MIN_LAG = 0.00001;
   begin
+    Result := False;
     Position := apNone;
-
-    //in both negative and positve cases we need to check if lead accel meets the threshold
-    if ALagAccel > 0 then
-      Result := ALeadAccel >= (ALagAccel + (FThresh * ALagAccel))
-    else
-      Result := ALeadAccel >= (ALagAccel - (FThresh * ALagAccel));
-
-    if not Result then
-      Exit;
-
     Funds := 0;
 
+    //avoid outliers approaching very close to zero
+    if (ALagAccel <> 0)
+      and (Abs(ALeadAccel) > MIN_LAG) //check to make sure we have a higher lead
+      and (Abs(ALagAccel) < MIN_LAG) //outlier check for small "dust"
+    then
+    begin
+      LogInfo('acceleration outlier detecting, bypassing position check');
+      Exit;
+    end;
+
     //check for main position
-    if ALeadAccel > 0 then
+    if (ALagAccel > 0) and (ALeadAccel > 0) then
     begin
       Funds := FPosPercent * AFunds;
 
@@ -274,6 +278,7 @@ var
       if Funds > AFunds then
         Funds := AFunds;
 
+      Result := ALeadAccel >= (ALagAccel * (1 + FThresh));
       Position := apFull;
     end
     //check for risky position
@@ -287,6 +292,7 @@ var
       if Funds > AFunds then
         Funds := AFunds;
 
+      Result := ALeadAccel >= (ALagAccel * (1 - FThresh));
       Position := apRisky;
     end;
   end;
@@ -295,11 +301,25 @@ var
     helper to determine if we should close the position
   *)
   function GetClosePosition(const ALeadAccel, ALagAccel : Single) : Boolean;
+  const
+    MIN_LAG = 0.00001;
   begin
+    Result := False;
+
+    //avoid outliers approaching very close to zero
+    if (ALagAccel <> 0)
+      and (Abs(ALeadAccel) > MIN_LAG) //check to make sure we have a higher lead
+      and (Abs(ALagAccel) < MIN_LAG) //outlier check for small "dust"
+    then
+    begin
+      LogInfo('acceleration outlier detecting, bypassing position check');
+      Exit;
+    end;
+
     if ALagAccel > 0 then
-      Result := ALeadAccel <= (ALagAccel - (FThreshDown * ALagAccel))
+      Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown))
     else
-      Result := ALeadAccel <= (ALagAccel + (FThreshDown * ALagAccel))
+      Result := ALeadAccel <= (ALagAccel * (1 + FThreshDown))
   end;
 
   procedure ClearPosition;
@@ -327,15 +347,17 @@ begin
 
     LMin := GetMinOrderSize(ATicker);
 
-    //calculate the lagging acceleration
-    LLagging := GetAverageAcceleratePerTick(Tickers);
+    //calculate the lagging acceleration for the window
+    LLagging := GetAverageAcceleratePerTick(Tickers) * Tickers.Count;
 
     //calculate the leading indicator (need to provide explicit start / end markers)
+    LLeadStart := Abs(Trunc(Tickers.Count * FLeadStart));
+    LLeadEnd := Abs(Trunc(Tickers.Count * FLeadEnd));
     LLeading := GetAverageAcceleratePerTick(
       Tickers,
-      Abs(Trunc(Tickers.Count * FLeadStart)),
-      Abs(Trunc(Tickers.Count * FLeadEnd))
-    );
+      LLeadStart,
+      LLeadEnd
+    ) * Succ(LLeadEnd - LLeadStart);
 
     //update internal (could probably just use internal vars here)
     FLag := LLagging;

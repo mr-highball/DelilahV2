@@ -130,7 +130,6 @@ var
 
 implementation
 uses
-  delilah.strategy.acceleration,
   FileUtil,
   strutils,
   delilah.ticker.gdax,
@@ -347,8 +346,6 @@ var
   LProduct : IGDAXProduct;
   LFunds, LInventory, LTickPrice, LAAC: Extended;
   LFundsLed: Extended;
-  LTempAccel: TStringList;
-  LTempStrat: IAccelerationStrategy;
 begin
   progress_simulate.Visible := True;
 
@@ -381,9 +378,6 @@ begin
 
   progress_simulate.Position := 0;
   LStep := Trunc(FTickers.Count / 20);
-  LTempAccel := TStringList.Create;
-  LTempStrat := FStrategies[0] as IAccelerationStrategy;
-  LTempAccel.Add('lagging,leading');
   for I := 0 to Pred(FTickers.Count) do
   begin
     {$IFDEF WINDOWS}
@@ -415,7 +409,6 @@ begin
     LTickPrice := FTickers[FCurrentSimIndex].Price;
     LAAC := FCurrentEngine.AAC;
     LFundsLed := FCurrentEngine.FundsLedger.Balance;
-    LTempAccel.Add(FloatToStr(LTempStrat.CurLagAccel) +',' + FLoatToStr(LTempStrat.CurLeadAccel));
 
     //update engine info
     FTickers[FCurrentSimIndex].Funds := LFundsLed;
@@ -434,7 +427,6 @@ begin
     if I mod 200 = 0 then
       Application.ProcessMessages;
   end;
-  LTempAccel.SaveToFile(edit_directory.Text + '\accelerations.csv');
 
   if FCancelSim then
     ShowMessage('Simulation Cancelled :(')

@@ -319,9 +319,17 @@ var
       Exit;
     end;
 
-    if ALagAccel > 0 then
+    //in full position, a flip towards negative acceleration for the window
+    //should constitute as a "closing" event. this could probably be a
+    //config option, but for now we're just gonna send it
+    if (FPosition = apFull) and (ALagAccel < 0) then
+      Result := True
+    //now check if we are greater than zero and have a full/risky position
+    //with the leading acceleration indicator crossing down below lagging
+    else if (ALagAccel > 0) then
       Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown))
-    else
+    //otherwise we will be in a risky position with lagging negative
+    else if ALagAccel < 0 then
       Result := ALeadAccel <= (ALagAccel * (1 + FThreshDown));
   end;
 
@@ -349,6 +357,16 @@ begin
     end;
 
     LMin := GetMinOrderSize(ATicker);
+
+    //using min, clear position if we have "dust"
+    if (FPosSize > 0)
+      and (AInventory < LMin)
+      and (LMin - AInventory > (LMin - LMin * 0.999))
+    then
+    begin
+      LogInfo('dust detected, clearing position');
+      ClearPosition;
+    end;
 
     //calculate the lagging acceleration for the window
     LLagging := GetAverageAcceleratePerTick(Tickers) * Tickers.Count;

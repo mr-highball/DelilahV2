@@ -797,6 +797,9 @@ begin
         //set the order size based off the percentage returned to us
         LOrderSize:=RoundTo(Abs(AInventory * LPerc),-8);
 
+        if LOrderSize > AInventory then
+          LOrderSize := AInventory;
+
         //now make sure we respect the quote increment (ie. can only sell
         //in increments of quote increment, so min order size of 1.0 quote inc
         //of 1.0, and our calc returned 3.5, we would have to sell 3)
@@ -1046,7 +1049,7 @@ begin
   Result:=False;
   Sell:=False;
   //prioritize an all sell above everything
-  if FSellItAllNow and (AInventory > 0) then
+  if FSellItAllNow and (AInventory > 0) and (FGTFOPerc > 0) then
   begin
     Sell:=True;
     Percentage:=FGTFOPerc;
@@ -1059,21 +1062,21 @@ begin
     if AInventory > 0 then
     begin
       //check for any sells weighted highest to lowest in priority
-      if FLargeSell then
+      if FLargeSell and (FLargeSellPerc > 0) then
       begin
         Sell:=True;
         Percentage:=FLargeSellPerc;
         Size:=psLarge;
         Exit(True);
       end
-      else if FMidSell then
+      else if FMidSell and (FMidSellPerc > 0) then
       begin
         Sell:=True;
         Percentage:=FMidSellPerc;
         Size:=psMid;
         Exit(True);
       end
-      else if FSmallSell then
+      else if FSmallSell and (FSmallSellPerc > 0) then
       begin
         Sell:=True;
         Percentage:=FSmallSellPerc;
@@ -1085,14 +1088,14 @@ begin
     //check for any buys weighted highest to lowest in priority
     if not FDontBuy then
     begin
-      if FLargeBuy then
+      if FLargeBuy and (FLargePerc > 0) then
       begin
         Sell:=False;
         Percentage:=FLargePerc;
         Size:=psLarge;
         Exit(True);
       end
-      else if FSmallBuy then
+      else if FSmallBuy and (FSmallPerc > 0) then
       begin
         Sell:=False;
         Percentage:=FSmallPerc;
@@ -1375,12 +1378,12 @@ begin
   inherited Create(AOnInfo,AOnError,AOnWarn);
   FChannel:=TChannelStrategyImpl.Create(AOnInfo,AOnError,AOnWarn);
   FIDS:=TFPGList<String>.Create;
-  FSmallPerc:=0.02;
-  FMidPerc:=0.03;
-  FLargePerc:=0.05;
-  FSmallSellPerc:=0.05;
-  FMidSellperc:=0.10;
-  FLargeSellPerc:=0.20;
+  FSmallPerc:=0;
+  FMidPerc:=0;
+  FLargePerc:=0;
+  FSmallSellPerc:=0;
+  FMidSellperc:=0;
+  FLargeSellPerc:=0;
   FMarketFee:=0.003;//account for slippage on market orders
   FLimitFee:=0.0015;
   FMinProfit:=0;

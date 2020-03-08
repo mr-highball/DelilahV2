@@ -131,7 +131,7 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  math, dateutils
+  math, dateutils, delilah.strategy.acceleration, delilah.strategy.acceleration.gdax
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};
@@ -612,116 +612,84 @@ end;
 procedure TMain.StartStrategy(Sender: TObject);
 var
   LError:String;
-  LConfigStrategy,
-  LMoonStrategy:ITierStrategyGDAX;
+  LSellForMonies,
+  LBuyLeDip:ITierStrategyGDAX;
+  LAccelHigh,
+  LAccelLow: IAccelerationStrategy;
 const
   MOON_MIN_WINDOW = 20 * 60 * 1000;
 begin
   //clear chart source
   chart_source.Clear;
 
-  //todo - right now just adding an sample strategy, but need to choose
-  //from the selected strategy in some dropdown once fully implemented.
-  //also allow easy ui binding, and registering...
-  LConfigStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
-  LMoonStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  //todo - ass
+  LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LBuyLeDip := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelHigh := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
 
-  //todo - currently using a config to pull window, but this needs
-  //to be dynamic based on strategy (since not all strategies utilize a window)
-  LConfigStrategy.ChannelStrategy.WindowSizeInMilli:=FTempWindowSetting;
-  LConfigStrategy.SmallTierPerc:=FSmallBuyPerc;
-  LConfigStrategy.MidTierPerc:=FMedBuyPerc;
-  LConfigStrategy.LargeTierPerc:=FLargeBuyPerc;
-  LConfigStrategy.SmallTierSellPerc:=FSmallSellPerc;
-  LConfigStrategy.MidTierSellPerc:=FMedSellPerc;
-  LConfigStrategy.LargeTierSellPerc:=FLargeSellPerc;
-  LConfigStrategy.UseMarketBuy:=FUseMarketBuy;
-  LConfigStrategy.UseMarketSell:=FUseMarketSell;
-  LConfigStrategy.OnlyLowerAAC:=FOnlyLower;
-  LConfigStrategy.AvoidChop:=FAvoidChop;
-  LConfigStrategy.MinReduction:=FMinReduce;
-  LConfigStrategy.MinProfit:=FMinProfit;
-  LConfigStrategy.OnlyProfit:=True;
-  LConfigStrategy.MarketFee:=FMarketFee;
-  LConfigStrategy.LimitFee:=FLimitFee;
-  LConfigStrategy.IgnoreOnlyProfitThreshold:=FIgnoreProfitPerc;
-  LConfigStrategy.GTFOPerc:=FGTFOPerc;
-  FMidStrategy:=nil;
-  FMidStrategy:=LConfigStrategy;
-  FMidStrategy.ActiveCriteria:=GetMidCriteria;
+  //configure the sell for monies to sell for 1% profits
+  LSellForMonies.UseMarketBuy := False;
+  LSellForMonies.UseMarketSell := False;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 600000;
+  LSellForMonies.AvoidChop := False;
+  LSellForMonies.GTFOPerc := 0;
+  LSellForMonies.SmallTierPerc := 0;
+  LSellForMonies.MidTierPerc := 0;
+  LSellForMonies.LargeTierPerc := 0;
+  LSellForMonies.SmallTierSellPerc := 1.0;
+  LSellForMonies.MidTierSellPerc := 1.0;
+  LSellForMonies.LargeTierSellPerc := 1.0;
+  LSellForMonies.IgnoreOnlyProfitThreshold := 0;
+  LSellForMonies.LimitFee := 0.001;
+  LSellForMonies.MarketFee := 0.002;
+  LSellForMonies.OnlyLowerAAC := True;
+  LSellForMonies.MinReduction := 0.99;
+  LSellForMonies.MinProfit := 0.01; //only important one
 
-  //log some quick info for strategy
-  LogInfo(
-    Format(
-      'Strategy::[UseMarketBuy]-%s [UseMarketSell]-%s [MarketFee]-%s [LimitFee]-%s [MinReduce]-%s [MinProfit]-%s',
-      [BoolToStr(FUseMarketBuy,True),BoolToStr(FUseMarketSell,True),FloatToStr(FMarketFee),FloatToStr(FLimitFee),FloatToStr(FMinReduce),FloatToStr(FMinProfit)]
-    )
-  );
+  //configure the buy le dip strategy (just buy no sells)
+  LBuyLeDip.UseMarketBuy := False;
+  LBuyLeDip.UseMarketSell := False;
+  LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 1800000;
+  LBuyLeDip.AvoidChop := False;
+  LBuyLeDip.GTFOPerc := 0;
+  LBuyLeDip.SmallTierPerc := 0.001;
+  LBuyLeDip.MidTierPerc := 0.001;
+  LBuyLeDip.LargeTierPerc := 0.003;
+  LBuyLeDip.SmallTierSellPerc := 0;
+  LBuyLeDip.MidTierSellPerc := 0;
+  LBuyLeDip.LargeTierSellPerc := 0;
+  LBuyLeDip.IgnoreOnlyProfitThreshold := 0;
+  LBuyLeDip.LimitFee := 0.001;
+  LBuyLeDip.MarketFee := 0.002;
+  LBuyLeDip.OnlyLowerAAC := True;
+  LBuyLeDip.MinProfit := 0;
+  LBuyLeDip.MinReduction := 0.005; //important one
 
-  //as you can tell... this is a permanent strategy that will never ever change in the future
-  if FMoonMan then
-  begin
-    (*
-      below we tailor these properties to the current set of moonman
-      criteria. the idea is to only operate when we run out of inventory
-      and to let our parent strategy do the selling. this should fix the case
-      where our parent (being lagging) has sold everything but bitcoin
-      jumps on the first falcon heavy it can get a ticket to. in this case
-      our parent strategy will almost never buy any coinage and miss
-      out on fat stacks
-    *)
+  //configure the low acceleration
+  LAccelLow.WindowSizeInMilli := 14400000;
+  LAccelLow.LeadStartPercent := 0.8;
+  LAccelLow.LeadEndPercent := 1.0;
+  LAccelLow.PositionPercent := 0.20;
+  LAccelLow.RiskyPositionPercent := 0;
+  LAccelLow.CrossThresholdPercent := 0.05;
+  LAccelLow.CrossDownThresholdPercent := 0.05;
 
-    //use 20% of parent size unless it's smaller than the min
-    if (FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.20) >= MOON_MIN_WINDOW then
-      LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=Round(FMidStrategy.ChannelStrategy.WindowSizeInMilli * 0.2)
-    else
-      LMoonStrategy.ChannelStrategy.WindowSizeInMilli:=MOON_MIN_WINDOW;
+  //configure the high acceleration
+  LAccelHigh.WindowSizeInMilli := 14400000;
+  LAccelHigh.LeadStartPercent := 0.8;
+  LAccelHigh.LeadEndPercent := 1.0;
+  LAccelHigh.PositionPercent := 0.20;
+  LAccelHigh.RiskyPositionPercent := 0;
+  LAccelHigh.CrossThresholdPercent := 0.08;
+  LAccelHigh.CrossDownThresholdPercent := 0.08;
 
-    LMoonStrategy.SmallTierPerc:=FMidStrategy.SmallTierPerc * 0.20;
-    LMoonStrategy.MidTierPerc:=FMidStrategy.MidTierPerc * 0.20;
-    LMoonStrategy.LargeTierPerc:=FMidStrategy.LargeTierPerc * 0.20;
-    LMoonStrategy.SmallTierSellPerc:=0;
-    LMoonStrategy.MidTierSellPerc:=0;
-    LMoonStrategy.LargeTierSellPerc:=0;
-    LMoonStrategy.UseMarketBuy:=FMidStrategy.UseMarketBuy;
-    LMoonStrategy.UseMarketSell:=FMidStrategy.UseMarketSell;
-    LMoonStrategy.OnlyLowerAAC:=FMidStrategy.OnlyLowerAAC;
-    LMoonStrategy.MinReduction:=FMidStrategy.MinReduction;
-    LMoonStrategy.OnlyProfit:=True;
-    LMoonStrategy.MarketFee:=0.000;
-    LMoonStrategy.AvoidChop:=False;
-    LMoonStrategy.MinProfit:=0.004;
-    LMoonStrategy.ActiveCriteria:=GetMoonCriteria;
-    LMoonStrategy.ActiveCriteriaData:=@FMidStrategy;
-  end;
+  //add all strategies
+  FEngine.Strategies.Add(LAccelLow);
+  FEngine.Strategies.Add(LAccelHigh);
+  FEngine.Strategies.Add(LBuyLeDip);
+  FEngine.Strategies.Add(LSellForMonies);
 
-  //add both config/moon strategies
-  FEngine.Strategies.Add(
-    LConfigStrategy
-  );
-
-  if FMoonMan then
-    FEngine.Strategies.Add(
-      LMoonStrategy
-    );
-
-  (*
-    as long as we have an acceleration factor above zero then
-    go ahead and make a strategy using this factor amount
-  *)
-  if FAccelWindowFactor > 0 then
-  begin
-    FAccelStrategy:=nil;
-    FAccelStrategy:=TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
-    FAccelStrategy.ChannelStrategy.WindowSizeInMilli:=FMidStrategy.ChannelStrategy.WindowSizeInMilli * FAccelWindowFactor;
-    FAccelStrategy.ActiveCriteria:=GetAccelCriteria;
-
-    //update our mid-tier strategy's data to this strategy
-    FMidStrategy.ActiveCriteriaData:=@FAccelStrategy;
-
-    //add strategy to the engine
-    FEngine.Strategies.Add(FAccelStrategy);
-  end;
 
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;

@@ -614,21 +614,20 @@ var
   LError:String;
   LSellForMonies,
   LBuyLeDip:ITierStrategyGDAX;
-  LAccelHigh,
-  LAccelLow: IAccelerationStrategy;
+  LAccelLow,
+  LAccelHigh: IAccelerationStrategy;
 const
   MOON_MIN_WINDOW = 20 * 60 * 1000;
 begin
   //clear chart source
   chart_source.Clear;
 
-  //todo - ass
   LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LBuyLeDip := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHigh := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
 
-  //configure the sell for monies to sell for 1% profits
+  //configure the sell for monies to sell for profits
   LSellForMonies.UseMarketBuy := False;
   LSellForMonies.UseMarketSell := False;
   LSellForMonies.ChannelStrategy.WindowSizeInMilli := 600000;
@@ -637,24 +636,25 @@ begin
   LSellForMonies.SmallTierPerc := 0;
   LSellForMonies.MidTierPerc := 0;
   LSellForMonies.LargeTierPerc := 0;
-  LSellForMonies.SmallTierSellPerc := 1.0;
-  LSellForMonies.MidTierSellPerc := 1.0;
-  LSellForMonies.LargeTierSellPerc := 1.0;
-  LSellForMonies.IgnoreOnlyProfitThreshold := 0;
+  LSellForMonies.SmallTierSellPerc := 0.01;
+  LSellForMonies.MidTierSellPerc := 0.02;
+  LSellForMonies.LargeTierSellPerc := 0.02;
+  LSellForMonies.IgnoreOnlyProfitThreshold := 0.95;
   LSellForMonies.LimitFee := 0.001;
   LSellForMonies.MarketFee := 0.002;
   LSellForMonies.OnlyLowerAAC := True;
   LSellForMonies.MinReduction := 0.99;
-  LSellForMonies.MinProfit := 0.01; //only important one
+  LSellForMonies.OnlyProfit := True; //important
+  LSellForMonies.MinProfit := 0.003; //important
 
   //configure the buy le dip strategy (just buy no sells)
   LBuyLeDip.UseMarketBuy := False;
   LBuyLeDip.UseMarketSell := False;
-  LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 1800000;
+  LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 5400000;
   LBuyLeDip.AvoidChop := False;
   LBuyLeDip.GTFOPerc := 0;
-  LBuyLeDip.SmallTierPerc := 0.001;
-  LBuyLeDip.MidTierPerc := 0.001;
+  LBuyLeDip.SmallTierPerc := 0;
+  LBuyLeDip.MidTierPerc := 0;
   LBuyLeDip.LargeTierPerc := 0.003;
   LBuyLeDip.SmallTierSellPerc := 0;
   LBuyLeDip.MidTierSellPerc := 0;
@@ -663,33 +663,34 @@ begin
   LBuyLeDip.LimitFee := 0.001;
   LBuyLeDip.MarketFee := 0.002;
   LBuyLeDip.OnlyLowerAAC := True;
+  LBuyLeDip.OnlyProfit := True;
+  LBuyLeDip.MinProfit := 0.99; //make sure this one never sells
   LBuyLeDip.MinProfit := 0;
-  LBuyLeDip.MinReduction := 0.005; //important one
+  LBuyLeDip.MinReduction := 0.0005;
 
   //configure the low acceleration
-  LAccelLow.WindowSizeInMilli := 14400000;
+  LAccelLow.WindowSizeInMilli := 7200000;
   LAccelLow.LeadStartPercent := 0.8;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.20;
+  LAccelLow.PositionPercent := 0.10;
   LAccelLow.RiskyPositionPercent := 0;
-  LAccelLow.CrossThresholdPercent := 0.05;
-  LAccelLow.CrossDownThresholdPercent := 0.05;
+  LAccelLow.CrossThresholdPercent := 3;
+  LAccelLow.CrossDownThresholdPercent := 3;
 
-  //configure the high acceleration
-  LAccelHigh.WindowSizeInMilli := 14400000;
+  //configure the higher acceleration
+  LAccelHigh.WindowSizeInMilli := 10800000;
   LAccelHigh.LeadStartPercent := 0.8;
   LAccelHigh.LeadEndPercent := 1.0;
-  LAccelHigh.PositionPercent := 0.20;
+  LAccelHigh.PositionPercent := 0.10;
   LAccelHigh.RiskyPositionPercent := 0;
-  LAccelHigh.CrossThresholdPercent := 0.08;
-  LAccelHigh.CrossDownThresholdPercent := 0.08;
+  LAccelHigh.CrossThresholdPercent := 3;
+  LAccelHigh.CrossDownThresholdPercent := 3;
 
   //add all strategies
   FEngine.Strategies.Add(LAccelLow);
   FEngine.Strategies.Add(LAccelHigh);
   FEngine.Strategies.Add(LBuyLeDip);
   FEngine.Strategies.Add(LSellForMonies);
-
 
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;

@@ -786,11 +786,10 @@ begin
           Exit(True);
         end;
 
-        //if a gtfo siganl occurred, but no percentage was specified
-        //return here so the minimum logic won't be reached
-        if (LSize = psGTFO) and (LPerc <= 0) then
+        //bail if zero was specified
+        if LPerc <= 0 then
         begin
-          LogInfo('DoFeed::GTFO occurred, but gtfo percentage is 0, exiting');
+          LogInfo('DoFeed::sell::percentage is 0, exiting');
           Exit(True);
         end;
 
@@ -844,7 +843,8 @@ begin
             and (((AInventory * AAAC) / (AFunds + (AInventory * AAAC))) >= FIgnoreProfitPerc)
           )
           or (
-            LSize = psGTFO
+            (LSize = psGTFO)
+            and (FGTFOPerc > 0)
           );
 
         //before doing any other calcs/comparisons, see if we are in
@@ -924,6 +924,11 @@ begin
           Exit(True);
         end;
 
+        if LPerc <= 0 then
+        begin
+          LogInfo('DoFeed::buy::percentage is 0, exiting');
+          Exit(True);
+        end;
         //see if we have enough funds to cover either a limit or market
         LOrderBuyTot:=Abs(RoundTo(AFunds * LPerc,-8));
 

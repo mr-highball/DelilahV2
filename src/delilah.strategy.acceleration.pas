@@ -129,6 +129,17 @@ type
     FPosSize : Extended;
     FPosition : TAccelPosition;
     FPositionDetails : IOrderDetails;
+    FMaxAccel,
+    FAvgMaxAccel,
+    FAvgAccel,
+    FMaxDecel,
+    FAvgMaxDecel,
+    FAvgDecel,
+    FStdAccel,
+    FStdDecel: Extended;
+    FAccels,
+    FDecels: TArray<Single>;
+    procedure UpdateExtremaAccel;
   protected
     function GetCurLag: Single;
     function GetCurLead: Single;
@@ -244,28 +255,18 @@ var
   LDetails: IOrderDetails;
   LID: String;
   LLeadStart, LLeadEnd: Int64;
+const
+    MIN_LAG = 0.00001;
 
   (*
     helper to determine if we should take a position
   *)
   function GetTakePosition(const ALeadAccel, ALagAccel : Single;
     out Position : TAccelPosition; out Funds : Extended) : Boolean;
-  const
-    MIN_LAG = 0.00001;
   begin
     Result := False;
     Position := apNone;
     Funds := 0;
-
-    //avoid outliers approaching very close to zero
-    if (ALagAccel <> 0)
-      and (Abs(ALeadAccel) > MIN_LAG) //check to make sure we have a higher lead
-      and (Abs(ALagAccel) < MIN_LAG) //outlier check for small "dust"
-    then
-    begin
-      LogInfo('acceleration outlier detecting, bypassing position check');
-      Exit;
-    end;
 
     //check for main position
     if (ALagAccel > 0) and (ALeadAccel > 0) then
@@ -309,24 +310,9 @@ var
     if FPosition = apNone then
       Exit;
 
-    //avoid outliers approaching very close to zero
-    if (ALagAccel <> 0)
-      and (Abs(ALeadAccel) > MIN_LAG) //check to make sure we have a higher lead
-      and (Abs(ALagAccel) < MIN_LAG) //outlier check for small "dust"
-    then
-    begin
-      LogInfo('acceleration outlier detecting, bypassing position check');
-      Exit;
-    end;
-
-    //in full position, a flip towards negative acceleration for the window
-    //should constitute as a "closing" event. this could probably be a
-    //config option, but for now we're just gonna send it
-    if (FPosition = apFull) and (ALagAccel < 0) then
-      Result := True
     //now check if we are greater than zero and have a full/risky position
     //with the leading acceleration indicator crossing down below lagging
-    else if (ALagAccel > 0) then
+    if (ALagAccel > 0) then
       Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown))
     //otherwise we will be in a risky position with lagging negative
     else if ALagAccel < 0 then
@@ -380,9 +366,22 @@ begin
       LLeadEnd
     ) * Succ(LLeadEnd - LLeadStart);
 
+    //avoid outliers approaching very close to zero
+    if (LLagging <> 0)
+      and (Abs(LLeading) > MIN_LAG) //check to make sure we have a higher lead
+      and (Abs(LLagging) < MIN_LAG) //outlier check for small "dust"
+    then
+    begin
+      LogInfo('acceleration outlier detecting, bypassing position checks');
+      Exit(True);
+    end;
+
     //update internal (could probably just use internal vars here)
     FLag := LLagging;
     FLead := LLeading;
+
+    //used for debugging purposes
+    UpdateExtremaAccel;
 
     //determine if we are in a position
     LInPosition := (FPosition in [apFull, apRisky]) and (FPosSize >= LMin);
@@ -497,6 +496,16 @@ end;
 constructor TAccelerationStrategyImpl.Create;
 begin
   inherited Create;
+  SetLength(FAccels, 0);
+  SetLength(FDecels, 0);
+  FAvgMaxAccel := 0;
+  FMaxAccel := 0;
+  FMaxDecel := 0;
+  FAvgMaxDecel := 0;
+  FAvgAccel := 0;
+  FAvgDecel := 0;
+  FStdAccel := 0;
+  FStdDecel := 0;
   FLag := 0;
   FLead := 0;
   FPosSize := 0;
@@ -513,6 +522,80 @@ destructor TAccelerationStrategyImpl.Destroy;
 begin
   FPositionDetails := nil;
   inherited Destroy;
+end;
+
+procedure TAccelerationStrategyImpl.UpdateExtremaAccel;
+
+  procedure WriteLog;
+  begin
+    LogInfo(Format('acceleration readout [avgAccel]:%f [maxAccel]:%f [stdAccel]:%f [avgDecel]:%f [maxDecel]:%f [stdDecel]:%f', [FAvgMaxAccel, FMaxAccel, FStdAccel, FAvgMaxDecel, FMaxDecel, FStdDecel]));
+  end;
+
+var
+  LTemp: Single;
+  I: Int64;
+begin
+  if (FLag <> 0) then
+  begin
+    LTemp := FLead / FLag;
+
+    //acceleration
+    if LTemp > 0 then
+    begin
+      //keep to the size of tickers
+      if Length(FAccels) > (Tickers.Count * 1.10) then
+      begin
+        I := Trunc(Length(FAccels) * 0.10);
+        Move(FAccels[I], FAccels[0], SizeOf(FAccels[I]) * (Length(FAccels) - I));
+        SetLength(FAccels, Length(FAccels) - Succ(I));
+      end;
+
+      SetLength(FAccels, Succ(Length(FAccels)));
+      FAccels[High(FAccels)] := LTemp;
+
+      //get the average / std
+      meanandstddev(FAccels, FAvgAccel, FStdAccel);
+
+      if LTemp > FMaxAccel then
+      begin
+        FMaxAccel := LTemp;
+
+        if FAvgMaxAccel <> 0 then
+          FAvgMaxAccel := (FAvgMaxAccel + LTemp) / 2
+        else
+          FAvgMaxAccel := FLead / FLag;
+      end;
+    end
+    //deceleration
+    else
+    begin
+      //keep to the size of tickers
+      if Length(FDecels) > (Tickers.Count * 1.10) then
+      begin
+        I := Trunc(Length(FDecels) * 0.10);
+        Move(FDecels[I], FDecels[0], SizeOf(FDecels[I]) * (Length(FDecels) - I));
+        SetLength(FDecels, Length(FDecels) - Succ(I));
+      end;
+
+      SetLength(FDecels, Succ(Length(FDecels)));
+      FDecels[High(FDecels)] := LTemp;
+
+      //get the average / std
+      meanandstddev(FDecels, FAvgDecel, FStdDecel);
+
+      if LTemp < FMaxDecel then
+      begin
+        FMaxDecel := LTemp;
+
+        if FAvgMaxDecel <> 0 then
+          FAvgMaxDecel := (FAvgMaxDecel + LTemp) / 2
+        else
+          FAvgMaxDecel := LTemp;
+      end;
+    end;
+
+    WriteLog;
+  end;
 end;
 
 function TAccelerationStrategyImpl.GetCurLag: Single;

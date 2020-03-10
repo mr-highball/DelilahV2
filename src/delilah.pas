@@ -908,6 +908,9 @@ end;
 
 function TDelilahImpl.Feed(const ATicker: ITicker; out Error: string): Boolean;
 begin
+  if EngineState <> esStarted then
+    if not Start(Error) then
+      Exit;
   Result:=DoFeed(ATicker,Error);
 end;
 
@@ -933,6 +936,8 @@ begin
 end;
 
 function TDelilahImpl.Stop(out Error: String): Boolean;
+var
+  I: Integer;
 begin
   Result:=False;
   try
@@ -940,6 +945,11 @@ begin
     if FState=esStopped then
       Exit(true);
     Result:=DoStop(Error);
+
+    //clear strategy data
+    for I := 0 to Pred(FStrategies.Count) do
+      FStrategies[I].Clear;
+
     FState:=esStopped;
   except on E:Exception do
     Error:=E.Message;

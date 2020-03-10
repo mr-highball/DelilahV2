@@ -33,6 +33,7 @@ type
     //property methods
     function GetLeadEnd: Single;
     function GetLeadStart: Single;
+    function GetMaxDecel: Extended;
     function GetPosition: TAccelPosition;
     function GetPosPercent: Single;
     function GetRiskyPerc: Single;
@@ -46,6 +47,13 @@ type
     procedure SetThreshDown(const AValue: Single);
     function GetCurLag: Single;
     function GetCurLead: Single;
+    function GetAccelStd: Extended;
+    function GetMaxAccel: Extended;
+    function GetAvgAccel: Extended;
+    function GetAvgDecel: Extended;
+    function GetAvgMaxAccel: Extended;
+    function GetAvgMaxDecel: Extended;
+    function GetDecelStd: Extended;
 
     //properties
 
@@ -81,12 +89,16 @@ type
     (*
       the "buffer" around the lagging indicator that should be used to determine
       if the leading indicator has "crossed" upwards (buy)
+
+      (CurLeadAccel - CurLagAccel) / CurLagAccel
     *)
     property CrossThresholdPercent : Single read GetThresh write SetThresh;
 
     (*
       the "buffer" around the lagging indicator that should be used to determine
       if the leading indicator has "crossed" downwards (sell)
+
+      (CurLeadAccel - CurLagAccel) / CurLagAccel
     *)
     property CrossDownThresholdPercent : Single read GetThreshDown write SetThreshDown;
 
@@ -96,14 +108,74 @@ type
     property Position : TAccelPosition read GetPosition;
 
     (*
-      the current lagging acceleration average
+      the current lagging acceleration for the entire window
+      averageAccelerationPerTick * TickCount
     *)
     property CurLagAccel : Single read GetCurLag;
 
     (*
-      the current leading acceleration average
+      the current leading acceleration for the leading window
+      the window is defined as LeadStart -> LeadEnd
+      averageAccelerationPerTick * TickCount
     *)
     property CurLeadAccel : Single read GetCurLead;
+
+    (*
+      the average of window acceleration differences. might be confusing,
+      here's some info:
+
+      once the window is "Ready", for every tick that reports
+      a positive acceleration difference (CurLeadAccel - CurLagAccel) / CurLagAccel
+      that number will be recorded. The mean of these recordings is
+      the "AverageAcceleration". It's important to note that this metric
+      is the "opposite" of "AverageDeceleration"
+    *)
+    property AverageAcceleration : Extended read GetAvgAccel;
+
+    (*
+      for every new MaxAccleration, this metric will be averaged with
+      the previous "high"
+    *)
+    property AverageMaxAcceleration : Extended read GetAvgMaxAccel;
+
+    (*
+      records the maximum acceleration difference seen from the beggining
+      of feeding ticks to this strategy
+    *)
+    property MaxAcceleration : Extended read GetMaxAccel;
+
+    (*
+      the standard deviation of the "AverageAcceleration" recordings
+    *)
+    property AccelerationStdDev : Extended read GetAccelStd;
+
+    (*
+      the "average of averages" of decelerations
+
+      once the window is "Ready", for every tick that reports
+      a negative acceleration (deceleration) difference (CurLeadAccel - CurLagAccel)
+      that number will be recorded. The mean of these recordings is
+      the "AverageDeceleration". It's important to note that this metric
+      is the "opposite" of "AverageAcceleration"
+    *)
+    property AverageDeceleration : Extended read GetAvgDecel;
+
+    (*
+      for every new MaxDeceleration, this metric will be averaged with
+      the previous "high"
+    *)
+    property AverageMaxDeceleration : Extended read GetAvgMaxDecel;
+
+    (*
+      records the maximum acceleration difference seen from the beggining
+      of feeding ticks to this strategy
+    *)
+    property MaxDeceleration : Extended read GetMaxDecel;
+
+    (*
+      the standard deviation of the "AverageDeceleration" recordings
+    *)
+    property DecelerationStdDev : Extended read GetDecelStd;
   end;
 
   { TAccelerationStrategyImpl }
@@ -138,8 +210,19 @@ type
     FStdAccel,
     FStdDecel: Extended;
     FAccels,
-    FDecels: TArray<Single>;
-    procedure UpdateExtremaAccel;
+    FDecels,
+    FLaggings: TArray<Extended>;
+    function GetAccelStd: Extended;
+    function GetAMaxAccel: Extended;
+    function GetAvgAccel: Extended;
+    function GetAvgDecel: Extended;
+    function GetAvgMaxAccel: Extended;
+    function GetAvgMaxDecel: Extended;
+    function GetDecelStd: Extended;
+    function GetMaxAccel: Extended;
+    function GetMaxDecel: Extended;
+    procedure UpdateExtremaAccel(const ALeading, ALagging : Single;
+      out IsOutlier : Boolean);
   protected
     function GetCurLag: Single;
     function GetCurLead: Single;
@@ -157,6 +240,9 @@ type
     function GetThreshDown: Single;
     procedure SetThreshDOwn(const AValue: Single);
   strict protected
+    function CalcAccelDiffPerc(const ALead, ALag : Single;
+      out IsAccel : Boolean) : Single;
+
     (*
       returns the minimum order size that can be taken. children can
       override this as it's used in DoFeed to determine if we are in position
@@ -213,6 +299,14 @@ type
     property Position : TAccelPosition read GetPosition;
     property CurLagAccel : Single read GetCurLag;
     property CurLeadAccel : Single read GetCurLead;
+    property AverageAcceleration : Extended read GetAvgAccel;
+    property AverageMaxAcceleration : Extended read GetAvgMaxAccel;
+    property MaxAcceleration : Extended read GetAMaxAccel;
+    property AccelerationStdDev : Extended read GetAccelStd;
+    property AverageDeceleration : Extended read GetAvgDecel;
+    property AverageMaxDeceleration : Extended read GetAvgMaxDecel;
+    property MaxDeceleration : Extended read GetMaxDecel;
+    property DecelerationStdDev : Extended read GetDecelStd;
 
     constructor Create; override;
     destructor Destroy; override;
@@ -236,6 +330,18 @@ begin
   FThreshDown := AValue;
 end;
 
+function TAccelerationStrategyImpl.CalcAccelDiffPerc(const ALead, ALag: Single;
+  out IsAccel: Boolean): Single;
+begin
+  Result := 0;
+
+  if ALag = 0 then
+    Exit;
+
+  IsAccel := ALead > ALag;
+  Result := (ALead - ALag) / Abs(ALag);
+end;
+
 function TAccelerationStrategyImpl.GetMinOrderSize(const ATicker: ITicker): Extended;
 begin
   //base just returns a small number and doesn't use the ticker
@@ -249,28 +355,39 @@ var
   LTicker: ITickerGDAX;
   LMin: Extended;
   LLagging, LLeading: Single;
-  LInPosition: Boolean;
+  LInPosition, LIsOutlier: Boolean;
   LPos : TAccelPosition;
   LFunds : Extended;
   LDetails: IOrderDetails;
   LID: String;
   LLeadStart, LLeadEnd: Int64;
 const
-    MIN_LAG = 0.00001;
+    MIN_LAG = 0.0001;
 
   (*
     helper to determine if we should take a position
   *)
   function GetTakePosition(const ALeadAccel, ALagAccel : Single;
     out Position : TAccelPosition; out Funds : Extended) : Boolean;
+  var
+    LDiff : Single;
+    LIsAccel : Boolean;
   begin
     Result := False;
+    LIsAccel := False;
     Position := apNone;
     Funds := 0;
 
+    //calculate the percent difference between leading & lagging
+    LDiff := CalcAccelDiffPerc(ALeadAccel, ALagAccel, LIsAccel);
+
+    if LDiff = 0 then
+      Exit;
+
     //check for main position
-    if (ALagAccel > 0) and (ALeadAccel > 0) then
+    if ALagAccel > 0 then
     begin
+      //find the amount of funds to spend for a full position
       Funds := FPosPercent * AFunds;
 
       if Funds <= 0 then
@@ -279,12 +396,18 @@ const
       if Funds > AFunds then
         Funds := AFunds;
 
-      Result := ALeadAccel >= (ALagAccel * (1 + FThresh));
+      //take position if positive diff percent, and is greater than the threshold
+      //or if threshold is negative handle differently
+      Result :=
+        ((FThresh > 0) and (LDiff >= FThresh))
+        or
+        ((FThresh < 0) and (LDiff <= FThresh));
       Position := apFull;
     end
     //check for risky position
     else if FRiskyPerc > 0 then
     begin
+      //find amount of funds to spend for a risky position
       Funds := FRiskyPerc * AFunds;
 
       if Funds < 0 then
@@ -293,7 +416,11 @@ const
       if Funds > AFunds then
         Funds := AFunds;
 
-      Result := ALeadAccel >= (ALagAccel * (1 - FThresh));
+      //close position if positive diff percent, and is greater than the threshold
+      Result :=
+        ((FThresh > 0) and (LDiff >= FThresh))
+        or
+        ((FThresh < 0) and (LDiff <= FThresh));
       Position := apRisky;
     end;
   end;
@@ -302,21 +429,30 @@ const
     helper to determine if we should close the position
   *)
   function GetClosePosition(const ALeadAccel, ALagAccel : Single) : Boolean;
-  const
-    MIN_LAG = 0.00001;
+  var
+    LDiff : Single;
+    LIsAccel : Boolean;
   begin
     Result := False;
+    LIsAccel := False;
 
     if FPosition = apNone then
       Exit;
 
-    //now check if we are greater than zero and have a full/risky position
-    //with the leading acceleration indicator crossing down below lagging
-    if (ALagAccel > 0) then
-      Result := ALeadAccel <= (ALagAccel * (1 - FThreshDown))
-    //otherwise we will be in a risky position with lagging negative
-    else if ALagAccel < 0 then
-      Result := ALeadAccel <= (ALagAccel * (1 + FThreshDown));
+    //calculate the percent difference between leading & lagging
+    LDiff := CalcAccelDiffPerc(ALeadAccel, ALagAccel, LIsAccel);
+
+    if LDiff = 0 then
+      Exit;
+
+    //close position if negative diff percent, and is greater than the threshold
+    //or if we negative threshold set, and the diff exceeds it
+    Result :=
+      (not LIsAccel and (FThreshdown > 0) and (abs(LDiff) >= FThreshDown))
+      or
+      (not LIsAccel and (FThreshdown < 0) and (LDiff <= FThreshDown))
+      or
+      (LIsAccel and (FThreshdown < 0) and (LDiff >= abs(FThreshdown))); //take profit case
   end;
 
   procedure ClearPosition;
@@ -366,22 +502,18 @@ begin
       LLeadEnd
     ) * Succ(LLeadEnd - LLeadStart);
 
-    //avoid outliers approaching very close to zero
-    if (LLagging <> 0)
-      and (Abs(LLeading) > MIN_LAG) //check to make sure we have a higher lead
-      and (Abs(LLagging) < MIN_LAG) //outlier check for small "dust"
-    then
+    //updates metrics (avg, max, outliers, etc...)
+    UpdateExtremaAccel(LLeading, LLagging, LIsOutlier);
+
+    if LIsOutlier then
     begin
-      LogInfo('acceleration outlier detecting, bypassing position checks');
+      LogInfo(Format('outlier lagging detected, skipping [lagging]:%f', [LLagging]));
       Exit(True);
     end;
 
     //update internal (could probably just use internal vars here)
     FLag := LLagging;
     FLead := LLeading;
-
-    //used for debugging purposes
-    UpdateExtremaAccel;
 
     //determine if we are in a position
     LInPosition := (FPosition in [apFull, apRisky]) and (FPosSize >= LMin);
@@ -524,23 +656,66 @@ begin
   inherited Destroy;
 end;
 
-procedure TAccelerationStrategyImpl.UpdateExtremaAccel;
+procedure TAccelerationStrategyImpl.UpdateExtremaAccel(const ALeading, ALagging : Single;
+  out IsOutlier : Boolean);
 
   procedure WriteLog;
   begin
     LogInfo(Format('acceleration readout [avgAccel]:%f [maxAccel]:%f [stdAccel]:%f [avgDecel]:%f [maxDecel]:%f [stdDecel]:%f', [FAvgMaxAccel, FMaxAccel, FStdAccel, FAvgMaxDecel, FMaxDecel, FStdDecel]));
   end;
 
+const
+  OUTLIER_BOUND = 0.33;
 var
-  LTemp: Single;
+  LAccelDiffPerc: Single;
   I: Int64;
+  LIsAccel : Boolean;
+  LLagAvg,
+  LLagStd : Extended;
 begin
-  if (FLag <> 0) then
-  begin
-    LTemp := FLead / FLag;
+  IsOutlier := False;
+  LLagAvg := 0;
+  LLagStd := 0;
 
+  //see if we have an outlier lagging so our numbers aren't hosed by close
+  //to zero bullshit
+  if Length(FLaggings) > 1 then
+  begin
+    meanandstddev(FLaggings, LLagAvg, LLagStd);
+
+    if (ALagging >= 0 - (LLagStd * OUTLIER_BOUND))
+      and (ALagging <= 0 + (LLagStd * OUTLIER_BOUND))
+    then
+    begin
+      IsOutlier := True;
+      Exit;
+    end;
+
+    SetLength(FLaggings, Succ(Length(FLaggings)));
+    FLaggings[High(FLaggings)] := ALagging;
+
+    //bounds check like below to keep along the lines of ticker count
+    if Length(FLaggings) > (Tickers.Count * 1.10) then
+    begin
+      I := Trunc(Length(FLaggings) * 0.10);
+      Move(FLaggings[I], FLaggings[0], SizeOf(FLaggings[I]) * (Length(FLaggings) - I));
+      SetLength(FLaggings, Length(FLaggings) - Succ(I));
+    end;
+  end
+  else
+  begin
+    SetLength(FLaggings, Succ(Length(FLaggings)));
+    FLaggings[High(FLaggings)] := ALagging;
+  end;
+
+  //calculate the difference percentage between leading and lagging
+  LAccelDiffPerc := CalcAccelDiffPerc(ALeading, ALagging, LIsAccel);
+
+  //ignore zero accelerations
+  if (LAccelDiffPerc <> 0) then
+  begin
     //acceleration
-    if LTemp > 0 then
+    if LIsAccel then
     begin
       //keep to the size of tickers
       if Length(FAccels) > (Tickers.Count * 1.10) then
@@ -548,20 +723,24 @@ begin
         I := Trunc(Length(FAccels) * 0.10);
         Move(FAccels[I], FAccels[0], SizeOf(FAccels[I]) * (Length(FAccels) - I));
         SetLength(FAccels, Length(FAccels) - Succ(I));
+
+        //re-balance max
+        FMaxAccel := maxvalue(FAccels);
+        FAvgMaxAccel := FMaxAccel;
       end;
 
       SetLength(FAccels, Succ(Length(FAccels)));
-      FAccels[High(FAccels)] := LTemp;
+      FAccels[High(FAccels)] := LAccelDiffPerc;
 
       //get the average / std
       meanandstddev(FAccels, FAvgAccel, FStdAccel);
 
-      if LTemp > FMaxAccel then
+      if LAccelDiffPerc > FMaxAccel then
       begin
-        FMaxAccel := LTemp;
+        FMaxAccel := LAccelDiffPerc;
 
         if FAvgMaxAccel <> 0 then
-          FAvgMaxAccel := (FAvgMaxAccel + LTemp) / 2
+          FAvgMaxAccel := (FAvgMaxAccel + LAccelDiffPerc) / 2
         else
           FAvgMaxAccel := FLead / FLag;
       end;
@@ -575,27 +754,76 @@ begin
         I := Trunc(Length(FDecels) * 0.10);
         Move(FDecels[I], FDecels[0], SizeOf(FDecels[I]) * (Length(FDecels) - I));
         SetLength(FDecels, Length(FDecels) - Succ(I));
+
+        //re-balance max
+        FMaxDecel := maxvalue(FDecels);
+        FAvgMaxDecel := FMaxDecel;
       end;
 
       SetLength(FDecels, Succ(Length(FDecels)));
-      FDecels[High(FDecels)] := LTemp;
+      FDecels[High(FDecels)] := LAccelDiffPerc;
 
       //get the average / std
       meanandstddev(FDecels, FAvgDecel, FStdDecel);
 
-      if LTemp < FMaxDecel then
+      if LAccelDiffPerc < FMaxDecel then
       begin
-        FMaxDecel := LTemp;
+        FMaxDecel := LAccelDiffPerc;
 
         if FAvgMaxDecel <> 0 then
-          FAvgMaxDecel := (FAvgMaxDecel + LTemp) / 2
+          FAvgMaxDecel := (FAvgMaxDecel + LAccelDiffPerc) / 2
         else
-          FAvgMaxDecel := LTemp;
+          FAvgMaxDecel := LAccelDiffPerc;
       end;
     end;
 
     WriteLog;
   end;
+end;
+
+function TAccelerationStrategyImpl.GetAccelStd: Extended;
+begin
+  Result := FStdAccel;
+end;
+
+function TAccelerationStrategyImpl.GetAMaxAccel: Extended;
+begin
+  Result := FMaxAccel;
+end;
+
+function TAccelerationStrategyImpl.GetAvgAccel: Extended;
+begin
+  Result := FAvgAccel;
+end;
+
+function TAccelerationStrategyImpl.GetAvgDecel: Extended;
+begin
+  Result := FAvgDecel;
+end;
+
+function TAccelerationStrategyImpl.GetAvgMaxAccel: Extended;
+begin
+  Result := FAvgMaxAccel;
+end;
+
+function TAccelerationStrategyImpl.GetAvgMaxDecel: Extended;
+begin
+  Result := FAvgMaxDecel;
+end;
+
+function TAccelerationStrategyImpl.GetDecelStd: Extended;
+begin
+  Result := FStdDecel;
+end;
+
+function TAccelerationStrategyImpl.GetMaxAccel: Extended;
+begin
+  Result := FMaxAccel;
+end;
+
+function TAccelerationStrategyImpl.GetMaxDecel: Extended;
+begin
+  Result := FMaxDecel;
 end;
 
 function TAccelerationStrategyImpl.GetCurLag: Single;

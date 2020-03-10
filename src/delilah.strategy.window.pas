@@ -99,6 +99,7 @@ type
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
       const AFunds, AInventory,AAAC: Extended; out Error: String): Boolean; override;
+    procedure DoClear; override;
     (*
       virtual in the event children will want to add additional checks to
       state that a window is "ready"
@@ -284,6 +285,12 @@ begin
   except on E:Exception do
     Error:=E.Message;
   end;
+end;
+
+procedure TWindowStrategyImpl.DoClear;
+begin
+  inherited DoClear;
+  FTickers.Clear;
 end;
 
 constructor TWindowStrategyImpl.Create;

@@ -376,6 +376,9 @@ begin
   //get the strategy to use for simulation and add to the engine
   LoadStrategies(LEngine.Strategies);
 
+  //startup the engine to accept tickers
+  LEngine.Start;
+
   progress_simulate.Position := 0;
   LStep := Trunc(FTickers.Count / 20);
   for I := 0 to Pred(FTickers.Count) do
@@ -427,6 +430,10 @@ begin
     if I mod 200 = 0 then
       Application.ProcessMessages;
   end;
+
+  //stop the engine to clear out any data from the strategies since
+  //those don't free with the engine freeing
+  LEngine.Stop;
 
   if FCancelSim then
     ShowMessage('Simulation Cancelled :(')

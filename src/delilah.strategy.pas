@@ -26,9 +26,11 @@ type
     procedure LogInfo(Const AMessage:String);
     procedure LogError(Const AMessage:String);
     procedure LogWarning(Const AMessage:String);
+    procedure DoClear;virtual;
   public
     function Feed(Const ATicker : ITicker;Const AManager:IOrderManager;
       Const AFunds,AInventory,AAAC:Extended;Out Error:String):Boolean;
+    procedure Clear;
     constructor Create;virtual;overload;
     constructor Create(Const AOnInfo,AOnError,AOnWarn:TStrategyLogEvent);virtual;overload;
   end;
@@ -55,6 +57,11 @@ begin
     FOnWarn(Self.Classname + '::' + AMessage);
 end;
 
+procedure TStrategyImpl.DoClear;
+begin
+  //nothing in base
+end;
+
 function TStrategyImpl.Feed(const ATicker: ITicker;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
@@ -73,6 +80,11 @@ begin
   Result:=DoFeed(ATicker,AManager,AFunds,AInventory,AAAC,Error);
   if not Result then
     LogError(Error);
+end;
+
+procedure TStrategyImpl.Clear;
+begin
+  DoClear;
 end;
 
 constructor TStrategyImpl.Create;

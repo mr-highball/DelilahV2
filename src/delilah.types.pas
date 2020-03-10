@@ -192,6 +192,11 @@ type
     ['{7F3F7AE5-BD9A-45EE-B4E3-6F3E9DC52964}']
     function Feed(Const ATicker : ITicker;Const AManager:IOrderManager;
       Const AFunds,AInventory,AAAC:Extended;Out Error:String):Boolean;
+
+    (*
+      clears internal data kept by the strategy, leaving settings intact
+    *)
+    procedure Clear;
   end;
 
   TStrategies = TFPGInterfacedObjectList<IStrategy>;

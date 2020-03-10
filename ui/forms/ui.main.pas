@@ -650,12 +650,12 @@ begin
   //configure the buy le dip strategy (just buy no sells)
   LBuyLeDip.UseMarketBuy := False;
   LBuyLeDip.UseMarketSell := False;
-  LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 5400000;
+  LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 3600000;
   LBuyLeDip.AvoidChop := False;
   LBuyLeDip.GTFOPerc := 0;
-  LBuyLeDip.SmallTierPerc := 0;
+  LBuyLeDip.SmallTierPerc := 0.005;
   LBuyLeDip.MidTierPerc := 0;
-  LBuyLeDip.LargeTierPerc := 0.003;
+  LBuyLeDip.LargeTierPerc := 0.01;
   LBuyLeDip.SmallTierSellPerc := 0;
   LBuyLeDip.MidTierSellPerc := 0;
   LBuyLeDip.LargeTierSellPerc := 0;
@@ -666,7 +666,7 @@ begin
   LBuyLeDip.OnlyProfit := True;
   LBuyLeDip.MinProfit := 0.99; //make sure this one never sells
   LBuyLeDip.MinProfit := 0;
-  LBuyLeDip.MinReduction := 0.0005;
+  LBuyLeDip.MinReduction := 0.001;
 
   //configure the low acceleration
   LAccelLow.WindowSizeInMilli := 7200000;
@@ -674,8 +674,8 @@ begin
   LAccelLow.LeadEndPercent := 1.0;
   LAccelLow.PositionPercent := 0.10;
   LAccelLow.RiskyPositionPercent := 0;
-  LAccelLow.CrossThresholdPercent := 3;
-  LAccelLow.CrossDownThresholdPercent := 3;
+  LAccelLow.CrossThresholdPercent := 5;
+  LAccelLow.CrossDownThresholdPercent := 8;
 
   //configure the higher acceleration
   LAccelHigh.WindowSizeInMilli := 10800000;
@@ -683,8 +683,8 @@ begin
   LAccelHigh.LeadEndPercent := 1.0;
   LAccelHigh.PositionPercent := 0.10;
   LAccelHigh.RiskyPositionPercent := 0;
-  LAccelHigh.CrossThresholdPercent := 3;
-  LAccelHigh.CrossDownThresholdPercent := 3;
+  LAccelHigh.CrossThresholdPercent := 5;
+  LAccelHigh.CrossDownThresholdPercent := 8;
 
   //add all strategies
   FEngine.Strategies.Add(LAccelLow);

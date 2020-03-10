@@ -13,6 +13,7 @@ type
   { TConfigureAcceleration }
 
   TConfigureAcceleration = class(TConfigureStrategy)
+    chk_dynamic: TCheckBox;
     edit_lead_starting_percent: TEdit;
     edit_cross_thresh: TEdit;
     edit_risky_pos_percent: TEdit;
@@ -62,6 +63,8 @@ begin
 
   if edit_cross_down_thresh.Text <> '' then
     LStrat.CrossDownThresholdPercent := StrToFloat(edit_cross_down_thresh.Text);
+
+  LStrat.UseDynamicPositions := chk_dynamic.Checked;
 end;
 
 procedure TConfigureAcceleration.DoReload(const AStrategy: IStrategy);
@@ -77,6 +80,7 @@ begin
   edit_risky_pos_percent.Text := FloatToStr(LStrat.RiskyPositionPercent);
   edit_cross_thresh.Text := FloatToStr(LStrat.CrossThresholdPercent);
   edit_cross_down_thresh.Text := FloatToStr(LStrat.CrossDownThresholdPercent);
+  chk_dynamic.Checked := LStrat.UseDynamicPositions;
 end;
 
 constructor TConfigureAcceleration.Create(TheOwner: TComponent);

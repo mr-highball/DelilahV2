@@ -39,6 +39,7 @@ type
     function GetRiskyPerc: Single;
     function GetThresh: Single;
     function GetThreshDown: Single;
+    function GetUseDyn: Boolean;
     procedure SetLeadEnd(const AValue: Single);
     procedure SetLeadStart(const AValue: Single);
     procedure SetPosPercent(const AValue: Single);
@@ -54,6 +55,7 @@ type
     function GetAvgMaxAccel: Extended;
     function GetAvgMaxDecel: Extended;
     function GetDecelStd: Extended;
+    procedure SetUseDyn(const AValue: Boolean);
 
     //properties
 
@@ -176,6 +178,13 @@ type
       the standard deviation of the "AverageDeceleration" recordings
     *)
     property DecelerationStdDev : Extended read GetDecelStd;
+
+    (*
+      attempts to optimize cross thresholds to make better entries / exits.
+      user specified cross percents are used as minimums in this case
+      **experimental**
+    *)
+    property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn; deprecated;
   end;
 
   { TAccelerationStrategyImpl }
@@ -212,6 +221,8 @@ type
     FAccels,
     FDecels,
     FLaggings: TArray<Extended>;
+    FUseDyn : Boolean;
+  protected
     function GetAccelStd: Extended;
     function GetAMaxAccel: Extended;
     function GetAvgAccel: Extended;
@@ -221,9 +232,10 @@ type
     function GetDecelStd: Extended;
     function GetMaxAccel: Extended;
     function GetMaxDecel: Extended;
+    function GetUseDyn: Boolean;
+    procedure SetUseDyn(const AValue: Boolean);
     procedure UpdateExtremaAccel(const ALeading, ALagging : Single;
       out IsOutlier : Boolean);
-  protected
     function GetCurLag: Single;
     function GetCurLead: Single;
     function GetPosition: TAccelPosition;
@@ -307,6 +319,7 @@ type
     property AverageMaxDeceleration : Extended read GetAvgMaxDecel;
     property MaxDeceleration : Extended read GetMaxDecel;
     property DecelerationStdDev : Extended read GetDecelStd;
+    property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn;
 
     constructor Create; override;
     destructor Destroy; override;
@@ -361,8 +374,6 @@ var
   LDetails: IOrderDetails;
   LID: String;
   LLeadStart, LLeadEnd: Int64;
-const
-    MIN_LAG = 0.0001;
 
   (*
     helper to determine if we should take a position
@@ -370,7 +381,8 @@ const
   function GetTakePosition(const ALeadAccel, ALagAccel : Single;
     out Position : TAccelPosition; out Funds : Extended) : Boolean;
   var
-    LDiff : Single;
+    LDiff,
+    LThresh: Single;
     LIsAccel : Boolean;
   begin
     Result := False;
@@ -383,6 +395,26 @@ const
 
     if LDiff = 0 then
       Exit;
+
+    //see if we are using dynamic thresholds
+    if FUseDyn then
+    begin
+      //set here to easily debug
+      LThresh := FAvgAccel + (FStdDecel * 0.10);
+
+      //negate when user specified to do so
+      if FThresh < 0 then
+        LThresh := -LThresh;
+
+      //set back to the user specified threshold if it's stricter
+      if (FThresh > 0) and (LThresh < FThresh) then
+        LThresh := FThresh
+      else if (FThresh < 0) and (LThresh > FThresh) then
+        LThresh := FThresh;
+    end
+    //not using dynamic, set to user specified
+    else
+      LThresh := FThresh;
 
     //check for main position
     if ALagAccel > 0 then
@@ -399,9 +431,9 @@ const
       //take position if positive diff percent, and is greater than the threshold
       //or if threshold is negative handle differently
       Result :=
-        ((FThresh > 0) and (LDiff >= FThresh))
+        ((LThresh > 0) and (LDiff >= LThresh))
         or
-        ((FThresh < 0) and (LDiff <= FThresh));
+        ((LThresh < 0) and (LDiff <= LThresh));
       Position := apFull;
     end
     //check for risky position
@@ -418,9 +450,9 @@ const
 
       //close position if positive diff percent, and is greater than the threshold
       Result :=
-        ((FThresh > 0) and (LDiff >= FThresh))
+        ((LThresh > 0) and (LDiff >= LThresh))
         or
-        ((FThresh < 0) and (LDiff <= FThresh));
+        ((LThresh < 0) and (LDiff <= LThresh));
       Position := apRisky;
     end;
   end;
@@ -432,6 +464,7 @@ const
   var
     LDiff : Single;
     LIsAccel : Boolean;
+    LThresh : Single;
   begin
     Result := False;
     LIsAccel := False;
@@ -445,14 +478,37 @@ const
     if LDiff = 0 then
       Exit;
 
+    //see if we are using dynamic thresholds
+    if FUseDyn then
+    begin
+      //set here to easily debug
+      LThresh := abs(FAvgDecel) + abs(FStdDecel) * 0.10;
+
+      //negate when user specified to do so
+      if FThreshDown < 0 then
+        LThresh := -LThresh;
+
+      //set back to the user specified threshold if it's stricter
+      if not LIsAccel and (FThreshDown > 0) and (LThresh < FThreshDown) then
+        LThresh := FThreshdown
+      else if not LIsAccel and (FThreshDown < 0) and (LThresh > FThreshDown) then
+        LThresh := FThreshDown
+      else if LIsAccel and (FThreshDown < 0) and (LThresh < FThreshDown) then
+        LThresh := FThreshDown;
+    end
+    //not using dynamic, set to user specified
+    else
+      LThresh := FThreshDown;
+
+
     //close position if negative diff percent, and is greater than the threshold
     //or if we negative threshold set, and the diff exceeds it
     Result :=
-      (not LIsAccel and (FThreshdown > 0) and (abs(LDiff) >= FThreshDown))
+      (not LIsAccel and (LThresh > 0) and (abs(LDiff) >= LThresh))
       or
-      (not LIsAccel and (FThreshdown < 0) and (LDiff <= FThreshDown))
+      (not LIsAccel and (LThresh < 0) and (LDiff <= LThresh))
       or
-      (LIsAccel and (FThreshdown < 0) and (LDiff >= abs(FThreshdown))); //take profit case
+      (LIsAccel and (LThresh < 0) and (LDiff >= abs(LThresh))); //take profit case
   end;
 
   procedure ClearPosition;
@@ -628,6 +684,7 @@ end;
 constructor TAccelerationStrategyImpl.Create;
 begin
   inherited Create;
+  FUseDyn := False;
   SetLength(FAccels, 0);
   SetLength(FDecels, 0);
   FAvgMaxAccel := 0;
@@ -665,7 +722,7 @@ procedure TAccelerationStrategyImpl.UpdateExtremaAccel(const ALeading, ALagging 
   end;
 
 const
-  OUTLIER_BOUND = 0.33;
+  OUTLIER_BOUND = 0.15;
 var
   LAccelDiffPerc: Single;
   I: Int64;
@@ -824,6 +881,16 @@ end;
 function TAccelerationStrategyImpl.GetMaxDecel: Extended;
 begin
   Result := FMaxDecel;
+end;
+
+function TAccelerationStrategyImpl.GetUseDyn: Boolean;
+begin
+  Result := FUseDyn;
+end;
+
+procedure TAccelerationStrategyImpl.SetUseDyn(const AValue: Boolean);
+begin
+  FUseDyn := AValue;
 end;
 
 function TAccelerationStrategyImpl.GetCurLag: Single;

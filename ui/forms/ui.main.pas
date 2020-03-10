@@ -615,7 +615,8 @@ var
   LSellForMonies,
   LBuyLeDip:ITierStrategyGDAX;
   LAccelLow,
-  LAccelHigh: IAccelerationStrategy;
+  LAccelHigh,
+  LAccelHighest: IAccelerationStrategy;
 const
   MOON_MIN_WINDOW = 20 * 60 * 1000;
 begin
@@ -626,19 +627,20 @@ begin
   LBuyLeDip := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHigh := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
 
   //configure the sell for monies to sell for profits
   LSellForMonies.UseMarketBuy := False;
   LSellForMonies.UseMarketSell := False;
-  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 600000;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 1200000;
   LSellForMonies.AvoidChop := False;
   LSellForMonies.GTFOPerc := 0;
   LSellForMonies.SmallTierPerc := 0;
   LSellForMonies.MidTierPerc := 0;
   LSellForMonies.LargeTierPerc := 0;
-  LSellForMonies.SmallTierSellPerc := 0.01;
-  LSellForMonies.MidTierSellPerc := 0.02;
-  LSellForMonies.LargeTierSellPerc := 0.02;
+  LSellForMonies.SmallTierSellPerc := 0.001;
+  LSellForMonies.MidTierSellPerc := 0.001;
+  LSellForMonies.LargeTierSellPerc := 0.01;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0.95;
   LSellForMonies.LimitFee := 0.001;
   LSellForMonies.MarketFee := 0.002;
@@ -653,9 +655,9 @@ begin
   LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 3600000;
   LBuyLeDip.AvoidChop := False;
   LBuyLeDip.GTFOPerc := 0;
-  LBuyLeDip.SmallTierPerc := 0.005;
-  LBuyLeDip.MidTierPerc := 0;
-  LBuyLeDip.LargeTierPerc := 0.01;
+  LBuyLeDip.SmallTierPerc := 0.001;
+  LBuyLeDip.MidTierPerc := 0.001;
+  LBuyLeDip.LargeTierPerc := 0.002;
   LBuyLeDip.SmallTierSellPerc := 0;
   LBuyLeDip.MidTierSellPerc := 0;
   LBuyLeDip.LargeTierSellPerc := 0;
@@ -666,29 +668,42 @@ begin
   LBuyLeDip.OnlyProfit := True;
   LBuyLeDip.MinProfit := 0.99; //make sure this one never sells
   LBuyLeDip.MinProfit := 0;
-  LBuyLeDip.MinReduction := 0.001;
+  LBuyLeDip.MinReduction := 0.0001;
 
   //configure the low acceleration
   LAccelLow.WindowSizeInMilli := 7200000;
   LAccelLow.LeadStartPercent := 0.8;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.10;
-  LAccelLow.RiskyPositionPercent := 0;
-  LAccelLow.CrossThresholdPercent := 5;
-  LAccelLow.CrossDownThresholdPercent := 8;
+  LAccelLow.PositionPercent := 0.075;
+  LAccelLow.RiskyPositionPercent := 0.025;
+  LAccelLow.CrossThresholdPercent := 0.5;
+  LAccelLow.CrossDownThresholdPercent := 0.5;
+  LAccelLow.UseDynamicPositions := False;
 
   //configure the higher acceleration
   LAccelHigh.WindowSizeInMilli := 10800000;
   LAccelHigh.LeadStartPercent := 0.8;
   LAccelHigh.LeadEndPercent := 1.0;
-  LAccelHigh.PositionPercent := 0.10;
-  LAccelHigh.RiskyPositionPercent := 0;
-  LAccelHigh.CrossThresholdPercent := 5;
-  LAccelHigh.CrossDownThresholdPercent := 8;
+  LAccelHigh.PositionPercent := 0.20;
+  LAccelHigh.RiskyPositionPercent := 0.10;
+  LAccelHigh.CrossThresholdPercent := 0.5;
+  LAccelHigh.CrossDownThresholdPercent := 0.5;
+  LAccelHigh.UseDynamicPositions := False;
+
+  //configure the higher acceleration
+  LAccelHighest.WindowSizeInMilli := 14400000;
+  LAccelHighest.LeadStartPercent := 0.8;
+  LAccelHighest.LeadEndPercent := 1.0;
+  LAccelHighest.PositionPercent := 0.15;
+  LAccelHighest.RiskyPositionPercent := 0.05;
+  LAccelHighest.CrossThresholdPercent := 0.5;
+  LAccelHighest.CrossDownThresholdPercent := 0.5;
+  LAccelHighest.UseDynamicPositions := False;
 
   //add all strategies
   FEngine.Strategies.Add(LAccelLow);
   FEngine.Strategies.Add(LAccelHigh);
+  FEngine.Strategies.Add(LAccelHighest);
   FEngine.Strategies.Add(LBuyLeDip);
   FEngine.Strategies.Add(LSellForMonies);
 

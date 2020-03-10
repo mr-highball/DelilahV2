@@ -15,7 +15,7 @@ inherited ConfigureAcceleration: TConfigureAcceleration
     Height = 478
     Width = 951
     HorzScrollBar.Page = 360
-    VertScrollBar.Page = 336
+    VertScrollBar.Page = 380
     ClientHeight = 474
     ClientWidth = 947
     object edit_window_size: TEdit[0]
@@ -123,6 +123,21 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       BorderSpacing.Top = 8
       TabOrder = 6
       TextHint = 'Cross Down Threshold Percent (Close)'
+    end
+    object chk_dynamic: TCheckBox[7]
+      AnchorSideLeft.Control = edit_cross_down_thresh
+      AnchorSideTop.Control = edit_cross_down_thresh
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_window_size
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 36
+      Top = 344
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      Caption = 'Use Dynamic Positions'
+      TabOrder = 7
     end
   end
   inherited pnl_name: TPanel

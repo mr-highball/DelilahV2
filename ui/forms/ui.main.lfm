@@ -1,7 +1,7 @@
 object Main: TMain
-  Left = 1083
+  Left = 883
   Height = 1006
-  Top = 215
+  Top = 183
   Width = 1292
   Align = alRight
   Caption = 'SimpleBot v1.0.0'
@@ -10,12 +10,11 @@ object Main: TMain
   DesignTimePPI = 192
   Menu = menu_main
   OnCreate = FormCreate
-  Position = poScreenCenter
   ShowHint = True
   LCLVersion = '2.0.2.0'
   object pctrl_main: TPageControl
     Left = 10
-    Height = 758
+    Height = 663
     Top = 10
     Width = 1272
     ActivePage = ts_auth
@@ -113,46 +112,57 @@ object Main: TMain
     end
     object ts_log: TTabSheet
       Caption = 'Logging'
-      ClientHeight = 204
-      ClientWidth = 620
+      ClientHeight = 605
+      ClientWidth = 1256
       ImageIndex = 2
       ParentFont = False
       inline multi_log: TMultiLine
-        Left = 5
-        Height = 248
-        Top = 5
-        Width = 618
+        Left = 10
+        Height = 435
+        Top = 10
+        Width = 1236
         Align = alClient
         BorderSpacing.Left = 10
         BorderSpacing.Top = 10
         BorderSpacing.Right = 10
         BorderSpacing.Bottom = 10
-        ClientHeight = 248
-        ClientWidth = 618
+        ClientHeight = 435
+        ClientWidth = 1236
         DesignLeft = 1260
         DesignTop = 614
         inherited pnl_control: TPanel
-          Height = 178
-          Width = 608
+          Left = 20
+          Height = 239
+          Top = 176
+          Width = 1196
           BorderSpacing.Left = 20
           BorderSpacing.Top = 20
           BorderSpacing.Right = 20
           BorderSpacing.Bottom = 20
         end
         inherited lbl_title: TLabel
-          Width = 608
+          Left = 20
+          Height = 32
+          Top = 20
+          Width = 1196
           BorderSpacing.Left = 20
           BorderSpacing.Top = 20
           BorderSpacing.Right = 20
         end
         inherited lbl_descr: TLabel
-          Width = 608
+          Left = 20
+          Height = 32
+          Top = 72
+          Width = 1196
           BorderSpacing.Left = 20
           BorderSpacing.Top = 20
           BorderSpacing.Right = 20
         end
         inherited lbl_author: TLabel
-          Width = 608
+          Left = 20
+          Height = 32
+          Top = 124
+          Width = 1196
           BorderSpacing.Left = 20
           BorderSpacing.Top = 20
           BorderSpacing.Right = 20
@@ -161,19 +171,19 @@ object Main: TMain
       object grp_log_options: TGroupBox
         Left = 0
         Height = 150
-        Top = 183
-        Width = 628
+        Top = 455
+        Width = 1256
         Align = alBottom
         Caption = 'Logging Options'
         ClientHeight = 113
-        ClientWidth = 624
+        ClientWidth = 1252
         ParentFont = False
         TabOrder = 1
         object chk_log_info: TCheckBox
-          Left = 100
-          Height = 30
+          Left = 200
+          Height = 63
           Top = 0
-          Width = 41
+          Width = 78
           Align = alLeft
           BorderSpacing.Left = 200
           Caption = 'Info'
@@ -185,19 +195,19 @@ object Main: TMain
           AnchorSideLeft.Side = asrCenter
           AnchorSideTop.Control = chk_log_info
           AnchorSideTop.Side = asrCenter
-          Left = 554
-          Height = 19
-          Top = 12
-          Width = 70
+          Left = 558
+          Height = 36
+          Top = 13
+          Width = 136
           Caption = 'Warnings'
           ParentFont = False
           TabOrder = 1
         end
         object chk_log_error: TCheckBox
-          Left = 474
-          Height = 30
+          Left = 956
+          Height = 63
           Top = 0
-          Width = 50
+          Width = 96
           Align = alRight
           BorderSpacing.Right = 200
           Caption = 'Errors'
@@ -207,17 +217,17 @@ object Main: TMain
         object pnl_log_clear: TPanel
           Left = 0
           Height = 50
-          Top = 5
-          Width = 624
+          Top = 63
+          Width = 1252
           Align = alBottom
           BevelOuter = bvNone
           ClientHeight = 50
-          ClientWidth = 624
+          ClientWidth = 1252
           ParentFont = False
           TabOrder = 3
           object btn_log_clear: TButton
-            Left = 474
-            Height = 25
+            Left = 1102
+            Height = 50
             Top = 0
             Width = 150
             Align = alRight
@@ -269,12 +279,12 @@ object Main: TMain
   end
   inline ignition_main: TIgnition
     Left = 10
-    Height = 125
-    Top = 832
+    Height = 220
+    Top = 737
     Width = 1272
     Align = alBottom
     BorderSpacing.Around = 10
-    ClientHeight = 125
+    ClientHeight = 220
     ClientWidth = 1272
     TabOrder = 1
     DesignLeft = 1194
@@ -283,7 +293,7 @@ object Main: TMain
       AnchorSideTop.Control = ignition_main
       Left = 672
       Height = 100
-      Top = 12
+      Top = 60
       Width = 280
       BorderSpacing.Right = 20
       Constraints.MaxHeight = 100
@@ -294,7 +304,7 @@ object Main: TMain
       AnchorSideRight.Control = ignition_main
       Left = 972
       Height = 100
-      Top = 12
+      Top = 60
       Width = 280
       BorderSpacing.Right = 20
       Constraints.MaxHeight = 100
@@ -304,7 +314,7 @@ object Main: TMain
       AnchorSideLeft.Control = ignition_main
       Left = 20
       Height = 32
-      Top = 12
+      Top = 60
       Width = 79
       BorderSpacing.Left = 20
     end
@@ -312,7 +322,7 @@ object Main: TMain
   object status_main: TStatusBar
     Left = 0
     Height = 44
-    Top = 778
+    Top = 683
     Width = 1292
     Panels = <    
       item

@@ -55,19 +55,20 @@ begin
   LTicker := ATicker as ITickerGDAX;
   LBid := LTicker.Ticker.Bid;
 
+  //since we use market orders, we need to adjust for funds
+  if LMin < (LTicker.Ticker.Product.MinMarketFunds / LBid) then
+    LMin :=  LTicker.Ticker.Product.MinMarketFunds / LBid;
+
   //create and initialize an order
   LOrder := TGDAXOrderImpl.Create;
   LOrder.Product := LTicker.Ticker.Product;
   LOrder.OrderType := otMarket; //for now to ensure we get the position always do market
   LOrder.Side := osBuy;
-  LOrder.Price := LTicker.Ticker.Bid;
+  LOrder.Price := LBid;
   LOrder.Size := Trunc(ASize / LBid / LMin) * LMin;
 
   if LOrder.Size < LMin then
-  begin
-    Reason := 'order size is less than minimum';
-    Exit;
-  end;
+    LOrder.Size := LMin;
 
   //success
   Result := TGDAXOrderDetailsImpl.Create(LOrder);
@@ -89,6 +90,10 @@ begin
   //cast the ticker
   LTicker := ATicker as ITickerGDAX;
   LAsk := LTicker.Ticker.Ask;
+
+  //since we use market orders, we need to adjust for funds
+  if LMin < (LTicker.Ticker.Product.MinMarketFunds / LAsk) then
+    LMin :=  LTicker.Ticker.Product.MinMarketFunds / LAsk;
 
   //create and initialize an order
   LOrder := TGDAXOrderImpl.Create;

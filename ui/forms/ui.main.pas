@@ -678,7 +678,7 @@ begin
   LAccelLow.RiskyPositionPercent := 0.025;
   LAccelLow.CrossThresholdPercent := 0.5;
   LAccelLow.CrossDownThresholdPercent := 0.5;
-  LAccelLow.UseDynamicPositions := False;
+  LAccelLow.UseDynamicPositions := True;
 
   //configure the higher acceleration
   LAccelHigh.WindowSizeInMilli := 10800000;
@@ -688,7 +688,7 @@ begin
   LAccelHigh.RiskyPositionPercent := 0.10;
   LAccelHigh.CrossThresholdPercent := 0.5;
   LAccelHigh.CrossDownThresholdPercent := 0.5;
-  LAccelHigh.UseDynamicPositions := False;
+  LAccelHigh.UseDynamicPositions := True;
 
   //configure the higher acceleration
   LAccelHighest.WindowSizeInMilli := 14400000;
@@ -698,7 +698,7 @@ begin
   LAccelHighest.RiskyPositionPercent := 0.05;
   LAccelHighest.CrossThresholdPercent := 0.5;
   LAccelHighest.CrossDownThresholdPercent := 0.5;
-  LAccelHighest.UseDynamicPositions := False;
+  LAccelHighest.UseDynamicPositions := True;
 
   //add all strategies
   FEngine.Strategies.Add(LAccelLow);

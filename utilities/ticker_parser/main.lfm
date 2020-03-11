@@ -15,9 +15,9 @@ object TickerParser: TTickerParser
     Height = 648
     Top = 0
     Width = 1021
-    ActivePage = Simulate
+    ActivePage = ts_load
     Align = alClient
-    TabIndex = 1
+    TabIndex = 0
     TabOrder = 0
     object ts_load: TTabSheet
       Caption = 'Load'
@@ -81,6 +81,21 @@ object TickerParser: TTickerParser
           OnClick = btn_loadClick
           TabOrder = 0
         end
+      end
+      object memo_load_order: TMemo
+        AnchorSideLeft.Control = edit_directory
+        AnchorSideTop.Control = edit_directory
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_directory
+        AnchorSideRight.Side = asrBottom
+        Left = 50
+        Height = 180
+        Top = 130
+        Width = 805
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 40
+        ReadOnly = True
+        TabOrder = 2
       end
     end
     object Simulate: TTabSheet

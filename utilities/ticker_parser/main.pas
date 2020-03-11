@@ -79,6 +79,7 @@ type
     edit_directory_csv: TEdit;
     edit_fee_perc: TEdit;
     edit_product_min: TEdit;
+    memo_load_order: TMemo;
     pctrl_main: TPageControl;
     pnl_ctrls: TPanel;
     btn_open_picker: TSpeedButton;
@@ -448,12 +449,15 @@ var
   LSearch : TListFileSearcher;
   LFiles: TStringList;
 begin
+  memo_load_order.Clear;
+
   //now load all the files from the folder and do some work
   LFiles := TStringList.Create;
   LSearch := TListFileSearcher.Create(LFiles);
   try
     LSearch.Search(edit_directory.Text);
     LoadFiles(LFiles);
+    memo_load_order.Lines.Assign(LFiles);
     Application.ProcessMessages;
   finally
     LFiles.Free;

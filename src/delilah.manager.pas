@@ -235,7 +235,10 @@ begin
 
     //call down to children to see if placing the order was successful
     if not DoPlace(ADetails,Error) then
+    begin
+      LogError('Place::an error occurrred [error]-' + Error);
       Exit;
+    end;
 
     //generate a guid and store the reference
     ID:=TGuid.NewGuid.ToString();
@@ -249,6 +252,7 @@ begin
 
     //success
     Result:=True;
+    LogInfo('Place::Success');
   except on E:Exception do
   begin
     LogError('Place::' + E.Message);

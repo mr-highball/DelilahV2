@@ -184,7 +184,7 @@ type
       user specified cross percents are used as minimums in this case
       **experimental**
     *)
-    property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn; deprecated;
+    property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn;
   end;
 
   { TAccelerationStrategyImpl }
@@ -606,8 +606,20 @@ begin
         //if the call to take is declined, then warn and exit gracefully
         if not LInPosition then
         begin
-          LogWarning(Format('TakePosition declined for [reason]:%s', [Error]));
+          LogWarning(Format('TakePosition::declined for [reason]:%s', [Error]));
           Exit(True);
+        end;
+
+        if (LDetails.Size * ATicker.Price) > AFunds then
+        begin
+          LogWarning('TakePosition::order details size greater than current funds');
+          Exit;
+        end;
+
+        if (LDetails.Size <= 0) then
+        begin
+          LogWarning('TakePosition::zero sized order, skipping place');
+          Exit;
         end;
 
         //try to place the order

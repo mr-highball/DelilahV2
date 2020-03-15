@@ -15,9 +15,9 @@ object TickerParser: TTickerParser
     Height = 648
     Top = 0
     Width = 1021
-    ActivePage = ts_load
+    ActivePage = Simulate
     Align = alClient
-    TabIndex = 0
+    TabIndex = 1
     TabOrder = 0
     object ts_load: TTabSheet
       Caption = 'Load'
@@ -224,27 +224,14 @@ object TickerParser: TTickerParser
         Height = 342
         Top = 8
         Width = 597
-        HorzScrollBar.Page = 210
-        VertScrollBar.Page = 36
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
         Anchors = [akTop, akLeft, akRight, akBottom]
         BorderSpacing.Left = 400
         BorderSpacing.Top = 8
         BorderSpacing.Right = 8
         BorderSpacing.Bottom = 80
-        ClientHeight = 338
-        ClientWidth = 593
         TabOrder = 6
-        object chk_sample: TCheckBox
-          Left = 0
-          Height = 36
-          Top = 0
-          Width = 593
-          Align = alTop
-          Caption = 'Sample Strategy'
-          Checked = True
-          State = cbChecked
-          TabOrder = 0
-        end
       end
       object btn_add_strategy: TButton
         AnchorSideTop.Control = scroll_strategies

@@ -617,8 +617,6 @@ var
   LAccelLow,
   LAccelHigh,
   LAccelHighest: IAccelerationStrategy;
-const
-  MOON_MIN_WINDOW = 20 * 60 * 1000;
 begin
   //clear chart source
   chart_source.Clear;
@@ -647,7 +645,7 @@ begin
   LSellForMonies.OnlyLowerAAC := True;
   LSellForMonies.MinReduction := 0.99;
   LSellForMonies.OnlyProfit := True; //important
-  LSellForMonies.MinProfit := 0.003; //important
+  LSellForMonies.MinProfit := 0.001; //important
 
   //configure the buy le dip strategy (just buy no sells)
   LBuyLeDip.UseMarketBuy := False;
@@ -668,36 +666,36 @@ begin
   LBuyLeDip.OnlyProfit := True;
   LBuyLeDip.MinProfit := 0.99; //make sure this one never sells
   LBuyLeDip.MinProfit := 0;
-  LBuyLeDip.MinReduction := 0.0001;
+  LBuyLeDip.MinReduction := 0.001;
 
   //configure the low acceleration
   LAccelLow.WindowSizeInMilli := 7200000;
-  LAccelLow.LeadStartPercent := 0.8;
+  LAccelLow.LeadStartPercent := 0.90;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.075;
-  LAccelLow.RiskyPositionPercent := 0.025;
-  LAccelLow.CrossThresholdPercent := 0.5;
-  LAccelLow.CrossDownThresholdPercent := 0.5;
+  LAccelLow.PositionPercent := 0.15;
+  LAccelLow.RiskyPositionPercent := 0.03;
+  LAccelLow.CrossThresholdPercent := 0.35;
+  LAccelLow.CrossDownThresholdPercent := 0.35;
   LAccelLow.UseDynamicPositions := True;
 
   //configure the higher acceleration
   LAccelHigh.WindowSizeInMilli := 10800000;
-  LAccelHigh.LeadStartPercent := 0.8;
+  LAccelHigh.LeadStartPercent := 0.6;
   LAccelHigh.LeadEndPercent := 1.0;
-  LAccelHigh.PositionPercent := 0.20;
-  LAccelHigh.RiskyPositionPercent := 0.10;
+  LAccelHigh.PositionPercent := 0.30;
+  LAccelHigh.RiskyPositionPercent := 0.03;
   LAccelHigh.CrossThresholdPercent := 0.5;
   LAccelHigh.CrossDownThresholdPercent := 0.5;
   LAccelHigh.UseDynamicPositions := True;
 
   //configure the higher acceleration
   LAccelHighest.WindowSizeInMilli := 14400000;
-  LAccelHighest.LeadStartPercent := 0.8;
+  LAccelHighest.LeadStartPercent := 0.7;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0.15;
-  LAccelHighest.RiskyPositionPercent := 0.05;
-  LAccelHighest.CrossThresholdPercent := 0.5;
-  LAccelHighest.CrossDownThresholdPercent := 0.5;
+  LAccelHighest.PositionPercent := 0.25;
+  LAccelHighest.RiskyPositionPercent := 0.03;
+  LAccelHighest.CrossThresholdPercent := 0.25;
+  LAccelHighest.CrossDownThresholdPercent := 0.25;
   LAccelHighest.UseDynamicPositions := True;
 
   //add all strategies

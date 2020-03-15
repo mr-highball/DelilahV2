@@ -72,7 +72,6 @@ type
     btn_save_simulate: TButton;
     btn_cance_simulate: TButton;
     btn_add_strategy: TButton;
-    chk_sample: TCheckBox;
     edit_product: TEdit;
     edit_funds: TEdit;
     edit_directory: TEdit;
@@ -191,26 +190,8 @@ end;
 
 procedure TTickerParser.LoadStrategies(const AStrategies : TStrategies);
 var
-  LStrategy : IStrategy;
   I: Integer;
-
-  function GetSample : IStrategy;
-  var
-    LSetup : ISampleGDAX;
-  begin
-    LSetup := TSampleGDAXImpl.Create;
-    LSetup.WindowSizeInMilli := 5 * 60 * 1000; //5 minute window
-
-    Result := LSetup;
-  end;
-
 begin
-  if chk_sample.Checked then
-  begin
-    LStrategy := GetSample;
-    AStrategies.Add(LStrategy);
-  end;
-
   //add checked strategies
   for I := 0 to Pred(FStrategyList.Count) do
     if FStrategyList[I].Checked then

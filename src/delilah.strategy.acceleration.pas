@@ -439,6 +439,13 @@ var
     //check for risky position
     else if FRiskyPerc > 0 then
     begin
+      //in dynamic mode, avoid risky positions if we've been in free-fall mode
+      if FUseDyn and ((FAvgAccel * 2) < Abs(FAvgDecel)) then
+      begin
+        LogInfo('GetTakePosition::average deceleration past threshold for dynamic mode');
+        Exit(False);
+      end;
+
       //find amount of funds to spend for a risky position
       Funds := FRiskyPerc * AFunds;
 
@@ -786,8 +793,10 @@ begin
     //acceleration
     if LIsAccel then
     begin
-      //keep to the size of tickers
-      if Length(FAccels) > (Tickers.Count * 1.10) then
+      //keep a smaller percentage of tickers to hold just enough relevant
+      //historical info
+      //todo - make this a config?
+      if Length(FAccels) > (Tickers.Count * 0.25) then
       begin
         I := Trunc(Length(FAccels) * 0.10);
         Move(FAccels[I], FAccels[0], SizeOf(FAccels[I]) * (Length(FAccels) - I));
@@ -818,7 +827,7 @@ begin
     else
     begin
       //keep to the size of tickers
-      if Length(FDecels) > (Tickers.Count * 1.10) then
+      if Length(FDecels) > (Tickers.Count * 0.25) then
       begin
         I := Trunc(Length(FDecels) * 0.10);
         Move(FDecels[I], FDecels[0], SizeOf(FDecels[I]) * (Length(FDecels) - I));

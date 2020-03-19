@@ -9,10 +9,13 @@ uses
   Forms, Controls, Graphics, Dialogs, JSONPropStorage, ExtCtrls, ComCtrls,
   StdCtrls, Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
-  ui.usercontrol.singleline, delilah.types, ui.email, delilah.strategy.gdax.tiers;
+  ui.usercontrol.singleline, delilah.types, ui.email, delilah.strategy.gdax.tiers,
+  gdax.api.ticker;
 
 type
 
+  //alias due to same names... my bad
+  TPreloadTick = TGDAXTickerImpl;
 
   { TMain }
   (*
@@ -106,6 +109,7 @@ type
     procedure SetupLogTab;
     procedure InitControls;
     procedure EnableAutoStart;
+    procedure PreloadTickers;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
     procedure StartStrategy(Sender:TObject);
@@ -128,6 +132,7 @@ var
 
 implementation
 uses
+  UITypes,
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
@@ -549,6 +554,80 @@ begin
   ShowMessage('not implemented');
 end;
 
+procedure TMain.PreloadTickers;
+var
+  LFile: TOpenDialog;
+  LTickers: TStringList;
+  I: Integer;
+  LGDAXTick : IGDAXTicker;
+  LTick : ITicker;
+  LError: String;
+begin
+  chk_log_error.Checked := False;
+  chk_log_info.Checked := False;
+  chk_log_warn.Checked := False;
+
+  try
+    if MessageDlg(
+        'Preload Tickers',
+        'Would you like to preload ticker data?',
+        TMsgDlgType.mtConfirmation,
+        [TMsgDlgBtn.mbNo, TMsgDlgBtn.mbYes],
+        ''
+      ) = mrYes
+    then
+    begin
+      LFile := TOpenDialog.Create(nil);
+
+      if LFile.Execute then
+      begin
+        LTickers := TStringList.Create;
+        LTickers.LoadFromFile(LFile.FileName);
+
+        for I := 0 to Pred(LTickers.Count) do
+        begin
+          //sanity check for json
+          if (LTickers[I].Length < 1) or (LTickers[I][1] <> '{') then
+            Continue;
+
+          //create a gdax ticker
+          LGDAXTick := TPreloadTick.Create;
+
+          //assign the selected product
+          LGDAXTick.Product := FProducts.ProductFrame.Product;
+
+          //attempt to load from json
+          if not LGDAXTick.LoadFromJSON(LTickers[I], LError) then
+            raise Exception.Create(LError);
+
+          //make a delilah ticker
+          LTick := TGDAXTickerImpl.Create(LGDAXTick);
+
+          //feed the engine (disregard errors)
+          FEngine.Feed(LTick, LError);
+
+          //cleanup local since we reuse this per iteration
+          LGDAXTick := nil;
+          LTick := nil;
+
+          if I mod 20 = 0 then
+          begin
+            ignition_main.lbl_status.Caption := 'loaded: ' + IntToStr(Succ(I));
+            Application.ProcessMessages;
+          end;
+        end;
+
+        LTickers.Free;
+      end;
+      LFile.Free;
+    end;
+  finally
+    chk_log_error.Checked := True;
+    chk_log_info.Checked := True;
+    chk_log_warn.Checked := True;
+  end;
+end;
+
 procedure TMain.CheckCanStart(Sender: TObject; var Continue: Boolean);
 begin
   //products need to be initialized before we can start the strategy
@@ -630,22 +709,22 @@ begin
   //configure the sell for monies to sell for profits
   LSellForMonies.UseMarketBuy := False;
   LSellForMonies.UseMarketSell := False;
-  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 1200000;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 600000;
   LSellForMonies.AvoidChop := False;
   LSellForMonies.GTFOPerc := 0;
   LSellForMonies.SmallTierPerc := 0;
   LSellForMonies.MidTierPerc := 0;
   LSellForMonies.LargeTierPerc := 0;
-  LSellForMonies.SmallTierSellPerc := 0.001;
-  LSellForMonies.MidTierSellPerc := 0.001;
-  LSellForMonies.LargeTierSellPerc := 0.01;
-  LSellForMonies.IgnoreOnlyProfitThreshold := 0.95;
+  LSellForMonies.SmallTierSellPerc := 0.02;
+  LSellForMonies.MidTierSellPerc := 0.02;
+  LSellForMonies.LargeTierSellPerc := 0.03;
+  LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := 0.001;
   LSellForMonies.MarketFee := 0.002;
   LSellForMonies.OnlyLowerAAC := True;
   LSellForMonies.MinReduction := 0.99;
   LSellForMonies.OnlyProfit := True; //important
-  LSellForMonies.MinProfit := 0.001; //important
+  LSellForMonies.MinProfit := 0.02; //important
 
   //configure the buy le dip strategy (just buy no sells)
   LBuyLeDip.UseMarketBuy := False;
@@ -688,21 +767,21 @@ begin
   LAccelHigh.CrossDownThresholdPercent := 0.5;
   LAccelHigh.UseDynamicPositions := True;
 
-  //configure the higher acceleration
-  LAccelHighest.WindowSizeInMilli := 14400000;
-  LAccelHighest.LeadStartPercent := 0.7;
+  //configure the highest acceleration
+  LAccelHighest.WindowSizeInMilli := 86400000;
+  LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0.25;
-  LAccelHighest.RiskyPositionPercent := 0.03;
-  LAccelHighest.CrossThresholdPercent := 0.25;
-  LAccelHighest.CrossDownThresholdPercent := 0.25;
+  LAccelHighest.PositionPercent := 1;
+  LAccelHighest.RiskyPositionPercent := 0.50;
+  LAccelHighest.CrossThresholdPercent := 0.05;
+  LAccelHighest.CrossDownThresholdPercent := 0.05;
   LAccelHighest.UseDynamicPositions := True;
 
   //add all strategies
-  FEngine.Strategies.Add(LAccelLow);
-  FEngine.Strategies.Add(LAccelHigh);
+  //FEngine.Strategies.Add(LAccelLow);
+  //FEngine.Strategies.Add(LAccelHigh);
   FEngine.Strategies.Add(LAccelHighest);
-  FEngine.Strategies.Add(LBuyLeDip);
+  //FEngine.Strategies.Add(LBuyLeDip);
   FEngine.Strategies.Add(LSellForMonies);
 
   //also assign the authenticator
@@ -711,6 +790,9 @@ begin
   //if the funds has changed since the last time this was run, reset it
   if FEngine.Funds<>StrToFloatDef(FFunds.Text,0) then
     FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
+
+  //prompt for pre-loading of tickers
+  PreloadTickers;
 
   //start the engine to accept tickers
   if not FEngine.Start(LError) then

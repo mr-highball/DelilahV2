@@ -428,6 +428,9 @@ var
       if Funds > AFunds then
         Funds := AFunds;
 
+      //todo - perhaps add a bounds check to the crossdown thresh here.
+      //       this should prevent immediate positions after closing
+
       //take position if positive diff percent, and is greater than the threshold
       //or if threshold is negative handle differently
       Result :=

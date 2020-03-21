@@ -748,38 +748,38 @@ begin
   LBuyLeDip.MinReduction := 0.001;
 
   //configure the low acceleration
-  LAccelLow.WindowSizeInMilli := 7200000;
-  LAccelLow.LeadStartPercent := 0.90;
+  LAccelLow.WindowSizeInMilli := 14400000;
+  LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.15;
-  LAccelLow.RiskyPositionPercent := 0.03;
-  LAccelLow.CrossThresholdPercent := 0.35;
-  LAccelLow.CrossDownThresholdPercent := 0.35;
+  LAccelLow.PositionPercent := 0.10;
+  LAccelLow.RiskyPositionPercent := 0.15;
+  LAccelLow.CrossThresholdPercent := 0.05;
+  LAccelLow.CrossDownThresholdPercent := 0.05;
   LAccelLow.UseDynamicPositions := True;
 
   //configure the higher acceleration
-  LAccelHigh.WindowSizeInMilli := 10800000;
-  LAccelHigh.LeadStartPercent := 0.6;
+  LAccelHigh.WindowSizeInMilli := 57600000;
+  LAccelHigh.LeadStartPercent := 0.8;
   LAccelHigh.LeadEndPercent := 1.0;
-  LAccelHigh.PositionPercent := 0.30;
-  LAccelHigh.RiskyPositionPercent := 0.03;
-  LAccelHigh.CrossThresholdPercent := 0.5;
-  LAccelHigh.CrossDownThresholdPercent := 0.5;
+  LAccelHigh.PositionPercent := 0.20;
+  LAccelHigh.RiskyPositionPercent := 0.25;
+  LAccelHigh.CrossThresholdPercent := 0.05;
+  LAccelHigh.CrossDownThresholdPercent := 0.05;
   LAccelHigh.UseDynamicPositions := True;
 
   //configure the highest acceleration
   LAccelHighest.WindowSizeInMilli := 86400000;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 1;
-  LAccelHighest.RiskyPositionPercent := 0.50;
+  LAccelHighest.PositionPercent := 0.60;
+  LAccelHighest.RiskyPositionPercent := 0.70;
   LAccelHighest.CrossThresholdPercent := 0.05;
   LAccelHighest.CrossDownThresholdPercent := 0.05;
   LAccelHighest.UseDynamicPositions := True;
 
   //add all strategies
-  //FEngine.Strategies.Add(LAccelLow);
-  //FEngine.Strategies.Add(LAccelHigh);
+  FEngine.Strategies.Add(LAccelLow);
+  FEngine.Strategies.Add(LAccelHigh);
   FEngine.Strategies.Add(LAccelHighest);
   //FEngine.Strategies.Add(LBuyLeDip);
   FEngine.Strategies.Add(LSellForMonies);

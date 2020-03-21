@@ -393,6 +393,13 @@ var
 begin
   Allow:=False;
 
+  //do not allow orders unless the engine is started
+  if EngineState <> esStarted then
+  begin
+    ADisallowReason := 'engine not started';
+    Exit;
+  end;
+
   //if the order total cost would exceed either funds or attempt
   //to sell more inventory than we have, then this would be an invalid order
   if ADetails.OrderType=odBuy then
@@ -879,9 +886,11 @@ var
   I:Integer;
 begin
   Result:=False;
+
   try
     //before calling down to the strategies we need to refresh our manager
-    if not FOrderManager.Refresh(Error) then
+    //only if we are started
+    if (EngineState = esStarted) and (not FOrderManager.Refresh(Error)) then
       Exit;
 
     //simply iterate strategies and attempt to feed, they are responsible
@@ -908,10 +917,7 @@ end;
 
 function TDelilahImpl.Feed(const ATicker: ITicker; out Error: string): Boolean;
 begin
-  if EngineState <> esStarted then
-    if not Start(Error) then
-      Exit;
-  Result:=DoFeed(ATicker,Error);
+  Result := DoFeed(ATicker,Error);
 end;
 
 function TDelilahImpl.Start(out Error: String): Boolean;

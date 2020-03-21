@@ -737,7 +737,7 @@ procedure TAccelerationStrategyImpl.UpdateExtremaAccel(const ALeading, ALagging 
 
   procedure WriteLog;
   begin
-    LogInfo(Format('acceleration readout [avgAccel]:%f [maxAccel]:%f [stdAccel]:%f [avgDecel]:%f [maxDecel]:%f [stdDecel]:%f', [FAvgMaxAccel, FMaxAccel, FStdAccel, FAvgMaxDecel, FMaxDecel, FStdDecel]));
+    LogInfo(Format('acceleration readout [avgAccel]:%f [maxAccel]:%f [stdAccel]:%f [avgDecel]:%f [maxDecel]:%f [stdDecel]:%f', [FAvgAccel, FMaxAccel, FStdAccel, FAvgDecel, FMaxDecel, FStdDecel]));
   end;
 
 const

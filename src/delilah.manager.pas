@@ -236,7 +236,7 @@ begin
     //call down to children to see if placing the order was successful
     if not DoPlace(ADetails,Error) then
     begin
-      LogError('Place::an error occurrred [error]-' + Error);
+      LogError('Place::an error occurrred [error]:' + Error);
       Exit;
     end;
 

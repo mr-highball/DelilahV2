@@ -482,7 +482,7 @@ begin
       LID
     ).Balance;
 
-    LogInfo(PREFIX + 'HoldsLedger::buy detected recording debit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+    LogInfo(PREFIX + 'HoldsLedger::buy detected recording debit, [entry]:' + FloatToStr(LEntry) + ' new balance [balance]:' + FloatToStr(LBal));
   end
   else
   begin
@@ -493,7 +493,7 @@ begin
       LID
     ).Balance;
 
-    LogInfo(PREFIX + 'HoldsLedger::sell detected recording credit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+    LogInfo(PREFIX + 'HoldsLedger::sell detected recording credit, [entry]:' + FloatToStr(LEntry) + ' new balance [balance]:' + FloatToStr(LBal));
   end;
 
   //now store the ledger id associated with this order id
@@ -509,7 +509,7 @@ begin
       LID
     ).Balance;
 
-    LogInfo(PREFIX + 'InvHoldsLedger::buy detected recording credit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+    LogInfo(PREFIX + 'InvHoldsLedger::buy detected recording credit, [entry]:' + FloatToStr(LEntry) + ' new balance [balance]:' + FloatToStr(LBal));
   end
   else
   begin
@@ -520,7 +520,7 @@ begin
       LID
     ).Balance;
 
-    LogInfo(PREFIX + 'InvHoldsLedger::sell detected recording debit, [entry]-' + FloatToStr(LEntry) + ' new balance [balance]-' + FloatToStr(LBal));
+    LogInfo(PREFIX + 'InvHoldsLedger::sell detected recording debit, [entry]:' + FloatToStr(LEntry) + ' new balance [balance]:' + FloatToStr(LBal));
   end;
 
   //store to ledger
@@ -564,11 +564,11 @@ begin
     //when an order is marked as canceled/completed call down to complete order
     omCanceled,omCompleted:
       begin
-        LogInfo(PREFIX + 'status changed, starting CompleteOrder for [ID]-' + AID);
+        LogInfo(PREFIX + 'status changed, starting CompleteOrder for [ID]:' + AID);
         CompleteOrder(ADetails,AID);
       end;
     else
-      LogInfo(PREFIX + 'status changed, but not canceled or completed [Old]-' + OrderManagerStatusToString(AOldStatus) + ' [New]-' + OrderManagerStatusToString(ANewStatus));
+      LogInfo(PREFIX + 'status changed, but not canceled or completed [Old]:' + OrderManagerStatusToString(AOldStatus) + ' [New]:' + OrderManagerStatusToString(ANewStatus));
   end;
   if Assigned(FOldStatus) then
     FOldStatus(ADetails,AID,AOldStatus,ANewStatus);
@@ -647,7 +647,7 @@ begin
   
   if I < 0 then
   begin
-    LogWarning('could not find [ID]-' + AOrderID + ' in order ledger');
+    LogWarning('could not find [ID]:' + AOrderID + ' in order ledger');
     Exit;
   end;
   
@@ -693,22 +693,22 @@ begin
         lsHold: 
           begin            
             LLedger := FHoldsLedger;
-            LogInfo('[LedgerSource]-holds ledger');
+            LogInfo('[LedgerSource]:holds ledger');
           end;
         lsStd: 
           begin
             LLedger := FFundsLedger;
-            LogInfo('[LedgerSource]-funds ledger');
+            LogInfo('[LedgerSource]:funds ledger');
           end;
         lsInvHold: 
           begin
             LLedger := FHoldsInvLedger;
-            LogInfo('[LedgerSource]-holds inventory ledger');
+            LogInfo('[LedgerSource]:holds inventory ledger');
           end;
         lsStdInv: 
           begin 
             LLedger := FInvLedger;
-            LogInfo('[LedgerSource]-inventory ledger');
+            LogInfo('[LedgerSource]:inventory ledger');
           end;
       end;
            
@@ -730,7 +730,7 @@ begin
               ltDebit
             ).Balance;
             
-            LogInfo(PREFIX + 'Balancing::record debit, [entry]-' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]-' + FloatToStr(LBal));
+            LogInfo(PREFIX + 'Balancing::record debit, [entry]:' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]:' + FloatToStr(LBal));
           end
           //otherwise record a credit
           else
@@ -740,7 +740,7 @@ begin
               ltCredit
             ).Balance;
             
-            LogInfo(PREFIX + 'Balancing::record credit, [entry]-' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]-' + FloatToStr(LBal));
+            LogInfo(PREFIX + 'Balancing::record credit, [entry]:' + FloatToStr(LLedger[LPair.ID].Entry) + ' new balance [balance]:' + FloatToStr(LBal));
           end;
         except on E : Exception do
           LogError(PREFIX + 'Balancing::' + E.Message);
@@ -750,7 +750,7 @@ begin
       LogInfo('Balancing::finished');
       
       //now for all of the indexes, remove from the lookup list
-      LogInfo('about to remove from owned [count]-' + IntToStr(Length(LIndexes)));
+      LogInfo('about to remove from owned [count]:' + IntToStr(Length(LIndexes)));
       
       for I:=0 to High(LIndexes) do
         LOwned.Delete(LIndexes[I]);
@@ -773,7 +773,7 @@ var
   LOldInv:Extended;
   LBal:Extended;
 begin
-  LogInfo(PREFIX + 'starting for [ID]-' + AID);
+  LogInfo(PREFIX + 'starting for [ID]:' + AID);
   LBal:=0;
   
   //nothing to complete if we aren't managing this order
@@ -798,7 +798,7 @@ begin
         LID
       ).Balance;
 
-      LogInfo(PREFIX + 'FundsLedger::buy side, new balance [balance]-' + FloatToStr(LBal));
+      LogInfo(PREFIX + 'FundsLedger::buy side, new balance [balance]:' + FloatToStr(LBal));
     end
     else
     begin
@@ -808,14 +808,14 @@ begin
         LID
       ).Balance;
 
-      LogInfo(PREFIX + 'FundsLedger::sell side, new balance [balance]-' + FloatToStr(LBal));
+      LogInfo(PREFIX + 'FundsLedger::sell side, new balance [balance]:' + FloatToStr(LBal));
     end;
     
     //store the id
     StoreLedgerID(AID, LID, lsStd);
     LOldInv:=Inventory;
     
-    LogInfo('[OldInventory]-' + FloatToStr(LOldInv));
+    LogInfo('[OldInventory]:' + FloatToStr(LOldInv));
 
     //record entries to inventory ledger
     if ADetails.OrderType = odBuy then
@@ -826,7 +826,7 @@ begin
         LID
       ).Balance;
 
-      LogInfo(PREFIX + 'InvLedger::buy side, new balance [balance]-' + FloatToStr(LBal));
+      LogInfo(PREFIX + 'InvLedger::buy side, new balance [balance]:' + FloatToStr(LBal));
     end
     else
     begin
@@ -835,7 +835,7 @@ begin
         ltDebit,
         LID
       ).Balance;
-      LogInfo(PREFIX + 'InvLedger::sell side, new balance [balance]-' + FloatToStr(LBal));
+      LogInfo(PREFIX + 'InvLedger::sell side, new balance [balance]:' + FloatToStr(LBal));
     end;
     StoreLedgerID(AID,LID,lsStdInv);
 
@@ -848,7 +848,7 @@ begin
     *)
     else if (LOldInv < Inventory) and (ADetails.Price > 0) then
     begin
-      LogInfo('AACUpdate::[OldAAC]-' + FloatToStr(FAAC));
+      LogInfo('AACUpdate::[OldAAC]:' + FloatToStr(FAAC));
       
       //update the aac for buy orders by adding fees (the actual cost)
       if ADetails.OrderType = odBuy then
@@ -857,16 +857,16 @@ begin
       else
         FAAC := (FAAC * LOldInv + (ADetails.Price * ADetails.Size  - ADetails.Fees)) / Inventory;
 
-      LogInfo('AACUpdate::[AAC]-' + FloatToStr(FAAC));
+      LogInfo('AACUpdate::[AAC]:' + FloatToStr(FAAC));
     end;
   end
   else
-    LogWarning(PREFIX + 'size is zero or lower [size]-' + FloatToStr(ADetails.Size));
+    LogWarning(PREFIX + 'size is zero or lower [size]:' + FloatToStr(ADetails.Size));
 
   //lastly remove this order from the manager since we no longer need it tracked
   FOrderManager.Delete(AID);
   
-  LogInfo(PREFIX + 'finished for [ID]-' + AID);
+  LogInfo(PREFIX + 'finished for [ID]:' + AID);
 end;
 
 function TDelilahImpl.DoStart(out Error: String): Boolean;

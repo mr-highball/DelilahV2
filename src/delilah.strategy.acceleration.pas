@@ -413,7 +413,7 @@ var
       else if (FThresh < 0) and (LThresh > FThresh) then
         LThresh := FThresh;
 
-      LogInfo(Format('GetTakePosition::dynamic threshold on [threshold]-%f', [LThresh]));
+      LogInfo(Format('GetTakePosition::dynamic threshold on [threshold]:%f', [LThresh]));
     end
     //not using dynamic, set to user specified
     else
@@ -504,7 +504,7 @@ var
       else if LIsAccel and (FThreshDown < 0) and (LThresh < FThreshDown) then
         LThresh := FThreshDown;
 
-      LogInfo(Format('GetClosePosition::dynamic threshold on [threshold]-%f', [LThresh]));
+      LogInfo(Format('GetClosePosition::dynamic threshold on [threshold]:%f', [LThresh]));
     end
     //not using dynamic, set to user specified
     else

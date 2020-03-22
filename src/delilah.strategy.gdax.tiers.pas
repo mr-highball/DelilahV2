@@ -752,9 +752,9 @@ begin
     begin
       LChannel:=FChannel.ByIndex[I];
       LogInfo('DoFeed::channel ' + LChannel.Name + ' ' +
-        '[anchor]-' + FloatToStr(LChannel.AnchorPrice) + ' ' +
-        '[lower]-' + FloatToStr(LChannel.Lower) + ' ' +
-        '[upper]-' + FloatToStr(LChannel.Upper)
+        '[anchor]:' + FloatToStr(LChannel.AnchorPrice) + ' ' +
+        '[lower]:' + FloatToStr(LChannel.Lower) + ' ' +
+        '[upper]:' + FloatToStr(LChannel.Upper)
       );
       LChannel:=nil;
     end;
@@ -1258,7 +1258,7 @@ type
     begin
       Result := Result + ((AStdDev * LRanges[I].StdDev) * LRanges[I].Percent);
       LDistributions := LDistributions + Format(
-        '[Range]-(L->U) %f .. %f [StdDev]-%f [Count]-%s [Percent]-%f' + ' ',
+        '[Range]:(L->U) %f .. %f [StdDev]:%f [Count]:%s [Percent]:%f' + ' ',
         [
           LRanges[I].Lower,
           LRanges[I].Upper,
@@ -1276,7 +1276,7 @@ type
 
     LogInfo(
       Format(
-        'ChoppyWaters::AdjustedDeviation::[Coverage]-%f [Dev]-%f [AdjustedDev]-%f',
+        'ChoppyWaters::AdjustedDeviation::[Coverage]:%f [Dev]:%f [AdjustedDev]:%f',
         [LCoverage, AStdDev, Result]
       )
     );
@@ -1309,7 +1309,7 @@ begin
 
   LogInfo(
     Format(
-      'ChoppyWaters::[AvgAnchor]-%s [AvgDeviation]-%s',
+      'ChoppyWaters::[AvgAnchor]:%s [AvgDeviation]:%s',
       [FloatToStr(LAvgAnc),FloatToStr(LAvgDev)]
     )
   );
@@ -1336,7 +1336,7 @@ begin
   //after adjusting the deviation according to our distribution
   LChopInd := AdjustedDeviation(LAvgDev) / LAvgAnc - LChopInd;
 
-  LogInfo('ChoppyWaters::[ChopIndicator]-' + FloatToStr(LChopInd));
+  LogInfo('ChoppyWaters::[ChopIndicator]:' + FloatToStr(LChopInd));
 
   //as long as the delta is greater than zero, there is a chance for some profit
   //so return choppy when we aren't

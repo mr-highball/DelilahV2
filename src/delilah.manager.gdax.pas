@@ -130,7 +130,7 @@ begin
   if not LTime.Get(LContent,LError) then
     Exit;
 
-  LogInfo('CancelCountCheck::starting, time check passed [order]-' + AID);
+  LogInfo('CancelCountCheck::starting, time check passed [order]:' + AID);
 
   //if the id doesn't exist, then we aren't tracking and we need to
   if I < 0 then
@@ -268,29 +268,29 @@ begin
     LDetails:=ADetails as IGDAXOrderDetails;
     LDetails.Order.Authenticator:=Authenticator;
     LID:=LDetails.Order.ID;
-    LogInfo(Format('DoCancel::Delete::about to delete [OrderID]-%s',[LID]));
+    LogInfo(Format('DoCancel::Delete::about to delete [OrderID]:%s',[LID]));
 
     //attempt to delete the order assuming strategy has filled it out correctly
     if not LDetails.Order.Delete(LContent,Error) then
     begin
-      LogError('DoCancel::Delete::failure with [Content]-'+LContent);
+      LogError('DoCancel::Delete::failure with [Content]:'+LContent);
 
       //checks to see if this order exceeds the maximum cancel tries
-      LogError('DoCancel::CancelCheck::checking if [OrderID]-' + LID + ' exceeds cancel try limit');
+      LogError('DoCancel::CancelCheck::checking if [OrderID]:' + LID + ' exceeds cancel try limit');
       if not CancelCountCheck(LID) then
       begin
-        LogError('DoCancel::CancelCheck::[OrderID]-' + LID + ' still has retries left');
+        LogError('DoCancel::CancelCheck::[OrderID]:' + LID + ' still has retries left');
         Exit;
       end;
     end;
 
-    LogInfo('DoCancel::Delete::[Content]-' + LContent);
+    LogInfo('DoCancel::Delete::[Content]:' + LContent);
 
     //in the event of partial fills, we need to check if the fills
     //object returns anything, if so, we need to update the cancelled
     //order's properties (since cancelling an empty order removes the id
     //entirely from gdax)
-    LogInfo('DoCancel::FillsCheck::starting fills check for [OrderID]-' + LID);
+    LogInfo('DoCancel::FillsCheck::starting fills check for [OrderID]:' + LID);
     LFills:=TGDAXFillsImpl.Create;
     LFills.OrderID:=LID;
     LFills.Authenticator:=FAuth;
@@ -300,7 +300,7 @@ begin
       LogInfo(
         Format(
           'DoCancel::FillsCheck::fills check failed so probably safe to call cancelled ' +
-          'web call details [Error]-%s [Content]-%s',
+          'web call details [Error]:%s [Content]:%s',
           [Error,LContent]
         )
       );
@@ -312,7 +312,7 @@ begin
         LogInfo(
           Format(
             'DoCancel::FillsCheck::order status check failed and fills check failed, order appears cancelled ' +
-            'web call details [Error]-%s [Content]-%s',
+            'web call details [Error]:%s [Content]:%s',
             [Error,LContent]
           )
         );
@@ -325,7 +325,7 @@ begin
         LogInfo(
           'DoCancel::FillsCheck::order check succeeded, which means we may have a partial ' +
           'however the fills check failed. punting this to next status check to get our pants on right ' +
-          'web call details [Content]-' + LContent
+          'web call details [Content]:' + LContent
         );
         Exit;
       end;
@@ -334,7 +334,7 @@ begin
     //check if we have partial fills by looking at the count
     if LFills.Count > 0 then
     begin
-      LogInfo('DoCancel::PartialFound::[FillCount]-' + IntToStr(LFills.Count));
+      LogInfo('DoCancel::PartialFound::[FillCount]:' + IntToStr(LFills.Count));
 
       //update size and fees with our fills object
       LDetails.Order.FilledSized:=LFills.TotalSize[[LDetails.Order.Side]];
@@ -343,7 +343,7 @@ begin
       //log that we had a partial fill
       LogInfo(
         Format(
-          'DoCancel::PartialFound::[FilledSize]-%s [FillFees]-%s [Unfilled]-%s',
+          'DoCancel::PartialFound::[FilledSize]:%s [FillFees]:%s [Unfilled]:%s',
           [
             FloatToStr(LDetails.Order.FilledSized),
             FloatToStr(LDetails.Order.FillFees),
@@ -352,14 +352,14 @@ begin
         )
       );
 
-      LogInfo('DoCancel::PartialFound::old [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
+      LogInfo('DoCancel::PartialFound::old [ExecutedValue]:' + FloatToStr(LDetails.Order.ExecutedValue));
 
       //manually fill out the executed value property, cumulative (size * price)
       LDetails.Order.ExecutedValue:=0;
       for I:=0 to Pred(LFills.Count) do
         LDetails.Order.ExecutedValue:=LDetails.Order.ExecutedValue + LFills.Entries[I].Size * LFills.Entries[I].Price;
 
-      LogInfo('DoCancel::PartialFound::new [ExecutedValue]-' + FloatToStr(LDetails.Order.ExecutedValue));
+      LogInfo('DoCancel::PartialFound::new [ExecutedValue]:' + FloatToStr(LDetails.Order.ExecutedValue));
     end;
 
     //the call to delete was successful so update the status,
@@ -384,7 +384,7 @@ begin
     //will check everything needed for continuing
     if not GDAXDetailsValid(ADetails,LError) then
     begin
-      LogError('DoGetStatus::[Error]-' + LError);
+      LogError('DoGetStatus::[Error]:' + LError);
       Exit;
     end;
 
@@ -418,15 +418,15 @@ begin
           LogWarning('DoGetStatus::NotFound::order message "NotFound" detected, checking for cancel retry count');
 
           //checks to see if this order exceeds the maximum cancel tries
-          LogError('DoGetStatus::NotFound::CancelCheck::checking if [OrderID]-' + LID + ' exceeds cancel try limit');
+          LogError('DoGetStatus::NotFound::CancelCheck::checking if [OrderID]:' + LID + ' exceeds cancel try limit');
           if not CancelCountCheck(LID) then
           begin
             Result:=LOldStatus;
-            LogError('DoGetStatus::NotFound::CancelCheck::[OrderID]-' + LID + ' still has retries left');
+            LogError('DoGetStatus::NotFound::CancelCheck::[OrderID]:' + LID + ' still has retries left');
             Exit;
           end
           else
-            LogWarning('DoGetStatus::NotFound::CancelCheck::[OrderID]-' + LID + ' used all cancel retries');
+            LogWarning('DoGetStatus::NotFound::CancelCheck::[OrderID]:' + LID + ' used all cancel retries');
 
           //cleanup if order is in the cancel map
           if FCancelMap.IndexOf(LID) >= 0 then
@@ -438,7 +438,7 @@ begin
           //notify listeners of status change
           if (LOldStatus <> Result) or (Result = omCanceled) then
           begin
-            LogInfo('DoGetStatus::StatusChange::[ID]-' + LID + ' [OldStatus]-' + OrderManagerStatusToString(LOldStatus) + ' [NewStatus]-' + OrderManagerStatusToString(Result));
+            LogInfo('DoGetStatus::StatusChange::[ID]:' + LID + ' [OldStatus]:' + OrderManagerStatusToString(LOldStatus) + ' [NewStatus]:' + OrderManagerStatusToString(Result));
             DoOnStatus(LDetails,LID,LOldStatus,Result);
           end;
 
@@ -453,11 +453,11 @@ begin
         Exit;
       end
       else
-        LogInfo('DoGetStatus::ResponseContent::[Content]-' + LContent);
+        LogInfo('DoGetStatus::ResponseContent::[Content]:' + LContent);
 
       //map the gdax status to the order manager
       Result:=GDAXStatusToEngineStatus(LDetails.Order.OrderStatus);
-      LogInfo('DoGetStatus::OrderManagerStatus::[Status]-' + OrderManagerStatusToString(Result));
+      LogInfo('DoGetStatus::OrderManagerStatus::[Status]:' + OrderManagerStatusToString(Result));
 
       //note: this code was added before changing the order status to
       //correclty report as "omCompleted" only if and order is settled.
@@ -486,7 +486,7 @@ begin
     end
     else
     begin
-      LogInfo('DoGetStatus::CanceledOrder::OrderInfo::[PostBody]-' + LDetails.Order.PostBody);
+      LogInfo('DoGetStatus::CanceledOrder::OrderInfo::[PostBody]:' + LDetails.Order.PostBody);
       Result:=omCanceled;
     end;
 
@@ -503,7 +503,7 @@ begin
     *)
     if (LOldStatus <> Result) or (Result = omCanceled) then
     begin
-      LogInfo('DoGetStatus::StatusChange::[ID]-' + LID + ' [OldStatus]-' + OrderManagerStatusToString(LOldStatus) + ' [NewStatus]-' + OrderManagerStatusToString(Result));
+      LogInfo('DoGetStatus::StatusChange::[ID]:' + LID + ' [OldStatus]:' + OrderManagerStatusToString(LOldStatus) + ' [NewStatus]:' + OrderManagerStatusToString(Result));
       DoOnStatus(LDetails,LID,LOldStatus,Result);
     end;
   except on E:Exception do
@@ -530,7 +530,7 @@ begin
   //update the last refresh
   FLastRefresh := Now;
 
-  LogInfo('DoRefresh::[OrderCount]-' + IntToStr(Orders.Count));
+  LogInfo('DoRefresh::[OrderCount]:' + IntToStr(Orders.Count));
 
   //right now, we will just go through the listing of orders and check
   //the status. this will count against gdax private endpoint limit, so

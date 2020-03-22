@@ -399,8 +399,9 @@ var
     //see if we are using dynamic thresholds
     if FUseDyn then
     begin
-      //set here to easily debug
-      LThresh := FAvgAccel + (FStdDecel * 0.10);
+      //find a threshold using a "slightly" above average (plus %deviation)
+      //acceleration and deceleration
+      LThresh := ((FAvgAccel + (FStdAccel * 0.05)) + (Abs(FAvgDecel) + (Abs(FStdDecel) * 0.05))) / 2;
 
       //negate when user specified to do so
       if FThresh < 0 then
@@ -411,6 +412,8 @@ var
         LThresh := FThresh
       else if (FThresh < 0) and (LThresh > FThresh) then
         LThresh := FThresh;
+
+      LogInfo(Format('GetTakePosition::dynamic threshold on [threshold]-%f', [LThresh]));
     end
     //not using dynamic, set to user specified
     else
@@ -429,26 +432,21 @@ var
         Funds := AFunds;
 
       //todo - perhaps add a bounds check to the crossdown thresh here.
-      //       this should prevent immediate positions after closing
+      //       that corresponds to dynamic, since currently this only uses
+      //       the "fixed" threshold. also maybe break this out since the
+      //       single line comparisons are getting a little hairy
 
       //take position if positive diff percent, and is greater than the threshold
       //or if threshold is negative handle differently
       Result :=
-        ((LThresh > 0) and (LDiff >= LThresh))
+        ((LThresh > 0) and (LDiff >= LThresh) and ((FThreshDown = 0) or (FThreshDown > 0) or ((FThreshDown < 0) and (LDiff < Abs(FThreshDown)))))
         or
-        ((LThresh < 0) and (LDiff <= LThresh));
+        ((LThresh < 0) and (LDiff <= LThresh) and ((FThreshDown = 0) or (Abs(LDiff) < Abs(FThreshDown))));
       Position := apFull;
     end
     //check for risky position
     else if FRiskyPerc > 0 then
     begin
-      //in dynamic mode, avoid risky positions if we've been in free-fall mode
-      if FUseDyn and ((FAvgAccel * 2) < Abs(FAvgDecel)) then
-      begin
-        LogInfo('GetTakePosition::average deceleration past threshold for dynamic mode');
-        Exit(False);
-      end;
-
       //find amount of funds to spend for a risky position
       Funds := FRiskyPerc * AFunds;
 
@@ -458,11 +456,11 @@ var
       if Funds > AFunds then
         Funds := AFunds;
 
-      //close position if positive diff percent, and is greater than the threshold
+      //take position if positive diff percent, and is greater than the threshold
       Result :=
-        ((LThresh > 0) and (LDiff >= LThresh))
+        ((LThresh > 0) and (LDiff >= LThresh)) and ((FThreshDown = 0) or (FThreshDown > 0) or ((FThreshDown < 0) and (LDiff < Abs(FThreshDown))))
         or
-        ((LThresh < 0) and (LDiff <= LThresh));
+        ((LThresh < 0) and (LDiff <= LThresh)) and ((FThreshDown = 0) or (Abs(LDiff) < Abs(FThreshDown)));
       Position := apRisky;
     end;
   end;
@@ -491,8 +489,8 @@ var
     //see if we are using dynamic thresholds
     if FUseDyn then
     begin
-      //set here to easily debug
-      LThresh := abs(FAvgDecel) + abs(FStdDecel) * 0.10;
+      //find dynamic threshold (see take position comments for notes)
+      LThresh := ((FAvgAccel + (FStdAccel * 0.05)) + (Abs(FAvgDecel) + (Abs(FStdDecel) * 0.05))) / 2;
 
       //negate when user specified to do so
       if FThreshDown < 0 then
@@ -505,6 +503,8 @@ var
         LThresh := FThreshDown
       else if LIsAccel and (FThreshDown < 0) and (LThresh < FThreshDown) then
         LThresh := FThreshDown;
+
+      LogInfo(Format('GetClosePosition::dynamic threshold on [threshold]-%f', [LThresh]));
     end
     //not using dynamic, set to user specified
     else
@@ -744,7 +744,7 @@ procedure TAccelerationStrategyImpl.UpdateExtremaAccel(const ALeading, ALagging 
   end;
 
 const
-  OUTLIER_BOUND = 0.15;
+  OUTLIER_BOUND = 0.02;
 var
   LAccelDiffPerc: Single;
   I: Int64;

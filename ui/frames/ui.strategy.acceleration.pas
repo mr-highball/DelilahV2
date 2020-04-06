@@ -14,6 +14,7 @@ type
 
   TConfigureAcceleration = class(TConfigureStrategy)
     chk_dynamic: TCheckBox;
+    edit_chop_thresh: TEdit;
     edit_lead_starting_percent: TEdit;
     edit_cross_thresh: TEdit;
     edit_risky_pos_percent: TEdit;
@@ -64,6 +65,9 @@ begin
   if edit_cross_down_thresh.Text <> '' then
     LStrat.CrossDownThresholdPercent := StrToFloat(edit_cross_down_thresh.Text);
 
+  if edit_chop_thresh.Text <> '' then
+    LStrat.AvoidChopThreshold := StrToFloat(edit_chop_thresh.Text);
+
   LStrat.UseDynamicPositions := chk_dynamic.Checked;
 end;
 
@@ -80,6 +84,7 @@ begin
   edit_risky_pos_percent.Text := FloatToStr(LStrat.RiskyPositionPercent);
   edit_cross_thresh.Text := FloatToStr(LStrat.CrossThresholdPercent);
   edit_cross_down_thresh.Text := FloatToStr(LStrat.CrossDownThresholdPercent);
+  edit_chop_thresh.Text := FloatToStr(LStrat.AvoidChopThreshold);
   chk_dynamic.Checked := LStrat.UseDynamicPositions;
 end;
 

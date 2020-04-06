@@ -3,20 +3,24 @@ inherited ConfigureAcceleration: TConfigureAcceleration
   Width = 951
   ClientHeight = 678
   ClientWidth = 951
+  DesignLeft = 763
+  DesignTop = 217
   inherited pnl_ctrls: TPanel
-    Top = 578
+    Top = 628
     Width = 951
     ClientWidth = 951
     inherited btn_save: TButton
-      Left = 793
+      Left = 872
+      Top = 13
     end
   end
   inherited scroll_controls: TScrollBox
-    Height = 478
+    Height = 578
+    Top = 50
     Width = 951
-    HorzScrollBar.Page = 360
-    VertScrollBar.Page = 380
-    ClientHeight = 474
+    HorzScrollBar.Page = 280
+    VertScrollBar.Page = 275
+    ClientHeight = 574
     ClientWidth = 947
     object edit_window_size: TEdit[0]
       AnchorSideLeft.Control = scroll_controls
@@ -24,7 +28,7 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       AnchorSideRight.Control = scroll_controls
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
+      Height = 23
       Top = 8
       Width = 747
       Anchors = [akTop, akLeft, akRight]
@@ -41,8 +45,8 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       AnchorSideRight.Control = scroll_controls
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
-      Top = 56
+      Height = 23
+      Top = 39
       Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Left = 100
@@ -58,8 +62,8 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       AnchorSideRight.Control = edit_lead_starting_percent
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
-      Top = 104
+      Height = 23
+      Top = 70
       Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -73,8 +77,8 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       AnchorSideRight.Control = edit_lead_starting_percent
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
-      Top = 152
+      Height = 23
+      Top = 101
       Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -88,8 +92,8 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       AnchorSideRight.Control = edit_lead_starting_percent
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
-      Top = 200
+      Height = 23
+      Top = 132
       Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -103,8 +107,8 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       AnchorSideRight.Control = edit_lead_starting_percent
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
-      Top = 248
+      Height = 23
+      Top = 163
       Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -112,27 +116,44 @@ inherited ConfigureAcceleration: TConfigureAcceleration
       TextHint = 'Cross Threshold Percent (Open)'
     end
     object edit_cross_down_thresh: TEdit[6]
+      AnchorSideLeft.Control = edit_cross_thresh
       AnchorSideTop.Control = edit_cross_thresh
       AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_window_size
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 40
-      Top = 296
-      Width = 717
+      Height = 23
+      Top = 194
+      Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
       TabOrder = 6
       TextHint = 'Cross Down Threshold Percent (Close)'
     end
-    object chk_dynamic: TCheckBox[7]
+    object edit_chop_thresh: TEdit[7]
       AnchorSideLeft.Control = edit_cross_down_thresh
       AnchorSideTop.Control = edit_cross_down_thresh
       AnchorSideTop.Side = asrBottom
       AnchorSideRight.Control = edit_window_size
       AnchorSideRight.Side = asrBottom
       Left = 100
-      Height = 36
-      Top = 344
+      Height = 23
+      Top = 225
+      Width = 747
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 8
+      TextHint = 'Chop Threshold'
+    end
+    object chk_dynamic: TCheckBox[8]
+      AnchorSideLeft.Control = edit_cross_down_thresh
+      AnchorSideTop.Control = edit_chop_thresh
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_window_size
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 19
+      Top = 256
       Width = 747
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -144,7 +165,9 @@ inherited ConfigureAcceleration: TConfigureAcceleration
     Width = 951
     ClientWidth = 951
     inherited edit_name: TEdit
-      Left = 325
+      Left = 400
+      Height = 23
+      Top = 14
     end
   end
 end

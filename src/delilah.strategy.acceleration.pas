@@ -40,6 +40,8 @@ type
     function GetThresh: Single;
     function GetThreshDown: Single;
     function GetUseDyn: Boolean;
+    procedure SetAvoidChop(const AValue: Extended);
+    function GetAvoidChop: Extended;
     procedure SetLeadEnd(const AValue: Single);
     procedure SetLeadStart(const AValue: Single);
     procedure SetPosPercent(const AValue: Single);
@@ -185,6 +187,22 @@ type
       **experimental**
     *)
     property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn;
+
+    (*
+      set if avoiding "choppy" conditions is desired. this setting looks at the
+      average of lead & lag, and if the current conditons fall between either side
+      (positive / negative) then opening positions will not be executed (closing may still occur)
+
+      example:
+        CurLagAccel = 0.01
+        CurLeadAccel = -.02
+        AvoidChopThreshold = 0.03
+
+        CurrentChopIndicator = (Abs(CurLagAccel) + Abs(CurLeadAccel) / 2) = 0.015
+        the current indicator is 0.015 and falls between the threshold, so trades
+        are postponed until volatility picks up.
+    *)
+    property AvoidChopThreshold : Extended read GetAvoidChop write SetAvoidChop;
   end;
 
   { TAccelerationStrategyImpl }
@@ -222,6 +240,7 @@ type
     FDecels,
     FLaggings: TArray<Extended>;
     FUseDyn : Boolean;
+    FAvoidChop : Extended;
   protected
     function GetAccelStd: Extended;
     function GetAMaxAccel: Extended;
@@ -251,6 +270,8 @@ type
     procedure SetThresh(const AValue: Single);
     function GetThreshDown: Single;
     procedure SetThreshDOwn(const AValue: Single);
+    procedure SetAvoidChop(const AValue: Extended);
+    function GetAvoidChop: Extended;
   strict protected
     function CalcAccelDiffPerc(const ALead, ALag : Single;
       out IsAccel : Boolean) : Single;
@@ -320,6 +341,7 @@ type
     property MaxDeceleration : Extended read GetMaxDecel;
     property DecelerationStdDev : Extended read GetDecelStd;
     property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn;
+    property AvoidChopThreshold : Extended read GetAvoidChop write SetAvoidChop;
 
     constructor Create; override;
     destructor Destroy; override;
@@ -341,6 +363,16 @@ end;
 procedure TAccelerationStrategyImpl.SetThreshDOwn(const AValue: Single);
 begin
   FThreshDown := AValue;
+end;
+
+procedure TAccelerationStrategyImpl.SetAvoidChop(const AValue: Extended);
+begin
+  FAvoidChop := AValue;
+end;
+
+function TAccelerationStrategyImpl.GetAvoidChop: Extended;
+begin
+  Result := FAvoidChop;
 end;
 
 function TAccelerationStrategyImpl.CalcAccelDiffPerc(const ALead, ALag: Single;
@@ -374,6 +406,7 @@ var
   LDetails: IOrderDetails;
   LID: String;
   LLeadStart, LLeadEnd: Int64;
+  LChopIndicator: ValReal;
 
   (*
     helper to determine if we should take a position
@@ -601,6 +634,20 @@ begin
     //if we aren't then check if we need to open one
     if (not LInPosition) or (FPosition = apRisky) then
     begin
+      //check for choppy conditions as long as user specified a threshold before opening
+      if FAvoidChop <> 0 then
+      begin
+        LChopIndicator := (Abs(FLag) + Abs(FLead)) / 2;
+        LogInfo(Format('current chop indicator [current]:%f [threshold]:%f', [LChopIndicator, Abs(FAvoidChop)]));
+
+        //if the indicator falls below what the user has specified, then bail
+        if LChopIndicator < Abs(FAvoidChop) then
+        begin
+          LogInfo('choppy conditions detected');
+          Exit(True);
+        end;
+      end;
+
       //check if we should take a position
       if GetTakePosition(LLeading, LLagging, LPos, LFunds) then
       begin
@@ -727,6 +774,7 @@ begin
   FRiskyPerc := 0.10;
   FThresh := 0.0025;
   FThreshDown := 0.0025;
+  FAvoidChop := 0;
 end;
 
 destructor TAccelerationStrategyImpl.Destroy;

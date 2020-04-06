@@ -1,0 +1,198 @@
+object Gunslinger: TGunslinger
+  Left = 0
+  Height = 240
+  Top = 0
+  Width = 319
+  ClientHeight = 240
+  ClientWidth = 319
+  LCLVersion = '1.8.4.0'
+  DesignLeft = 650
+  DesignTop = 315
+  object grp_sell: TGroupBox
+    AnchorSideLeft.Control = split_main
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = pnl_info
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 168
+    Height = 180
+    Top = 55
+    Width = 146
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderSpacing.Left = 5
+    BorderSpacing.Top = 5
+    BorderSpacing.Right = 5
+    BorderSpacing.Bottom = 5
+    Caption = 'Sell'
+    ClientHeight = 160
+    ClientWidth = 142
+    TabOrder = 0
+    object scroll_sell: TScrollBox
+      Left = 0
+      Height = 135
+      Top = 0
+      Width = 142
+      HorzScrollBar.Page = 1
+      VertScrollBar.Page = 1
+      Align = alClient
+      BorderStyle = bsNone
+      TabOrder = 0
+    end
+    object btn_sell: TButton
+      Left = 0
+      Height = 25
+      Top = 135
+      Width = 142
+      Align = alBottom
+      Caption = '&Sell'
+      OnClick = btn_sellClick
+      TabOrder = 1
+    end
+  end
+  object split_main: TSplitter
+    AnchorSideLeft.Control = Owner
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = Owner
+    AnchorSideTop.Side = asrCenter
+    Left = 155
+    Height = 240
+    Top = 0
+    Width = 8
+    Align = alNone
+    Anchors = []
+  end
+  object grp_buy: TGroupBox
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = pnl_info
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = split_main
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 5
+    Height = 180
+    Top = 55
+    Width = 145
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderSpacing.Left = 5
+    BorderSpacing.Top = 5
+    BorderSpacing.Right = 5
+    BorderSpacing.Bottom = 5
+    Caption = 'Buy'
+    ClientHeight = 160
+    ClientWidth = 141
+    TabOrder = 2
+    object scroll_buy: TScrollBox
+      Left = 0
+      Height = 135
+      Top = 0
+      Width = 141
+      HorzScrollBar.Page = 1
+      VertScrollBar.Page = 1
+      Align = alClient
+      BorderStyle = bsNone
+      TabOrder = 0
+    end
+    object btn_buy: TButton
+      Left = 0
+      Height = 25
+      Top = 135
+      Width = 141
+      Align = alBottom
+      Caption = '&Buy'
+      OnClick = btn_buyClick
+      TabOrder = 1
+    end
+  end
+  object pnl_info: TPanel
+    Left = 0
+    Height = 50
+    Top = 0
+    Width = 319
+    Align = alTop
+    BevelOuter = bvNone
+    Caption = 'Gunslinger Mode'
+    ClientHeight = 50
+    ClientWidth = 319
+    TabOrder = 3
+    object img_hat: TImage
+      AnchorSideLeft.Control = pnl_info
+      AnchorSideTop.Control = pnl_info
+      AnchorSideBottom.Control = pnl_info
+      AnchorSideBottom.Side = asrBottom
+      Left = 5
+      Height = 40
+      Top = 5
+      Width = 32
+      Anchors = [akTop, akLeft, akBottom]
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Bottom = 5
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B477261706869637B02000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        06624B474400FF00FF00FFA0BDA79300000230494441545885EDD5DF6BCE511C
+        07F017B66922AC85ED8289D42C4B966451B8E0426E1457EE44B9F01728323772
+        2177E46E37F2A3D5E40A25B1B40B2D51D8C5C48CD436CA6C63D8E3E29C67CFD7
+        B6C7F779D673A39E779DCE399FF3F9753EE7F3F91CCA28A38CFF181568C67174
+        60185F70075B4A6DAC0AA7D18B6FC8A48C516C2FA5031DB318F98D8178760CF5
+        5884F3F1BCBB54C65BA2C221EC8846FE852AE129325893A67C7E010EEC8AF34D
+        74612C857F020FE37A4F291C688CF38B0278B37810E73338253CCF9CD1258473
+        7711324D6626651B2AE7E2C050545257844C5DC2783726E3FA316AD28417E228
+        EEE26342D1535CC2D614F9B5422FC8CA9DC04EBC8FFB27A8CE27DC84D7D2EBFC
+        16D6612536E1B0507E3D89DB2679A101FD91767136E39B3118197A7028DEA612
+        B568C5597C4A716E0CED3810F703091BADD1C15FF10253A8465F1468C7827C21
+        C2625C4E18FC81DB4292ED930B6F733C1F9E26DF19E91792C436B98429A434E1
+        A4D00D33381769F53888EB188F6757A7C9ED8DF46749E287482CB67F1FC1CF28
+        FBDDCC567D4D8858122BE2F94892382EBCCDB2221D80FD5159D6709FD07C36E4
+        E15F15F93E2789F723F19E908CF38A74A211CFE56EDE294467BDF03764D12294
+        770637240C35E1915C931815CAF1255E09993F9C181309A54B8430D70837DF56
+        80C3D98FAD37495C8D2B42D9A4F581B98E3742C24EFD0DF9425D2B3CC546A117
+        3444A1E5429E5460A9503123F81A47763D2874D177782B34A07EE19B2EA38C32
+        FEC21FD72BCAE6EC5978060000000049454E44AE426082
+      }
+      Proportional = True
+    end
+    object img_hat1: TImage
+      AnchorSideLeft.Control = pnl_info
+      AnchorSideTop.Control = pnl_info
+      AnchorSideRight.Control = pnl_info
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = pnl_info
+      AnchorSideBottom.Side = asrBottom
+      Left = 282
+      Height = 40
+      Top = 5
+      Width = 32
+      Anchors = [akTop, akRight, akBottom]
+      BorderSpacing.Left = 5
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      BorderSpacing.Bottom = 5
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B477261706869632C02000089504E47
+        0D0A1A0A0000000D494844520000001A0000001A0806000000A94A4CCE000000
+        06624B474400FF00FF00FFA0BDA793000001E1494441544889DDD54D884D6118
+        07F05F774C584C29A558C847CA45463414B2184D6CB0D058DA28536423C56A2C
+        94260B9A5016624B291261312C2C940536F2D94449889AE4D25C742DDE6772BB
+        73EE754F1D9BF9D75BCFFB9EE73CFFF7FF7C9CC31441C784512A30E82E1C0F7B
+        1A4E62F07F102DC306F4E35AD8B78A222AA127EC851890941D4505BFB0068B3B
+        325F6F1F47700C6F25157BF1092F50C5260CC7596E2CC53E5C8960357CC40E8C
+        C7FE220E06799954B47F613E7A636DC6BC0C9F39F88C6F7883517CC5733C6B45
+        3457CA732F96B47119582735409754A7B1B8D47E9C6D242A6375386E8FB3ABB8
+        8DFBB8849575FEA3B88B91585BB0287CEE853DA0AEFB483D5FCB58C3B88E9752
+        1A6A7882054D949DC0E556D2674A937CA381E80E5684DAD37136A66EEA1B5092
+        EADA12DDB8891F75441FF02EEC713C928ADED3244626EA6FD587AD52CE0F6186
+        54AFAE20791AAACE48B9AFE2711E32117462066A782F35C34EFCC4FAB8C0A9F0
+        1FC1B6BC24A4BC56701E0782EC37D686820B982ECDCBA0A4AE332F012C0F559D
+        9815674352771D96D2F705AFA4F4F5494A73AB7960725B971BFC7229C8C2EE0C
+        929ABF035B084AD8D3E4D9AAA289BA9B3C6BF71BD73651B39F5FB54822786872
+        7D2AD85834513FBEE335CEC57E76D124530F7F00E7F579CDEF35BB8900000000
+        49454E44AE426082
+      }
+      Proportional = True
+    end
+  end
+end

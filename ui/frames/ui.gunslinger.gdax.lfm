@@ -1,0 +1,15 @@
+inherited GDAXGunslinger: TGDAXGunslinger
+  TabOrder = 0
+  inherited grp_sell: TGroupBox
+    AnchorSideRight.Control = Owner
+    AnchorSideBottom.Control = Owner
+  end
+  inherited split_main: TSplitter
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+  end
+  inherited grp_buy: TGroupBox
+    AnchorSideLeft.Control = Owner
+    AnchorSideBottom.Control = Owner
+  end
+end

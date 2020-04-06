@@ -1,0 +1,89 @@
+object GDAXSlingerOrder: TGDAXSlingerOrder
+  Left = 0
+  Height = 336
+  Top = 0
+  Width = 246
+  ClientHeight = 336
+  ClientWidth = 246
+  TabOrder = 0
+  DesignLeft = 678
+  DesignTop = 272
+  object pnl_quick_amt: TPanel
+    AnchorSideTop.Control = pnl_amt
+    AnchorSideTop.Side = asrBottom
+    Left = 0
+    Height = 50
+    Top = 105
+    Width = 244
+    BevelOuter = bvNone
+    TabOrder = 1
+  end
+  object pnl_amt: TPanel
+    AnchorSideLeft.Control = pnl_type
+    AnchorSideTop.Control = pnl_type
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = pnl_type
+    AnchorSideRight.Side = asrBottom
+    Left = 5
+    Height = 50
+    Top = 55
+    Width = 236
+    Anchors = [akTop, akLeft, akRight]
+    BevelOuter = bvNone
+    TabOrder = 2
+  end
+  object pnl_type: TPanel
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 5
+    Height = 50
+    Top = 5
+    Width = 236
+    Anchors = [akTop, akLeft, akRight]
+    BorderSpacing.Left = 5
+    BorderSpacing.Top = 5
+    BorderSpacing.Right = 5
+    BevelOuter = bvNone
+    ClientHeight = 50
+    ClientWidth = 236
+    TabOrder = 0
+    object radio_grp_type: TRadioGroup
+      Left = 0
+      Height = 50
+      Top = 0
+      Width = 236
+      Align = alClient
+      AutoFill = True
+      Caption = 'Type'
+      ChildSizing.LeftRightSpacing = 6
+      ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+      ChildSizing.EnlargeVertical = crsHomogenousChildResize
+      ChildSizing.ShrinkHorizontal = crsScaleChilds
+      ChildSizing.ShrinkVertical = crsScaleChilds
+      ChildSizing.Layout = cclLeftToRightThenTopToBottom
+      ChildSizing.ControlsPerLine = 2
+      ClientHeight = 30
+      ClientWidth = 232
+      Columns = 2
+      TabOrder = 0
+      object radio_type_limit: TRadioButton
+        Left = 6
+        Height = 30
+        Top = 0
+        Width = 105
+        Caption = 'Limit'
+        TabOrder = 0
+      end
+      object radio_type_market: TRadioButton
+        Left = 111
+        Height = 30
+        Top = 0
+        Width = 115
+        Caption = 'Market'
+        TabOrder = 1
+      end
+    end
+  end
+end

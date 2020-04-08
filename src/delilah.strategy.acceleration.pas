@@ -580,9 +580,7 @@ begin
     LMin := GetMinOrderSize(ATicker);
 
     //using min, clear position if we have "dust"
-    if (FPosSize > 0)
-      and (AInventory < LMin)
-      and (LMin - AInventory > (LMin - LMin * 0.999))
+    if (FPosSize > 0) and (AInventory < LMin)
     then
     begin
       LogInfo('dust detected, clearing position');

@@ -739,15 +739,15 @@ begin
   LBuyLeDip.SmallTierPerc := 0.0;
   LBuyLeDip.MidTierPerc := 0.0;
   LBuyLeDip.LargeTierPerc := 0.004;
-  LBuyLeDip.SmallTierSellPerc := 0.01;
-  LBuyLeDip.MidTierSellPerc := 0.01;
-  LBuyLeDip.LargeTierSellPerc := 0.02;
-  LBuyLeDip.IgnoreOnlyProfitThreshold := 0.95;
+  LBuyLeDip.SmallTierSellPerc := 0.0025;
+  LBuyLeDip.MidTierSellPerc := 0.0025;
+  LBuyLeDip.LargeTierSellPerc := 0.005;
+  LBuyLeDip.IgnoreOnlyProfitThreshold := 0.90;
   LBuyLeDip.LimitFee := 0.001;
   LBuyLeDip.MarketFee := 0.002;
   LBuyLeDip.OnlyLowerAAC := False;
   LBuyLeDip.OnlyProfit := True;
-  LBuyLeDip.MinProfit := 0.035;
+  LBuyLeDip.MinProfit := 0.004;
   LBuyLeDip.MinReduction := 0.0;
 
   //configure the lowest acceleration

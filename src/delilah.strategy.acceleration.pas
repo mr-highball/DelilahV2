@@ -405,7 +405,7 @@ var
   LFunds : Extended;
   LDetails: IOrderDetails;
   LID: String;
-  LLeadStart, LLeadEnd: Int64;
+  LLeadStart, LLeadEnd, LLagEnd: Int64;
   LChopIndicator: ValReal;
 
   (*
@@ -589,9 +589,6 @@ begin
       ClearPosition;
     end;
 
-    //calculate the lagging acceleration for the window
-    LLagging := GetAverageAcceleratePerTick(Tickers) * Tickers.Count;
-
     //calculate the leading indicator (need to provide explicit start / end markers)
     LLeadStart := Abs(Trunc(Tickers.Count * FLeadStart));
     LLeadEnd := Abs(Trunc(Tickers.Count * FLeadEnd));
@@ -600,6 +597,14 @@ begin
       LLeadStart,
       LLeadEnd
     ) * Succ(LLeadEnd - LLeadStart);
+
+    (*
+      calculate the lagging acceleration for the window. we calculate the distance
+      the lead start/end are apart and use that to offset the ending for lag slightly.
+      for now the start for lag is always at the beginning
+    *)
+    LLagEnd := Tickers.Count - Round((LLeadEnd - LLeadStart) / 2); //position ending in middle of leading
+    LLagging := GetAverageAcceleratePerTick(Tickers, -1, LLagEnd) * Succ(LLagEnd);
 
     //updates metrics (avg, max, outliers, etc...)
     UpdateExtremaAccel(LLeading, LLagging, LIsOutlier);

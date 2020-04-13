@@ -756,8 +756,8 @@ begin
   LAccelLowest.LeadEndPercent := 1.0;
   LAccelLowest.PositionPercent := 0.05;
   LAccelLowest.RiskyPositionPercent := 0.05;
-  LAccelLowest.CrossThresholdPercent := 0.10;
-  LAccelLowest.CrossDownThresholdPercent := 2;
+  LAccelLowest.CrossThresholdPercent := 0.75;
+  LAccelLowest.CrossDownThresholdPercent := 0.75;
   LAccelLowest.AvoidChopThreshold := 0.03;
   LAccelLowest.UseDynamicPositions := True;
 
@@ -767,8 +767,8 @@ begin
   LAccelLow.LeadEndPercent := 1.0;
   LAccelLow.PositionPercent := 0.05;
   LAccelLow.RiskyPositionPercent := 0.05;
-  LAccelLow.CrossThresholdPercent := 0.10;
-  LAccelLow.CrossDownThresholdPercent := 2;
+  LAccelLow.CrossThresholdPercent := 0.75;
+  LAccelLow.CrossDownThresholdPercent := 0.75;
   LAccelLow.AvoidChopThreshold := 0.03;
   LAccelLow.UseDynamicPositions := True;
 
@@ -778,8 +778,8 @@ begin
   LAccelHigh.LeadEndPercent := 1.0;
   LAccelHigh.PositionPercent := 0.05;
   LAccelHigh.RiskyPositionPercent := 0.05;
-  LAccelHigh.CrossThresholdPercent := 0.10;
-  LAccelHigh.CrossDownThresholdPercent := 2;
+  LAccelHigh.CrossThresholdPercent := 0.75;
+  LAccelHigh.CrossDownThresholdPercent := 0.75;
   LAccelHigh.AvoidChopThreshold := 0.03;
   LAccelHigh.UseDynamicPositions := True;
 
@@ -789,8 +789,8 @@ begin
   LAccelHighest.LeadEndPercent := 1.0;
   LAccelHighest.PositionPercent := 0.05;
   LAccelHighest.RiskyPositionPercent := 0.05;
-  LAccelHighest.CrossThresholdPercent := 0.10;
-  LAccelHighest.CrossDownThresholdPercent := 2;
+  LAccelHighest.CrossThresholdPercent := 0.75;
+  LAccelHighest.CrossDownThresholdPercent := 0.75;
   LAccelHighest.AvoidChopThreshold := 0.03;
   LAccelHighest.UseDynamicPositions := True;
 

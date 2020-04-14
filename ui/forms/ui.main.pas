@@ -795,6 +795,7 @@ begin
   LAccelHighest.UseDynamicPositions := True;
 
   //add all strategies
+  FEngine.Strategies.Add(LAccelLowest);
   FEngine.Strategies.Add(LAccelLow);
   FEngine.Strategies.Add(LAccelHigh);
   FEngine.Strategies.Add(LAccelHighest);

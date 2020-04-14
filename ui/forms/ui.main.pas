@@ -739,15 +739,15 @@ begin
   LBuyLeDip.SmallTierPerc := 0.0;
   LBuyLeDip.MidTierPerc := 0.0;
   LBuyLeDip.LargeTierPerc := 0.004;
-  LBuyLeDip.SmallTierSellPerc := 0.01;
-  LBuyLeDip.MidTierSellPerc := 0.01;
-  LBuyLeDip.LargeTierSellPerc := 0.02;
-  LBuyLeDip.IgnoreOnlyProfitThreshold := 0.95;
+  LBuyLeDip.SmallTierSellPerc := 0.0025;
+  LBuyLeDip.MidTierSellPerc := 0.0025;
+  LBuyLeDip.LargeTierSellPerc := 0.005;
+  LBuyLeDip.IgnoreOnlyProfitThreshold := 0.90;
   LBuyLeDip.LimitFee := 0.001;
   LBuyLeDip.MarketFee := 0.002;
   LBuyLeDip.OnlyLowerAAC := False;
   LBuyLeDip.OnlyProfit := True;
-  LBuyLeDip.MinProfit := 0.035;
+  LBuyLeDip.MinProfit := 0.004;
   LBuyLeDip.MinReduction := 0.0;
 
   //configure the lowest acceleration
@@ -756,8 +756,8 @@ begin
   LAccelLowest.LeadEndPercent := 1.0;
   LAccelLowest.PositionPercent := 0.05;
   LAccelLowest.RiskyPositionPercent := 0.05;
-  LAccelLowest.CrossThresholdPercent := 0.10;
-  LAccelLowest.CrossDownThresholdPercent := 2;
+  LAccelLowest.CrossThresholdPercent := 0.75;
+  LAccelLowest.CrossDownThresholdPercent := 1.5;
   LAccelLowest.AvoidChopThreshold := 0.03;
   LAccelLowest.UseDynamicPositions := True;
 
@@ -767,8 +767,8 @@ begin
   LAccelLow.LeadEndPercent := 1.0;
   LAccelLow.PositionPercent := 0.05;
   LAccelLow.RiskyPositionPercent := 0.05;
-  LAccelLow.CrossThresholdPercent := 0.10;
-  LAccelLow.CrossDownThresholdPercent := 2;
+  LAccelLow.CrossThresholdPercent := 0.75;
+  LAccelLow.CrossDownThresholdPercent := 1.5;
   LAccelLow.AvoidChopThreshold := 0.03;
   LAccelLow.UseDynamicPositions := True;
 
@@ -778,8 +778,8 @@ begin
   LAccelHigh.LeadEndPercent := 1.0;
   LAccelHigh.PositionPercent := 0.05;
   LAccelHigh.RiskyPositionPercent := 0.05;
-  LAccelHigh.CrossThresholdPercent := 0.10;
-  LAccelHigh.CrossDownThresholdPercent := 2;
+  LAccelHigh.CrossThresholdPercent := 0.75;
+  LAccelHigh.CrossDownThresholdPercent := 1.5;
   LAccelHigh.AvoidChopThreshold := 0.03;
   LAccelHigh.UseDynamicPositions := True;
 
@@ -789,8 +789,8 @@ begin
   LAccelHighest.LeadEndPercent := 1.0;
   LAccelHighest.PositionPercent := 0.05;
   LAccelHighest.RiskyPositionPercent := 0.05;
-  LAccelHighest.CrossThresholdPercent := 0.10;
-  LAccelHighest.CrossDownThresholdPercent := 2;
+  LAccelHighest.CrossThresholdPercent := 0.75;
+  LAccelHighest.CrossDownThresholdPercent := 1.5;
   LAccelHighest.AvoidChopThreshold := 0.03;
   LAccelHighest.UseDynamicPositions := True;
 

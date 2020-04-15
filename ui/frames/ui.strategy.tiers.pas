@@ -18,6 +18,7 @@ type
     chk_only_lower: TCheckBox;
     chk_market_buy: TCheckBox;
     chk_market_sell: TCheckBox;
+    edit_max_scale_buy_percent: TEdit;
     edit_window_size: TEdit;
     edit_min_profit: TEdit;
     edit_ignore_profit_threshold: TEdit;
@@ -80,6 +81,9 @@ begin
   if edit_large_buy_percent.Text <> '' then
     LStrat.LargeTierPerc := StrToFloat(edit_large_buy_percent.Text);
 
+  if edit_max_scale_buy_percent.Text <> '' then
+    LStrat.MaxScaledBuyPerc := StrToFloat(edit_max_scale_buy_percent.Text);
+
   LStrat.OnlyProfit := chk_only_profit.Checked;
   LStrat.OnlyLowerAAC := chk_only_lower.Checked;
   LStrat.UseMarketBuy := chk_market_buy.Checked;
@@ -103,6 +107,7 @@ begin
   edit_large_sell_percent.Text := FloatToStr(LStrat.LargeTierSellPerc);
   edit_small_buy_percent.Text := FloatToStr(LStrat.SmallTierPerc);
   edit_large_buy_percent.Text := FloatToStr(LStrat.LargeTierPerc);
+  edit_max_scale_buy_percent.Text := FloatToStr(LStrat.MaxScaledBuyPerc);
   chk_only_profit.Checked := LStrat.OnlyProfit ;
   chk_only_lower.Checked := LStrat.OnlyLowerAAC ;
   chk_market_buy.Checked := LStrat.UseMarketBuy ;

@@ -77,6 +77,7 @@ type
     function GetLargeSellPerc: Single;
     function GetLimitFee: Single;
     function GetMarketFee: Single;
+    function GetMaxScaleBuy: Single;
     function GetMidPerc: Single;
     function GetMidSellPerc: Single;
     function GetMinProfit: Single;
@@ -97,6 +98,7 @@ type
     procedure SetLimitFee(Const AValue: Single);
     procedure SetMarketFee(Const AValue: Single);
     procedure SetMarketSell(Const AValue: Boolean);
+    procedure SetMaxScaleBuy(const AValue: Single);
     procedure SetMidPerc(Const AValue: Single);
     procedure SetMidSellPerc(Const AValue: Single);
     procedure SetMinProfit(Const AValue: Single);
@@ -196,6 +198,12 @@ type
     *)
     property ActiveCriteria : TActiveCriteriaCallbackArray read GetActiveCriteria write SetActiveCritera;
     property ActiveCriteriaData : Pointer read GetActiveCriteriaData write SetActiveCriteriaData;
+
+    (*
+      when set to anything non-zero, will scale buys proportionally to
+      the amount of remaining funds, all the way up to this "max" percentage
+    *)
+    property MaxScaledBuyPerc : Single read GetMaxScaleBuy write SetMaxScaleBuy;
   end;
 
   { TTierStrategyGDAXImpl }
@@ -220,7 +228,8 @@ type
     FMinProfit,
     FMinReduction,
     FGTFOPerc,
-    FIgnoreProfitPerc: Single;
+    FIgnoreProfitPerc,
+    FMaxScaleBuy: Single;
     FDontBuy,
     FSellItAllNow,
     FLargeBuy,
@@ -240,6 +249,7 @@ type
     function GetLargeSellPerc: Single;
     function GetMarketFee: Single;
     function GetLimitFee: Single;
+    function GetMaxScaleBuy: Single;
     function GetMidPerc: Single;
     function GetMidSellPerc: Single;
     function GetMinProfit: Single;
@@ -283,6 +293,15 @@ type
     procedure LargeSellLow(Const ASender:IChannel;Const ADirection:TChannelDirection);
     function GetAvoidChop: Boolean;
     procedure SetAvoidChop(const AValue: Boolean);
+    procedure SetMaxScaleBuy(const AValue: Single);
+  strict private
+
+    (*
+      provided some details about the account and market, this will calculate
+      the scaled buy percentage
+    *)
+    function CalculateScaleBuyPercent(const AFunds, AInventory,
+      AAAC : Extended; const ABuyPerc : Single) : Single;
   strict protected
     const
       GTFO = 'gtfo';
@@ -330,6 +349,7 @@ type
     property GTFOPerc : Single read GetGTFOPerc write SetGTFOPerc;
     property ActiveCriteria : TActiveCriteriaCallbackArray read GetActiveCriteria write SetActiveCritera;
     property ActiveCriteriaData : Pointer read GetActiveCriteriaData write SetActiveCriteriaData;
+    property MaxScaledBuyPerc : Single read GetMaxScaleBuy write SetMaxScaleBuy;
     constructor Create(const AOnInfo, AOnError, AOnWarn: TStrategyLogEvent);override;
     destructor Destroy; override;
   end;
@@ -378,6 +398,11 @@ end;
 function TTierStrategyGDAXImpl.GetLimitFee: Single;
 begin
   Result:=FLimitFee;
+end;
+
+function TTierStrategyGDAXImpl.GetMaxScaleBuy: Single;
+begin
+  Result := FMaxScaleBuy;
 end;
 
 function TTierStrategyGDAXImpl.GetMidPerc: Single;
@@ -446,7 +471,7 @@ begin
   FActiveCriteria:=AValue;
 end;
 
-procedure TTierStrategyGDAXImpl.SetActiveCriteriaData(Const AValue: Pointer);
+procedure TTierStrategyGDAXImpl.SetActiveCriteriaData(const AValue: Pointer);
 begin
   FActiveCriteriaData:=AValue;
 end;
@@ -929,6 +954,10 @@ begin
           LogInfo('DoFeed::buy::percentage is 0, exiting');
           Exit(True);
         end;
+
+        //now account for buy scaling
+        LPerc := CalculateScaleBuyPercent(AFunds, AInventory, AAAC, LPerc);
+
         //see if we have enough funds to cover either a limit or market
         LOrderBuyTot:=Abs(RoundTo(AFunds * LPerc,-8));
 
@@ -1377,27 +1406,63 @@ begin
   FAvoidChop:=AValue;
 end;
 
+procedure TTierStrategyGDAXImpl.SetMaxScaleBuy(const AValue: Single);
+begin
+  FMaxScaleBuy := AValue;
+end;
+
+function TTierStrategyGDAXImpl.CalculateScaleBuyPercent(const AFunds,
+  AInventory, AAAC: Extended; const ABuyPerc: Single): Single;
+var
+  LTotalFunds,
+  LFundUsage: Extended;
+begin
+  Result := ABuyPerc;
+
+  //no buy scaling set, exit
+  if FMaxScaleBuy <= 0 then
+    Exit;
+
+  //find the fund utilization percentage
+  LTotalFunds := (AInventory * AAAC + AFunds);
+
+  if LTotalFunds = 0 then
+    Exit;
+
+  LFundUsage := 1 - AFunds / LTotalFunds;
+
+  //now with the fund usage, we can apply the scale to the provided buy percent
+  Result := ABuyPerc + (ABuyPerc * (LFundUsage * FMaxScaleBuy));
+
+  //can't buy negative amounts
+  if Result < 0 then
+    Result := 0;
+
+  LogInfo(Format('CalculateScaleBuyPercent::buy scaling applied [orig]:%f [new]:%f', [ABuyPerc, Result]));
+end;
+
 constructor TTierStrategyGDAXImpl.Create(const AOnInfo, AOnError,
   AOnWarn: TStrategyLogEvent);
 begin
   inherited Create(AOnInfo,AOnError,AOnWarn);
-  FChannel:=TChannelStrategyImpl.Create(AOnInfo,AOnError,AOnWarn);
-  FIDS:=TFPGList<String>.Create;
-  FSmallPerc:=0;
-  FMidPerc:=0;
-  FLargePerc:=0;
-  FSmallSellPerc:=0;
-  FMidSellperc:=0;
-  FLargeSellPerc:=0;
-  FMarketFee:=0.003;//account for slippage on market orders
-  FLimitFee:=0.0015;
-  FMinProfit:=0;
-  FMinReduction:=0;
-  FUseMarketBuy:=False;
-  FUseMarketSell:=False;
-  FIgnoreProfitPerc:=0;
-  FGTFOPerc:=0;
-  FAvoidChop:=False;
+  FChannel := TChannelStrategyImpl.Create(AOnInfo,AOnError,AOnWarn);
+  FIDS := TFPGList<String>.Create;
+  FSmallPerc := 0;
+  FMidPerc := 0;
+  FLargePerc := 0;
+  FSmallSellPerc := 0;
+  FMidSellperc := 0;
+  FLargeSellPerc := 0;
+  FMarketFee := 0.003;//account for slippage on market orders
+  FLimitFee := 0.0015;
+  FMinProfit := 0;
+  FMinReduction := 0;
+  FUseMarketBuy := False;
+  FUseMarketSell := False;
+  FIgnoreProfitPerc := 0;
+  FGTFOPerc := 0;
+  FAvoidChop := False;
+  FMaxScaleBuy := 0;
   InitChannel;
 end;
 

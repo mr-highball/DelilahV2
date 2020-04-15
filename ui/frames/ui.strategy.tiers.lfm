@@ -18,7 +18,22 @@ inherited ConfigureTiers: TConfigureTiers
     VertScrollBar.Page = 683
     ClientHeight = 683
     ClientWidth = 917
-    object edit_ignore_profit_threshold: TEdit[0]
+    object edit_max_scale_buy_percent: TEdit[0]
+      AnchorSideLeft.Control = edit_ignore_profit_threshold
+      AnchorSideTop.Control = edit_large_buy_percent
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_ignore_profit_threshold
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 488
+      Width = 717
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      TabOrder = 15
+      TextHint = 'Max Scaled Buy Percent'
+    end
+    object edit_ignore_profit_threshold: TEdit[1]
       AnchorSideLeft.Control = scroll_controls
       AnchorSideTop.Control = edit_window_size
       AnchorSideTop.Side = asrBottom
@@ -35,7 +50,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 0
       TextHint = 'Ignore Profit Threshold'
     end
-    object edit_min_profit: TEdit[1]
+    object edit_min_profit: TEdit[2]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_ignore_profit_threshold
       AnchorSideTop.Side = asrBottom
@@ -50,7 +65,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 1
       TextHint = 'Min Profit'
     end
-    object edit_min_reduction: TEdit[2]
+    object edit_min_reduction: TEdit[3]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_min_profit
       AnchorSideTop.Side = asrBottom
@@ -65,7 +80,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 2
       TextHint = 'Min Reduction'
     end
-    object edit_market_fee: TEdit[3]
+    object edit_market_fee: TEdit[4]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_min_reduction
       AnchorSideTop.Side = asrBottom
@@ -80,7 +95,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 3
       TextHint = 'Market Fee'
     end
-    object edit_limit_fee: TEdit[4]
+    object edit_limit_fee: TEdit[5]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_market_fee
       AnchorSideTop.Side = asrBottom
@@ -95,7 +110,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 4
       TextHint = 'Limit Fee'
     end
-    object edit_small_sell_perc: TEdit[5]
+    object edit_small_sell_perc: TEdit[6]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_limit_fee
       AnchorSideTop.Side = asrBottom
@@ -110,7 +125,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 5
       TextHint = 'Small Sell Percent'
     end
-    object edit_large_sell_percent: TEdit[6]
+    object edit_large_sell_percent: TEdit[7]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_small_sell_perc
       AnchorSideTop.Side = asrBottom
@@ -125,7 +140,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 6
       TextHint = 'Large Sell Percent'
     end
-    object edit_small_buy_percent: TEdit[7]
+    object edit_small_buy_percent: TEdit[8]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_large_sell_percent
       AnchorSideTop.Side = asrBottom
@@ -140,7 +155,7 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 7
       TextHint = 'Small Buy Percent'
     end
-    object edit_large_buy_percent: TEdit[8]
+    object edit_large_buy_percent: TEdit[9]
       AnchorSideLeft.Control = edit_ignore_profit_threshold
       AnchorSideTop.Control = edit_small_buy_percent
       AnchorSideTop.Side = asrBottom
@@ -155,22 +170,22 @@ inherited ConfigureTiers: TConfigureTiers
       TabOrder = 8
       TextHint = 'Large Buy Percent'
     end
-    object chk_only_profit: TCheckBox[9]
+    object chk_only_profit: TCheckBox[10]
       AnchorSideLeft.Control = edit_large_buy_percent
-      AnchorSideTop.Control = edit_large_buy_percent
+      AnchorSideTop.Control = edit_max_scale_buy_percent
       AnchorSideTop.Side = asrBottom
       AnchorSideRight.Control = edit_large_buy_percent
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 36
-      Top = 488
+      Top = 536
       Width = 717
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
       Caption = 'Only Profit'
       TabOrder = 9
     end
-    object chk_only_lower: TCheckBox[10]
+    object chk_only_lower: TCheckBox[11]
       AnchorSideLeft.Control = edit_large_buy_percent
       AnchorSideTop.Control = chk_only_profit
       AnchorSideTop.Side = asrBottom
@@ -178,14 +193,14 @@ inherited ConfigureTiers: TConfigureTiers
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 36
-      Top = 532
+      Top = 580
       Width = 717
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
       Caption = 'Only Lower'
       TabOrder = 10
     end
-    object chk_market_buy: TCheckBox[11]
+    object chk_market_buy: TCheckBox[12]
       AnchorSideLeft.Control = edit_large_buy_percent
       AnchorSideTop.Control = chk_only_lower
       AnchorSideTop.Side = asrBottom
@@ -193,14 +208,14 @@ inherited ConfigureTiers: TConfigureTiers
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 36
-      Top = 576
+      Top = 624
       Width = 717
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
       Caption = 'Market Buy'
       TabOrder = 11
     end
-    object chk_market_sell: TCheckBox[12]
+    object chk_market_sell: TCheckBox[13]
       AnchorSideLeft.Control = edit_large_buy_percent
       AnchorSideTop.Control = chk_market_buy
       AnchorSideTop.Side = asrBottom
@@ -208,14 +223,14 @@ inherited ConfigureTiers: TConfigureTiers
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 36
-      Top = 620
+      Top = 668
       Width = 717
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
       Caption = 'Market Sell'
       TabOrder = 12
     end
-    object chk_avoid_chop: TCheckBox[13]
+    object chk_avoid_chop: TCheckBox[14]
       AnchorSideLeft.Control = edit_large_buy_percent
       AnchorSideTop.Control = chk_market_sell
       AnchorSideTop.Side = asrBottom
@@ -223,14 +238,14 @@ inherited ConfigureTiers: TConfigureTiers
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 36
-      Top = 664
+      Top = 712
       Width = 717
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
       Caption = 'Avoid Chop'
       TabOrder = 13
     end
-    object edit_window_size: TEdit[14]
+    object edit_window_size: TEdit[15]
       AnchorSideLeft.Control = scroll_controls
       AnchorSideTop.Control = scroll_controls
       AnchorSideRight.Control = scroll_controls

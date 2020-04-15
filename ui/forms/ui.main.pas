@@ -738,7 +738,7 @@ begin
   LBuyLeDip.GTFOPerc := 0.0;
   LBuyLeDip.SmallTierPerc := 0.0;
   LBuyLeDip.MidTierPerc := 0.0;
-  LBuyLeDip.LargeTierPerc := 0.004;
+  LBuyLeDip.LargeTierPerc := 0.001;
   LBuyLeDip.SmallTierSellPerc := 0.0025;
   LBuyLeDip.MidTierSellPerc := 0.0025;
   LBuyLeDip.LargeTierSellPerc := 0.005;
@@ -749,6 +749,7 @@ begin
   LBuyLeDip.OnlyProfit := True;
   LBuyLeDip.MinProfit := 0.004;
   LBuyLeDip.MinReduction := 0.0;
+  LBuyLeDip.MaxScaledBuyPerc := 8;
 
   //configure the lowest acceleration
   LAccelLowest.WindowSizeInMilli := 10800000;

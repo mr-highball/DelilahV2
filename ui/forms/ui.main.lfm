@@ -1,28 +1,27 @@
 object Main: TMain
   Left = 883
-  Height = 1006
+  Height = 503
   Top = 183
-  Width = 1292
+  Width = 646
   Align = alRight
   Caption = 'SimpleBot v1.0.0'
-  ClientHeight = 967
-  ClientWidth = 1292
-  DesignTimePPI = 192
+  ClientHeight = 483
+  ClientWidth = 646
   Menu = menu_main
   OnCreate = FormCreate
   ShowHint = True
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '1.8.4.0'
   object pctrl_main: TPageControl
-    Left = 10
-    Height = 663
-    Top = 10
-    Width = 1272
+    Left = 5
+    Height = 330
+    Top = 5
+    Width = 636
     ActivePage = ts_chart
     Align = alClient
-    BorderSpacing.Left = 10
-    BorderSpacing.Top = 10
-    BorderSpacing.Right = 10
-    BorderSpacing.Bottom = 10
+    BorderSpacing.Left = 5
+    BorderSpacing.Top = 5
+    BorderSpacing.Right = 5
+    BorderSpacing.Bottom = 5
     Images = icons
     ParentFont = False
     TabIndex = 3
@@ -52,25 +51,25 @@ object Main: TMain
         HorzScrollBar.Page = 1
         VertScrollBar.Page = 1
         Align = alClient
-        BorderSpacing.Left = 10
-        BorderSpacing.Top = 10
-        BorderSpacing.Right = 10
-        BorderSpacing.Bottom = 10
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        BorderSpacing.Right = 5
+        BorderSpacing.Bottom = 5
         ParentFont = False
         TabOrder = 0
       end
     end
     object ts_chart: TTabSheet
       Caption = 'Chart'
-      ClientHeight = 605
-      ClientWidth = 1256
+      ClientHeight = 287
+      ClientWidth = 628
       ImageIndex = 0
       ParentFont = False
       object chart_ticker: TChart
-        Left = 520
-        Height = 585
-        Top = 10
-        Width = 726
+        Left = 260
+        Height = 277
+        Top = 5
+        Width = 363
         AxisList = <        
           item
             Marks.LabelBrush.Style = bsClear
@@ -101,7 +100,7 @@ object Main: TMain
         )
         Toolset = chart_tools
         Align = alClient
-        BorderSpacing.Around = 10
+        BorderSpacing.Around = 5
         Color = clNone
         DoubleBuffered = True
         object chart_tickerLineSeries1: TLineSeries
@@ -110,100 +109,100 @@ object Main: TMain
         end
       end
       inline Gunslinger1: TGDAXGunslinger
-        Height = 605
-        Width = 500
+        Height = 287
+        Width = 250
         Align = alLeft
-        ClientHeight = 605
-        ClientWidth = 500
+        ClientHeight = 287
+        ClientWidth = 250
         TabOrder = 1
-        DesignLeft = 1376
-        DesignTop = 648
+        DesignLeft = 688
+        DesignTop = 324
         inherited grp_sell: TGroupBox
           AnchorSideRight.Control = Gunslinger1
           AnchorSideBottom.Control = Gunslinger1
-          Left = 310
-          Height = 365
-          Top = 220
-          Width = 170
-          BorderSpacing.Left = 20
-          BorderSpacing.Top = 20
-          BorderSpacing.Right = 20
-          BorderSpacing.Bottom = 20
-          ClientHeight = 328
-          ClientWidth = 166
+          Left = 151
+          Height = 167
+          Top = 110
+          Width = 89
+          BorderSpacing.Left = 10
+          BorderSpacing.Top = 10
+          BorderSpacing.Right = 10
+          BorderSpacing.Bottom = 10
+          ClientHeight = 147
+          ClientWidth = 85
           inherited scroll_sell: TScrollBox
-            Height = 228
-            Width = 166
+            Height = 97
+            Width = 85
           end
           inherited btn_sell: TButton
-            Height = 100
-            Top = 228
-            Width = 166
+            Height = 50
+            Top = 97
+            Width = 85
           end
         end
         inherited split_main: TSplitter
           AnchorSideLeft.Control = Gunslinger1
           AnchorSideTop.Control = Gunslinger1
-          Left = 258
-          Height = 960
-          Top = 701
-          Width = 32
+          Left = 125
+          Height = 480
+          Top = 216
+          Width = 16
         end
         inherited grp_buy: TGroupBox
           AnchorSideLeft.Control = Gunslinger1
           AnchorSideBottom.Control = Gunslinger1
-          Left = 20
-          Height = 365
-          Top = 220
-          Width = 218
-          BorderSpacing.Left = 20
-          BorderSpacing.Top = 20
-          BorderSpacing.Right = 20
-          BorderSpacing.Bottom = 20
-          ClientHeight = 328
-          ClientWidth = 214
+          Left = 10
+          Height = 167
+          Top = 110
+          Width = 105
+          BorderSpacing.Left = 10
+          BorderSpacing.Top = 10
+          BorderSpacing.Right = 10
+          BorderSpacing.Bottom = 10
+          ClientHeight = 147
+          ClientWidth = 101
           inherited scroll_buy: TScrollBox
-            Height = 228
-            Width = 214
+            Height = 97
+            Width = 101
           end
           inherited btn_buy: TButton
-            Height = 100
-            Top = 228
-            Width = 214
+            Height = 50
+            Top = 97
+            Width = 101
           end
         end
         inherited pnl_info: TPanel
-          Height = 200
-          Width = 500
+          Height = 100
+          Width = 250
           BevelOuter = bvRaised
-          ClientHeight = 200
-          ClientWidth = 500
+          ClientHeight = 100
+          ClientWidth = 250
           inherited img_hat: TImage
-            Left = 21
-            Height = 158
-            Top = 21
-            Width = 128
-            BorderSpacing.Left = 20
-            BorderSpacing.Top = 20
-            BorderSpacing.Bottom = 20
+            Left = 11
+            Height = 78
+            Top = 11
+            Width = 64
+            BorderSpacing.Left = 10
+            BorderSpacing.Top = 10
+            BorderSpacing.Bottom = 10
           end
           inherited img_hat1: TImage
-            Left = 351
-            Height = 158
-            Top = 21
-            Width = 128
-            BorderSpacing.Left = 20
-            BorderSpacing.Top = 20
-            BorderSpacing.Right = 20
-            BorderSpacing.Bottom = 20
+            Left = 175
+            Height = 78
+            Top = 11
+            Width = 64
+            BorderSpacing.Left = 10
+            BorderSpacing.Top = 10
+            BorderSpacing.Right = 10
+            BorderSpacing.Bottom = 10
           end
         end
       end
       object Splitter1: TSplitter
-        Left = 500
-        Height = 605
+        Left = 250
+        Height = 287
         Top = 0
-        Width = 10
+        Width = 5
       end
     end
     object ts_log: TTabSheet
@@ -218,60 +217,58 @@ object Main: TMain
         Top = 10
         Width = 1236
         Align = alClient
-        BorderSpacing.Left = 10
-        BorderSpacing.Top = 10
-        BorderSpacing.Right = 10
-        BorderSpacing.Bottom = 10
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        BorderSpacing.Right = 5
+        BorderSpacing.Bottom = 5
         ClientHeight = 435
         ClientWidth = 1236
-        DesignLeft = 1260
-        DesignTop = 614
         inherited pnl_control: TPanel
           Left = 20
           Height = 239
           Top = 176
           Width = 1196
-          BorderSpacing.Left = 20
-          BorderSpacing.Top = 20
-          BorderSpacing.Right = 20
-          BorderSpacing.Bottom = 20
+          BorderSpacing.Left = 10
+          BorderSpacing.Top = 10
+          BorderSpacing.Right = 10
+          BorderSpacing.Bottom = 10
         end
         inherited lbl_title: TLabel
           Left = 20
           Height = 32
           Top = 20
           Width = 1196
-          BorderSpacing.Left = 20
-          BorderSpacing.Top = 20
-          BorderSpacing.Right = 20
+          BorderSpacing.Left = 10
+          BorderSpacing.Top = 10
+          BorderSpacing.Right = 10
         end
         inherited lbl_descr: TLabel
           Left = 20
           Height = 32
           Top = 72
           Width = 1196
-          BorderSpacing.Left = 20
-          BorderSpacing.Top = 20
-          BorderSpacing.Right = 20
+          BorderSpacing.Left = 10
+          BorderSpacing.Top = 10
+          BorderSpacing.Right = 10
         end
         inherited lbl_author: TLabel
           Left = 20
           Height = 32
           Top = 124
           Width = 1196
-          BorderSpacing.Left = 20
-          BorderSpacing.Top = 20
-          BorderSpacing.Right = 20
+          BorderSpacing.Left = 10
+          BorderSpacing.Top = 10
+          BorderSpacing.Right = 10
         end
       end
       object grp_log_options: TGroupBox
         Left = 0
-        Height = 150
-        Top = 455
+        Height = 75
+        Top = 530
         Width = 1256
         Align = alBottom
         Caption = 'Logging Options'
-        ClientHeight = 113
+        ClientHeight = 55
         ClientWidth = 1252
         ParentFont = False
         TabOrder = 1
@@ -281,7 +278,7 @@ object Main: TMain
           Top = 0
           Width = 78
           Align = alLeft
-          BorderSpacing.Left = 200
+          BorderSpacing.Left = 100
           Caption = 'Info'
           ParentFont = False
           TabOrder = 0
@@ -291,9 +288,9 @@ object Main: TMain
           AnchorSideLeft.Side = asrCenter
           AnchorSideTop.Control = chk_log_info
           AnchorSideTop.Side = asrCenter
-          Left = 558
+          Left = 279
           Height = 36
-          Top = 12
+          Top = 6
           Width = 136
           Caption = 'Warnings'
           ParentFont = False
@@ -305,27 +302,27 @@ object Main: TMain
           Top = 0
           Width = 96
           Align = alRight
-          BorderSpacing.Right = 200
+          BorderSpacing.Right = 100
           Caption = 'Errors'
           ParentFont = False
           TabOrder = 2
         end
         object pnl_log_clear: TPanel
           Left = 0
-          Height = 50
-          Top = 63
+          Height = 25
+          Top = 88
           Width = 1252
           Align = alBottom
           BevelOuter = bvNone
-          ClientHeight = 50
+          ClientHeight = 25
           ClientWidth = 1252
           ParentFont = False
           TabOrder = 3
           object btn_log_clear: TButton
-            Left = 1102
+            Left = 1177
             Height = 50
             Top = 0
-            Width = 150
+            Width = 75
             Align = alRight
             Caption = 'Clear'
             OnClick = btn_log_clearClick
@@ -347,7 +344,7 @@ object Main: TMain
         Top = 0
         Width = 628
         Align = alClient
-        BorderSpacing.Bottom = 10
+        BorderSpacing.Bottom = 5
         Lines.Strings = (
           'icons'
           '--'
@@ -374,74 +371,70 @@ object Main: TMain
     end
   end
   inline ignition_main: TIgnition
-    Left = 10
-    Height = 220
-    Top = 737
-    Width = 1272
+    Left = 5
+    Height = 110
+    Top = 368
+    Width = 636
     Align = alBottom
-    BorderSpacing.Around = 10
-    ClientHeight = 220
-    ClientWidth = 1272
+    BorderSpacing.Around = 5
+    ClientHeight = 110
+    ClientWidth = 636
     TabOrder = 1
-    DesignLeft = 1194
-    DesignTop = 490
     inherited btn_stop: TButton
       AnchorSideTop.Control = ignition_main
-      Left = 672
-      Height = 100
-      Top = 60
-      Width = 280
-      BorderSpacing.Right = 20
+      Left = 336
+      Height = 50
+      Top = 30
+      Width = 140
+      BorderSpacing.Right = 10
       Caption = 'Stop'
-      Constraints.MaxHeight = 100
-      Constraints.MaxWidth = 280
+      Constraints.MaxHeight = 50
+      Constraints.MaxWidth = 140
     end
     inherited btn_start: TButton
       AnchorSideTop.Control = ignition_main
       AnchorSideRight.Control = ignition_main
-      Left = 972
-      Height = 100
-      Top = 60
-      Width = 280
-      BorderSpacing.Right = 20
+      Left = 486
+      Height = 50
+      Top = 30
+      Width = 140
+      BorderSpacing.Right = 10
       Caption = 'Start'
-      Constraints.MaxHeight = 100
-      Constraints.MaxWidth = 280
+      Constraints.MaxHeight = 50
+      Constraints.MaxWidth = 140
     end
     inherited lbl_status: TLabel
       AnchorSideLeft.Control = ignition_main
-      Left = 20
-      Height = 32
-      Top = 60
-      Width = 79
-      BorderSpacing.Left = 20
+      Left = 10
+      Top = 30
+      BorderSpacing.Left = 10
     end
   end
   object status_main: TStatusBar
     Left = 0
-    Height = 44
-    Top = 683
-    Width = 1292
+    Height = 23
+    Top = 340
+    Width = 646
     Panels = <    
       item
         Text = 'Funds'
-        Width = 250
+        Width = 125
       end    
       item
         Text = 'Inventory'
-        Width = 250
+        Width = 125
       end    
       item
         Text = 'AAC'
-        Width = 250
+        Width = 125
       end    
       item
         Text = 'Profit'
-        Width = 250
+        Width = 125
       end    
       item
         Text = 'Completed'
-        Width = 250
+        Width = 125
       end>
     ParentFont = False
     SimplePanel = False
@@ -452,8 +445,8 @@ object Main: TMain
     Formatted = True
     OnSavingProperties = json_mainSavingProperties
     OnRestoringProperties = json_mainRestoringProperties
-    left = 886
-    top = 640
+    left = 443
+    top = 320
   end
   object chart_source: TListChartSource
     DataPoints.Strings = (
@@ -461,14 +454,14 @@ object Main: TMain
       '2|51|$0000FF|'
     )
     Sorted = True
-    left = 886
-    top = 544
+    left = 443
+    top = 272
   end
   object icons: TImageList
     Height = 32
     Width = 32
-    left = 886
-    top = 448
+    left = 443
+    top = 224
     Bitmap = {
       4C69060000002000000020000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -1242,8 +1235,8 @@ object Main: TMain
     }
   end
   object chart_tools: TChartToolset
-    left = 1040
-    top = 544
+    left = 520
+    top = 272
     object chart_toolsZoomMouseWheelTool1: TZoomMouseWheelTool
     end
     object chart_toolsDataPointCrosshairTool1: TDataPointCrosshairTool
@@ -1251,13 +1244,85 @@ object Main: TMain
   end
   object menu_main: TMainMenu
     Images = menu
-    left = 752
-    top = 640
+    left = 376
+    top = 320
     object mi_configure: TMenuItem
       Caption = 'Configure'
+      Bitmap.Data = {
+        36040000424D3604000000000000360000002800000010000000100000000100
+        2000000000000004000064000000640000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000013000000000000000000000013000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000A000000EF000000660000006F000000E3000000020000
+        0000000000000000000000000000000000000000000000000000000000000000
+        00000000000A00000055000000EF000000AE000000B5000000EC000000420000
+        000A000000000000000000000000000000000000000000000000000000000000
+        0016000000F0000000EE0000002700000000000000000000003A000000EE0000
+        00E6000000070000000000000000000000000000000000000000000000000000
+        000000000069000000A700000000000000000000000000000000000000C30000
+        004C000000000000000000000000000000000000000000000000000000000000
+        000000000074000000AE00000000000000000000000000000000000000C90000
+        0057000000000000000000000000000000000000000000000000000000000000
+        0015000000DE000000ED0000003B000000000000000000000052000000EA0000
+        00D8000000170000003000000000000000000000000000000000000000000000
+        00000000000000000049000000EF000000C0000000C8000000E9000000520000
+        004C00000092000000DA000000440000004F0000000000000000000000000000
+        00000000000000000009000000E7000000520000005A000000DE0000004B0000
+        00F1000000A100000074000000E5000000C90000000100000000000000000000
+        0000000000000000000000000009000000000000000000000018000000920000
+        009F000000000000000000000023000000EE0000003100000000000000000000
+        0000000000000000000000000000000000000000000000000030000000D90000
+        0075000000000000000000000002000000F60000009500000000000000000000
+        0000000000000000000000000000000000000000000000000000000000460000
+        00E10000001C000000010000007C000000CC0000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000520000
+        00C4000000F2000000F8000000D0000000C10000000100000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000320000009400000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        0000000000000000000000000000000000000000000000000000
+      }
       ImageIndex = 3
       object mi_email: TMenuItem
         Caption = 'Email Notifications'
+        Bitmap.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000064000000640000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          001E000000AB000000EC000000EC000000AA0000001E00000000000000000000
+          00000000000000000000000000000000000000000000000000000000001E0000
+          00E800000077000000150000001600000079000000E80000001C000000000000
+          0000000000000000000000000000000000000000000000000000000000A80000
+          0078000000000000008000000080000000000000007A000000A5000000000000
+          0040000000800000008000000080000000800000008000000080000000ED0000
+          001800000080000000C0000000C0000000800000001A000000E6000000000000
+          0080000000C00000008000000080000000800000008000000080000000EC0000
+          001900000080000000C0000000C0000000800000001A000000E5000000000000
+          0080000000800000000000000000000000000000000000000000000000A80000
+          0078000000000000008000000080000000000000007A000000A5000000000000
+          00800000008000000000000000000000000000000000000000000000001E0000
+          00E8000000770000001F0000001F00000079000000E80000001C000000000000
+          008000000080000000000000000000000000000000000000004D0000004C0000
+          001E000000A9000000E0000000E0000000D40000008E00000000000000000000
+          008000000080000000000000000000000011000000A1000000E3000000E30000
+          00A0000000100000000000000000000000800000008000000000000000000000
+          008000000080000000000000003C000000DB000000AA00000014000000140000
+          00AA000000DB0000003C00000000000000800000008000000000000000000000
+          00800000008500000088000000E7000000530000000000000000000000000000
+          000000000053000000E700000088000000850000008000000000000000000000
+          008B000000F8000000CE00000087000000800000008000000080000000800000
+          00800000008000000088000000CF000000F80000008B00000000000000000000
+          0040000000990000008000000080000000800000008000000080000000800000
+          0080000000800000008000000080000000990000004000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000
+        }
         ImageIndex = 1
         object mi_email_setup: TMenuItem
           Caption = 'Setup...'
@@ -1271,6 +1336,42 @@ object Main: TMain
       end
       object mi_logging: TMenuItem
         Caption = 'Logging'
+        Bitmap.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000064000000640000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000BF0000
+          00AB0000006D0000000200000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000AE0000
+          009C000000C30000009B00000002000000000000000000000000000000000000
+          0000000000800000008000000080000000800000008000000080000000B90000
+          00D300000015000000BF0000009C000000020000000000000000000000000000
+          0000000000FF0000008000000080000000800000008000000080000000820000
+          00C3000000B200000014000000C7000000920000000100000000000000000000
+          0000000000FF0000000000000000000000000000000000000000000000000000
+          0004000000AA000000B300000018000000CD0000009300000001000000000000
+          0000000000FF0000000000000000000000000000000000000000000000000000
+          0000000000020000009F000000C100000018000000C300000090000000000000
+          0000000000FF00000000000000800000008000000080000000FF000000FF0000
+          008000000000000000020000009E000000C20000002A000000F2000000000000
+          0000000000FF0000000000000000000000000000000000000000000000000000
+          0000000000000000000000000002000000FF000000EE00000088000000000000
+          0000000000FF00000000000000800000008000000080000000FF000000FF0000
+          00FF000000FF0000008000000000000000FF0000000000000000000000000000
+          0000000000FF0000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000FF0000000000000000000000000000
+          0000000000FF0000008000000080000000800000008000000080000000800000
+          0080000000800000008000000080000000FF0000000000000000000000000000
+          0000000000FF0000008000000080000000800000008000000080000000800000
+          0080000000800000008000000080000000FF0000000000000000000000000000
+          0000000000FF0000008000000080000000800000008000000080000000800000
+          0080000000800000008000000080000000FF0000000000000000000000000000
+          0000000000800000008000000080000000800000008000000080000000800000
+          0080000000800000008000000080000000800000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000
+        }
         ImageIndex = 0
         object mi_file_settings: TMenuItem
           Caption = 'File Settings...'
@@ -1284,14 +1385,50 @@ object Main: TMain
       object mi_auto_start: TMenuItem
         AutoCheck = True
         Caption = 'Auto-Start'
+        Bitmap.Data = {
+          36040000424D3604000000000000360000002800000010000000100000000100
+          2000000000000004000064000000640000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000C0000000FF00000071000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          000000000000000000000000000000000063000000CE000000E50000003F0000
+          0000000000000000000000000000000000000000000000000000000000000000
+          000000000000000000000000000000000010000000F00000005B000000E10000
+          0017000000000000000000000000000000000000000000000000000000000000
+          000000000000000000000000000000000000000000A30000006B0000007A0000
+          00C0000000040000000000000000000000000000000000000000000000000000
+          000000000000000000090000005100000086000000CF000000CC000000000000
+          00A8000000990000000000000000000000000000000000000000000000000000
+          00000000000000000002000000BC000000CF0000005000000021000000000000
+          000B000000D30000006400000000000000000000000000000000000000000000
+          000000000000000000000000001A000000E70000003C00000000000000910000
+          00D1000000F7000000C500000011000000000000000000000000000000000000
+          00000000000000000000000000000000004E000000E000000010000000AA0000
+          0084000000060000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000009A000000A3000000570000
+          00B5000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000C000000DA000000690000
+          00EF000000100000000000000000000000000000000000000000000000000000
+          000000000000000000000000000000000000000000000000002B000000EB0000
+          00CF000000610000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000680000
+          00FF000000B90000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000
+        }
         ImageIndex = 2
         OnClick = mi_auto_startClick
       end
     end
   end
   object menu: TImageList
-    left = 1024
-    top = 448
+    left = 512
+    top = 224
     Bitmap = {
       4C69050000001000000010000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

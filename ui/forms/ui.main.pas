@@ -719,8 +719,8 @@ begin
   LSellForMonies.SmallTierPerc := 0;
   LSellForMonies.MidTierPerc := 0;
   LSellForMonies.LargeTierPerc := 0;
-  LSellForMonies.SmallTierSellPerc := 0.02;
-  LSellForMonies.MidTierSellPerc := 0.02;
+  LSellForMonies.SmallTierSellPerc := 0.03;
+  LSellForMonies.MidTierSellPerc := 0.03;
   LSellForMonies.LargeTierSellPerc := 0.05;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := 0.001;
@@ -728,7 +728,7 @@ begin
   LSellForMonies.OnlyLowerAAC := True;
   LSellForMonies.MinReduction := 0.99;
   LSellForMonies.OnlyProfit := True; //important
-  LSellForMonies.MinProfit := 0.10; //important
+  LSellForMonies.MinProfit := 0.05; //important
 
   //configure the buy le dip strategy (small seller)
   LBuyLeDip.UseMarketBuy := False;
@@ -785,23 +785,23 @@ begin
   LAccelHigh.UseDynamicPositions := True;
 
   //configure the highest acceleration
-  LAccelHighest.WindowSizeInMilli := 39600000;
+  LAccelHighest.WindowSizeInMilli := 172800000;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0.08;
-  LAccelHighest.RiskyPositionPercent := 0.10;
-  LAccelHighest.CrossThresholdPercent := 0.75;
-  LAccelHighest.CrossDownThresholdPercent := 1.5;
-  LAccelHighest.AvoidChopThreshold := 0.03;
-  LAccelHighest.UseDynamicPositions := True;
+  LAccelHighest.PositionPercent := 1;
+  LAccelHighest.RiskyPositionPercent := 0.635;
+  LAccelHighest.CrossThresholdPercent := 5;
+  LAccelHighest.CrossDownThresholdPercent := 2;
+  LAccelHighest.AvoidChopThreshold := 0.035;
+  LAccelHighest.UseDynamicPositions := False; //fixed
 
   //add all strategies
-  FEngine.Strategies.Add(LAccelLowest);
-  FEngine.Strategies.Add(LAccelLow);
-  FEngine.Strategies.Add(LAccelHigh);
+  //FEngine.Strategies.Add(LAccelLowest);
+  //FEngine.Strategies.Add(LAccelLow);
+  //FEngine.Strategies.Add(LAccelHigh);
   FEngine.Strategies.Add(LAccelHighest);
-  FEngine.Strategies.Add(LBuyLeDip);
-  //FEngine.Strategies.Add(LSellForMonies);
+  //FEngine.Strategies.Add(LBuyLeDip);
+  FEngine.Strategies.Add(LSellForMonies);
 
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;

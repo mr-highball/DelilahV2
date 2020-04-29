@@ -10,7 +10,7 @@ uses
   Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
-  delilah.strategy.gdax.tiers, gdax.api.ticker;
+  delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration;
 
 type
 
@@ -102,8 +102,7 @@ type
     FUseMarketBuy,
     FUseMarketSell,
     FAvoidChop: Boolean;
-    FMidStrategy: ITierStrategyGDAX;
-    FAccelStrategy: ITierStrategyGDAX;
+    FAccelStrategy: IAccelerationStrategy;
     FAccelWindowFactor: Integer;
     procedure SetupEmail;
     procedure EnableEmail;
@@ -138,7 +137,7 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  math, dateutils, delilah.strategy.acceleration, delilah.strategy.acceleration.gdax
+  math, dateutils, delilah.strategy.acceleration.gdax
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};
@@ -147,6 +146,13 @@ uses
 
 const
   LOG_ENTRY = '%s %s - %s';
+
+procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+begin
+  //make sure we are in a position before making any trades
+  Active:= PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull];
+end;
 
 procedure MoonParentReady(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
@@ -364,13 +370,13 @@ end;
 
 procedure TMain.FormCreate(Sender: TObject);
 var
-  LError:String;
   LManager:IGDAXOrderManager;
 begin
-  FMidStrategy:=nil;;
   FCompletedOrders:=0;
+
   //create an engine
   FEngine:=TDelilahImpl.Create(LogInfo, LogError, LogWarn);
+
   //since we are dealing with GDAX assign the order manager
   LManager:=TGDAXOrderManagerImpl.Create(LogInfo, LogError, LogWarn);
   FEngine.OrderManager:=LManager;
@@ -386,7 +392,6 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  FMidStrategy:=nil;
   FAccelStrategy:=nil;
 end;
 
@@ -692,100 +697,39 @@ end;
 
 procedure TMain.StartStrategy(Sender: TObject);
 var
-  LError:String;
-  LSellForMonies,
-  LBuyLeDip:ITierStrategyGDAX;
-  LAccelLowest,
-  LAccelLow,
-  LAccelHigh,
-  LAccelHighest: IAccelerationStrategy;
+  LError : String;
+  LSellForMonies : ITierStrategyGDAX;
+  LAccelHighest : IAccelerationStrategy;
 begin
   //clear chart source
   chart_source.Clear;
 
   LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
-  LBuyLeDip := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
-  LAccelLowest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
-  LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
-  LAccelHigh := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
 
   //configure the sell for monies to sell for higher profits
   LSellForMonies.UseMarketBuy := False;
   LSellForMonies.UseMarketSell := False;
-  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 1800000;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 3600000;
   LSellForMonies.AvoidChop := False;
   LSellForMonies.GTFOPerc := 0;
-  LSellForMonies.SmallTierPerc := 0;
-  LSellForMonies.MidTierPerc := 0;
-  LSellForMonies.LargeTierPerc := 0;
-  LSellForMonies.SmallTierSellPerc := 0.03;
-  LSellForMonies.MidTierSellPerc := 0.03;
-  LSellForMonies.LargeTierSellPerc := 0.05;
+  LSellForMonies.SmallTierPerc := 0.0005;
+  LSellForMonies.MidTierPerc := 0.0005;
+  LSellForMonies.LargeTierPerc := 0.002;
+  LSellForMonies.SmallTierSellPerc := 0.01;
+  LSellForMonies.MidTierSellPerc := 0.01;
+  LSellForMonies.LargeTierSellPerc := 0.03;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := 0.001;
   LSellForMonies.MarketFee := 0.002;
-  LSellForMonies.OnlyLowerAAC := True;
-  LSellForMonies.MinReduction := 0.99;
-  LSellForMonies.OnlyProfit := True; //important
-  LSellForMonies.MinProfit := 0.05; //important
-
-  //configure the buy le dip strategy (small seller)
-  LBuyLeDip.UseMarketBuy := False;
-  LBuyLeDip.UseMarketSell := False;
-  LBuyLeDip.ChannelStrategy.WindowSizeInMilli := 3600000;
-  LBuyLeDip.AvoidChop := False;
-  LBuyLeDip.GTFOPerc := 0.0;
-  LBuyLeDip.SmallTierPerc := 0.0;
-  LBuyLeDip.MidTierPerc := 0.0;
-  LBuyLeDip.LargeTierPerc := 0.002;
-  LBuyLeDip.SmallTierSellPerc := 0.01;
-  LBuyLeDip.MidTierSellPerc := 0.01;
-  LBuyLeDip.LargeTierSellPerc := 0.02;
-  LBuyLeDip.IgnoreOnlyProfitThreshold := 0.90;
-  LBuyLeDip.LimitFee := 0.001;
-  LBuyLeDip.MarketFee := 0.002;
-  LBuyLeDip.OnlyLowerAAC := False;
-  LBuyLeDip.OnlyProfit := True;
-  LBuyLeDip.MinProfit := 0.005;
-  LBuyLeDip.MinReduction := 0.0;
-  LBuyLeDip.MaxScaledBuyPerc := 10;
-
-  //configure the lowest acceleration
-  LAccelLowest.WindowSizeInMilli := 10800000;
-  LAccelLowest.LeadStartPercent := 0.635;
-  LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := 0.02;
-  LAccelLowest.RiskyPositionPercent := 0.04;
-  LAccelLowest.CrossThresholdPercent := 0.75;
-  LAccelLowest.CrossDownThresholdPercent := 1.5;
-  LAccelLowest.AvoidChopThreshold := 0.035;
-  LAccelLowest.UseDynamicPositions := True;
-
-  //configure the low acceleration
-  LAccelLow.WindowSizeInMilli := 18000000;
-  LAccelLow.LeadStartPercent := 0.635;
-  LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.03;
-  LAccelLow.RiskyPositionPercent := 0.05;
-  LAccelLow.CrossThresholdPercent := 0.75;
-  LAccelLow.CrossDownThresholdPercent := 1.5;
-  LAccelLow.AvoidChopThreshold := 0.035;
-  LAccelLow.UseDynamicPositions := True;
-
-  //configure the higher acceleration
-  LAccelHigh.WindowSizeInMilli := 28800000;
-  LAccelHigh.LeadStartPercent := 0.635;
-  LAccelHigh.LeadEndPercent := 1.0;
-  LAccelHigh.PositionPercent := 0.05;
-  LAccelHigh.RiskyPositionPercent := 0.08;
-  LAccelHigh.CrossThresholdPercent := 0.75;
-  LAccelHigh.CrossDownThresholdPercent := 1.5;
-  LAccelHigh.AvoidChopThreshold := 0.03;
-  LAccelHigh.UseDynamicPositions := True;
+  LSellForMonies.OnlyLowerAAC := False;
+  LSellForMonies.MinReduction := 0;
+  LSellForMonies.OnlyProfit := True;
+  LSellForMonies.MinProfit := 0.03;
+  LSellForMonies.MaxScaledBuyPerc := 10;
 
   //configure the highest acceleration
-  LAccelHighest.WindowSizeInMilli := 172800000;
+  LAccelHighest.WindowSizeInMilli := 172800000; //48hr
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
   LAccelHighest.PositionPercent := 1;
@@ -795,12 +739,16 @@ begin
   LAccelHighest.AvoidChopThreshold := 0.035;
   LAccelHighest.UseDynamicPositions := False; //fixed
 
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FAccelStrategy := LAccelHighest;
+  LSellForMonies.ActiveCriteria := GetAccelCriteria;
+  LSellForMonies.ActiveCriteriaData := @FAccelStrategy;
+
+  //also update the strategy to hold any balance if a restart occurred
+  FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
+
   //add all strategies
-  //FEngine.Strategies.Add(LAccelLowest);
-  //FEngine.Strategies.Add(LAccelLow);
-  //FEngine.Strategies.Add(LAccelHigh);
   FEngine.Strategies.Add(LAccelHighest);
-  //FEngine.Strategies.Add(LBuyLeDip);
   FEngine.Strategies.Add(LSellForMonies);
 
   //also assign the authenticator
@@ -994,7 +942,7 @@ end;
 function TMain.GetAccelCriteria: TActiveCriteriaCallbackArray;
 begin
   SetLength(Result,1);
-  Result[0]:=AccelDisableTrades;
+  Result[0] := @AccelStrategyInPosition;
 end;
 
 

@@ -203,7 +203,14 @@ type
         are postponed until volatility picks up.
     *)
     property AvoidChopThreshold : Extended read GetAvoidChop write SetAvoidChop;
+
+    (*
+      manually sets the position size this strategy is currently holding
+    *)
+    procedure UpdateCurrentPosition(const APositionSize : Extended);
   end;
+
+  PAccelerationStrategy = ^IAccelerationStrategy;
 
   { TAccelerationStrategyImpl }
   (*
@@ -342,6 +349,8 @@ type
     property DecelerationStdDev : Extended read GetDecelStd;
     property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn;
     property AvoidChopThreshold : Extended read GetAvoidChop write SetAvoidChop;
+
+    procedure UpdateCurrentPosition(const APositionSize : Extended);
 
     constructor Create; override;
     destructor Destroy; override;
@@ -751,6 +760,20 @@ begin
   except on E : Exception do
     Error := E.Message;
   end;
+end;
+
+procedure TAccelerationStrategyImpl.UpdateCurrentPosition(
+  const APositionSize: Extended);
+begin
+  if APositionSize <= 0 then
+    FPosSize := 0
+  else
+  begin
+    FPosSize := APositionSize;
+    FPosition := apFull;
+  end;
+
+  LogInfo(Format('UpdateCurrentPosition::[size]-%f', [FPosSize]));
 end;
 
 constructor TAccelerationStrategyImpl.Create;

@@ -790,7 +790,7 @@ begin
   LAccelHighest.LeadEndPercent := 1.0;
   LAccelHighest.PositionPercent := 1;
   LAccelHighest.RiskyPositionPercent := 0.635;
-  LAccelHighest.CrossThresholdPercent := 5;
+  LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   LAccelHighest.AvoidChopThreshold := 0.035;
   LAccelHighest.UseDynamicPositions := False; //fixed

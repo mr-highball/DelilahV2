@@ -628,6 +628,8 @@ begin
       end;
       LFile.Free;
     end;
+
+    FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
   finally
     chk_log_error.Checked := True;
     chk_log_info.Checked := True;

@@ -150,8 +150,12 @@ const
 procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 begin
+  //when we are selling, then don't require a position
+  if not ADetails^.IsBuy then
+    Active := True
   //make sure we are in a position before making any trades
-  Active:= PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull];
+  else
+    Active:= PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull];
 end;
 
 procedure MoonParentReady(Const ADetails : PActiveCriteriaDetails;
@@ -728,7 +732,7 @@ begin
   LSellForMonies.MinReduction := 0;
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := 0.03;
-  LSellForMonies.MaxScaledBuyPerc := 10;
+  LSellForMonies.MaxScaledBuyPerc := 12;
 
   //configure the highest acceleration
   LAccelHighest.WindowSizeInMilli := 172800000; //48hr

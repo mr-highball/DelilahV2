@@ -394,6 +394,8 @@ begin
 
   IsAccel := ALead > ALag;
   Result := (ALead - ALag) / Abs(ALag);
+
+  LogInfo(Format('CalcAccelDiffPerc::[lead]:%f [lag]:%f [isAccel]:%s [threshold]:%f', [ALead, ALag, BoolToStr(IsAccel, True), Result]));
 end;
 
 function TAccelerationStrategyImpl.GetMinOrderSize(const ATicker: ITicker): Extended;
@@ -561,6 +563,8 @@ var
       (not LIsAccel and (LThresh < 0) and (LDiff <= LThresh))
       or
       (LIsAccel and (LThresh < 0) and (LDiff >= abs(LThresh))); //take profit case
+
+    LogInfo(Format('GetClosePosition::[shouldclose]:%s', [BoolToStr(Result, True)]));
   end;
 
   procedure ClearPosition;
@@ -641,7 +645,7 @@ begin
       ClearPosition;
 
     //log the state for users
-    LogInfo(Format('acceleration indicators [in-position]:%s [lagging]:%f [leading]:%f', [BoolToStr(LInPosition, True), LLagging, LLeading]));
+    LogInfo(Format('acceleration indicators [in-position]:%s [size]:%f [lagging]:%f [leading]:%f', [BoolToStr(LInPosition, True), FPosSize, LLagging, LLeading]));
 
     //if we aren't then check if we need to open one
     if (not LInPosition) or (FPosition = apRisky) then
@@ -749,10 +753,10 @@ begin
       if not AManager.Place(LDetails, LID, Error) then
         Exit;
 
+      LogInfo(Format('position closed [size]:%f', [FPosSize]));
+
       //reset internals, position closed
       ClearPosition;
-
-      LogInfo('position closed');
     end;
 
     //success

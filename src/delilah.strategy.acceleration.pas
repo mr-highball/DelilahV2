@@ -773,7 +773,7 @@ begin
     FPosition := apFull;
   end;
 
-  LogInfo(Format('UpdateCurrentPosition::[size]-%f', [FPosSize]));
+  LogInfo(Format('UpdateCurrentPosition::[size]:%f', [FPosSize]));
 end;
 
 constructor TAccelerationStrategyImpl.Create;

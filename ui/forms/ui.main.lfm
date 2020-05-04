@@ -16,7 +16,7 @@ object Main: TMain
     Height = 330
     Top = 5
     Width = 636
-    ActivePage = ts_chart
+    ActivePage = ts_product
     Align = alClient
     BorderSpacing.Left = 5
     BorderSpacing.Top = 5
@@ -24,7 +24,7 @@ object Main: TMain
     BorderSpacing.Bottom = 5
     Images = icons
     ParentFont = False
-    TabIndex = 3
+    TabIndex = 1
     TabOrder = 0
     OnChange = pctrl_mainChange
     object ts_auth: TTabSheet

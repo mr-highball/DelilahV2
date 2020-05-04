@@ -198,7 +198,7 @@ type
         CurLeadAccel = -.02
         AvoidChopThreshold = 0.03
 
-        CurrentChopIndicator = (Abs(CurLagAccel) + Abs(CurLeadAccel) / 2) = 0.015
+        CurrentChopIndicator = (Abs(CurLagAccel) + Abs(CurLeadAccel) / 2) / AvgPrice = 0.015  (todo** added price change descr up to match this urrp beer)
         the current indicator is 0.015 and falls between the threshold, so trades
         are postponed until volatility picks up.
     *)
@@ -653,7 +653,10 @@ begin
       //check for choppy conditions as long as user specified a threshold before opening
       if FAvoidChop <> 0 then
       begin
-        LChopIndicator := (Abs(FLag) + Abs(FLead)) / 2;
+        //chop indicator is based off of lead/lag and since those are dependant
+        //on the entire window, divide by the average price to  get an indicator not dependant
+        //on the fixed price of an asset but a percentage of price
+        LChopIndicator := ((Abs(FLag) + Abs(FLead)) / 2) / AveragePrice;
         LogInfo(Format('current chop indicator [current]:%f [threshold]:%f', [LChopIndicator, Abs(FAvoidChop)]));
 
         //if the indicator falls below what the user has specified, then bail

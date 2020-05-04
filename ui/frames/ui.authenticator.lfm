@@ -33,7 +33,9 @@ object Authenticator: TAuthenticator
       BorderSpacing.Left = 75
       BorderSpacing.Top = 5
       BorderSpacing.Right = 25
+      EchoMode = emPassword
       OnChange = edit_keyChange
+      PasswordChar = '*'
       TabOrder = 0
     end
     object edit_secret: TEdit
@@ -48,7 +50,9 @@ object Authenticator: TAuthenticator
       Width = 264
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Right = 25
+      EchoMode = emPassword
       OnChange = edit_secretChange
+      PasswordChar = '*'
       TabOrder = 1
     end
     object edit_pass: TEdit
@@ -65,7 +69,9 @@ object Authenticator: TAuthenticator
       Width = 264
       Anchors = [akLeft, akRight, akBottom]
       BorderSpacing.Bottom = 10
+      EchoMode = emPassword
       OnChange = edit_passChange
+      PasswordChar = '*'
       TabOrder = 2
     end
     object lbl_key: TLabel
@@ -113,11 +119,11 @@ object Authenticator: TAuthenticator
     ClientWidth = 364
     TabOrder = 1
     object chk_mode: TCheckBox
-      Left = 240
+      Left = 239
       Height = 25
       Hint = 'when this is toggled ''on'' the trade engine will operate on the gdax sandbox'
       Top = 0
-      Width = 99
+      Width = 100
       Align = alRight
       BorderSpacing.Right = 25
       Caption = 'Sandbox Mode'
@@ -133,7 +139,7 @@ object Authenticator: TAuthenticator
       Height = 25
       Hint = 'when this is toggled ''on'' the local computer time is used to authenticate gdax requests'
       Top = 0
-      Width = 78
+      Width = 77
       Align = alRight
       BorderSpacing.Right = 25
       Caption = 'Local Time'

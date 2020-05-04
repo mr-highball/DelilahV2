@@ -78,32 +78,18 @@ type
     procedure pctrl_mainChange(Sender: TObject);
   private
     FAuth : TAuthenticator;
-    FOnlyLower: Boolean;
-    FMoonMan: Boolean;
     FProducts : TProducts;
     FProductInit : Boolean;
     FFunds : TSingleLine;
     FInit : Boolean;
     FEngine : IDelilah;
     FCompletedOrders,
-    FTempWindowSetting : Cardinal;
+    FHighWindowSize: Cardinal;
     FMarketFee,
-    FLimitFee,
-    FMinProfit,
-    FMinReduce,
-    FSmallBuyPerc,
-    FMedBuyPerc,
-    FLargeBuyPerc,
-    FSmallSellPerc,
-    FMedSellPerc,
-    FLargeSellPerc,
-    FIgnoreProfitPerc,
-    FGTFOPerc: Single;
-    FUseMarketBuy,
-    FUseMarketSell,
-    FAvoidChop: Boolean;
-    FAccelStrategy: IAccelerationStrategy;
-    FAccelWindowFactor: Integer;
+    FLimitFee: Single;
+    FAccelStrategy,
+    FLowAccelStrategy,
+    FLowestAccelStrategy : IAccelerationStrategy;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -122,9 +108,9 @@ type
     procedure LogError(Const AMessage:String);
     procedure LogInfo(Const AMessage:String);
     procedure LogWarn(Const AMessage:String);
-    function GetMoonCriteria : TActiveCriteriaCallbackArray;
-    function GetMidCriteria : TActiveCriteriaCallbackArray;
     function GetAccelCriteria : TActiveCriteriaCallbackArray;
+    function GetLowAccelCriteria : TActiveCriteriaCallbackArray;
+    function GetLowestAccelCriteria : TActiveCriteriaCallbackArray;
   public
   end;
 
@@ -146,6 +132,80 @@ uses
 
 const
   LOG_ENTRY = '%s %s - %s';
+
+procedure AccelLowestStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+var
+  LTotalPerc: Single;
+  LCurrentUtilization: Extended;
+begin
+  Active := False;
+
+  //only operate the lowest tiered strategy when we're in position and all
+  //higher strategies are not
+  if (PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull])
+    and (Main.FLowAccelStrategy.Position in [apNone])
+    and (Main.FAccelStrategy.Position in [apNone])
+  then
+  begin
+    //when we are selling and in position, allow the sell
+    if not ADetails^.IsBuy then
+      Active := True
+    else
+    begin
+      //no div by zero
+      if Main.FEngine.Funds = 0 then
+        Exit;
+
+      //calc the total percent the low strategy is alotted
+      LTotalPerc := PAccelerationStrategy(ADetails.Data)^.RiskyPositionPercent + PAccelerationStrategy(ADetails.Data)^.PositionPercent;
+
+      //then find the utilization of the funds
+      LCurrentUtilization := Main.FEngine.AvailableFunds / Main.FEngine.Funds;
+
+      //if we have utilized less, then allow the buy (does not account for compounding)
+      if (1 - LCurrentUtilization) < LTotalPerc then
+        Active := True;
+
+      Main.LogInfo(Format('AccelLowestStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
+    end;
+  end;
+end;
+
+procedure AccelLowStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
+  Var Active : Boolean);
+var
+  LTotalPerc: Single;
+  LCurrentUtilization: Extended;
+begin
+  Active := False;
+
+  //only operate the low tiered strategy when we're in position
+  if PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull] then
+  begin
+    //when we are selling and in position, allow the sell
+    if not ADetails^.IsBuy then
+      Active := True
+    else
+    begin
+      //no div by zero
+      if Main.FEngine.Funds = 0 then
+        Exit;
+
+      //calc the total percent the low strategy is alotted
+      LTotalPerc := PAccelerationStrategy(ADetails.Data)^.RiskyPositionPercent + PAccelerationStrategy(ADetails.Data)^.PositionPercent;
+
+      //then find the utilization of the funds
+      LCurrentUtilization := Main.FEngine.AvailableFunds / Main.FEngine.Funds;
+
+      //if we have utilized less, then allow the buy (does not account for compounding)
+      if (1 - LCurrentUtilization) < LTotalPerc then
+        Active := True;
+
+      Main.LogInfo(Format('AccelLowStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
+    end;
+  end;
+end;
 
 procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
@@ -302,74 +362,65 @@ procedure TMain.json_mainRestoringProperties(Sender: TObject);
 var
   LBal:Extended;
 begin
-  //todo - check if a json settings file exists, if so read/assign values
   if not FInit then
     Exit;
-   //get our ledgers setup correctly
+
+  //get our ledgers setup correctly
   FEngine.InventoryLedger.Clear;
   FEngine.FundsLedger.Clear;
   FEngine.HoldsLedger.Clear;
   FEngine.HoldsInventoryLedger.Clear;
 
   //now read from our json file
-  FAuth.Secret:=json_main.ReadString('secret','');
-  FAuth.Key:=json_main.ReadString('key','');
-  FAuth.Passphrase:=json_main.ReadString('pass','');;
-  FFunds.Text:=json_main.ReadString('funds','0.0');
-  FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
-  FAuth.IsSanboxMode:=json_main.ReadBoolean('sandbox_mode',True);
-  FEngine.AAC:=StrToFloatDef(json_main.ReadString('aac','0.0'),0);
+  FAuth.Secret := json_main.ReadString('secret','');
+  FAuth.Key := json_main.ReadString('key','');
+  FAuth.Passphrase := json_main.ReadString('pass','');;
+  FFunds.Text := json_main.ReadString('funds','0.0');
+  FEngine.Funds := StrToFloatDef(FFunds.Text,0);
+  FAuth.IsSanboxMode := json_main.ReadBoolean('sandbox_mode',True);
+  FEngine.AAC := StrToFloatDef(json_main.ReadString('aac','0.0'),0);
 
   //restoring funds requires us to see what was recorded in the ledger
   //as the balance, then subtract (balance - start funds) and then
   //credit by this amount (could be negative credit)
   LBal:=StrToFloatDef(json_main.ReadString('funds_ledger','0.0'),0);
-  if LBal>0 then
+
+  if LBal > 0 then
     LBal:=LBal - FEngine.Funds;
+
   //record to funds
-  if LBal<>0 then
-    LBal:=FEngine.FundsLedger.RecordEntry(
+  if LBal <> 0 then
+    LBal := FEngine.FundsLedger.RecordEntry(
       LBal,
       ltCredit
     ).Balance;
+
   //record to holds
-  LBal:=FEngine.HoldsLedger.RecordEntry(
+  LBal := FEngine.HoldsLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('holds_ledger','0.0'),0),
     ltDebit
   ).Balance;
+
   //record to inventory
-  LBal:=FEngine.InventoryLedger.RecordEntry(
+  LBal := FEngine.InventoryLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('inventory_ledger','0.0'),0),
     ltCredit
   ).Balance;
+
   //record to holds inventory
-  LBal:=FEngine.HoldsInventoryLedger.RecordEntry(
+  LBal := FEngine.HoldsInventoryLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('inventory_holds_ledger','0.0'),0),
     ltDebit
   ).Balance;
+
   //simple counter for completed orders
   FCompletedOrders:=json_main.ReadInteger('completed_orders',0);
 
-  //todo - remove these once strategies can persist
-  FTempWindowSetting:=json_main.ReadInteger('temp_window_setting',20 * 60 * 1000);
-  FMarketFee:=StrToFloatDef(json_main.ReadString('market_fee','0.005'),0.005);
-  FLimitFee:=StrToFloatDef(json_main.ReadString('limit_fee','0.0015'),0.0015);
-  FUseMarketBuy:=json_main.ReadBoolean('market_buy',False);
-  FUseMarketSell:=json_main.ReadBoolean('market_sell',False);
-  FMinReduce:=StrToFloatDef(json_main.ReadString('min_reduction','0'),0);
-  FMinProfit:=StrToFloatDef(json_main.ReadString('min_profit','0'),0);
-  FSmallBuyPerc:=StrToFloatDef(json_main.ReadString('small_buy_perc','0'),0);
-  FMedBuyPerc:=StrToFloatDef(json_main.ReadString('med_buy_perc','0'),0);
-  FLargeBuyPerc:=StrToFloatDef(json_main.ReadString('large_buy_perc','0'),0);
-  FSmallSellPerc:=StrToFloatDef(json_main.ReadString('small_sell_perc','0'),0);
-  FMedSellPerc:=StrToFloatDef(json_main.ReadString('med_sell_perc','0'),0);
-  FLargeSellPerc:=StrToFloatDef(json_main.ReadString('large_sell_perc','0'),0);
-  FIgnoreProfitPerc:=StrToFloatDef(json_main.ReadString('ignore_profit_perc','0'),0);
-  FGTFOPerc:=StrToFloatDef(json_main.ReadString('gtfo_perc','0'),0);
-  FOnlyLower:=json_main.ReadBoolean('only_lower',True);
-  FAvoidChop:=json_main.ReadBoolean('avoid_chop',False);
-  FMoonMan:=json_main.ReadBoolean('lunar_mission',False);
-  FAccelWindowFactor:=json_main.ReadInteger('accel_window_factor',4);
+  FMarketFee := StrToFloatDef(json_main.ReadString('market_fee','0.005'),0.005);
+  FLimitFee := StrToFloatDef(json_main.ReadString('limit_fee','0.005'),0.005);
+
+  //temp settings
+  FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size','14400000'), 14400000);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -396,12 +447,12 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  FAccelStrategy:=nil;
+  FAccelStrategy := nil;
+  FLowAccelStrategy := nil;
 end;
 
 procedure TMain.json_mainSavingProperties(Sender: TObject);
 begin
-  //todo - attempt to save a settings file based on options set
   json_main.WriteString('secret',FAuth.Secret);
   json_main.WriteString('key',FAuth.Key);
   json_main.WriteString('pass',FAuth.Passphrase);
@@ -413,27 +464,11 @@ begin
   json_main.WriteString('holds_ledger',FloatToStr(FEngine.HoldsLedger.Balance));
   json_main.WriteString('inventory_ledger',FloatToStr(FEngine.InventoryLedger.Balance));
   json_main.WriteString('inventory_holds_ledger',FloatToStr(FEngine.HoldsInventoryLedger.Balance));
-
-  //todo - temporary, will remove
-  json_main.WriteInteger('temp_window_setting',FTempWindowSetting);
-  json_main.WriteBoolean('market_sell',FUseMarketSell);
-  json_main.WriteBoolean('market_buy',FUseMarketBuy);
-  json_main.WriteBoolean('only_lower',FOnlyLower);
-  json_main.WriteBoolean('avoid_chop',FAvoidChop);
-  json_main.WriteBoolean('lunar_mission',FMoonMan);
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
   json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
-  json_main.WriteString('min_reduction',FloatToStr(FMinReduce));
-  json_main.WriteString('min_profit',FloatToStr(FMinProfit));
-  json_main.WriteString('small_buy_perc',FloatToStr(FSmallBuyPerc));
-  json_main.WriteString('med_buy_perc',FloatToStr(FMedBuyPerc));
-  json_main.WriteString('large_buy_perc',FloatToStr(FLargeBuyPerc));
-  json_main.WriteString('small_sell_perc',FloatToStr(FSmallSellPerc));
-  json_main.WriteString('med_sell_perc',FloatToStr(FMedSellPerc));
-  json_main.WriteString('large_sell_perc',FloatToStr(FLargeSellPerc));
-  json_main.WriteString('ignore_profit_perc',FloatToStr(FIgnoreProfitPerc));
-  json_main.WriteString('gtfo_perc',FloatToStr(FGTFOPerc));
-  json_main.WriteInteger('accel_window_factor',FAccelWindowFactor);
+
+  //temp
+  json_main.WriteString('high_window_size', IntToStr(FHighWindowSize));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -632,8 +667,6 @@ begin
       end;
       LFile.Free;
     end;
-
-    FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
   finally
     chk_log_error.Checked := True;
     chk_log_info.Checked := True;
@@ -706,13 +739,98 @@ var
   LError : String;
   LSellForMonies : ITierStrategyGDAX;
   LAccelHighest : IAccelerationStrategy;
+  LSellForMoniesLow: ITierStrategyGDAX;
+  LAccelLow: IAccelerationStrategy;
+  LSellForMoniesLowest: ITierStrategyGDAX;
+  LAccelLowest: IAccelerationStrategy;
 begin
   //clear chart source
   chart_source.Clear;
 
+  LSellForMoniesLowest := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelLowest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LSellForMoniesLow := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
 
+  //----------------------------------------------------------------------------
+  //configure the sell for monies to sell for higher profits
+  LSellForMoniesLowest.UseMarketBuy := False;
+  LSellForMoniesLowest.UseMarketSell := False;
+  LSellForMoniesLowest.ChannelStrategy.WindowSizeInMilli := 2000000;
+  LSellForMoniesLowest.AvoidChop := False;
+  LSellForMoniesLowest.GTFOPerc := 0;
+  LSellForMoniesLowest.SmallTierPerc := 0.0005;
+  LSellForMoniesLowest.MidTierPerc := 0.0005;
+  LSellForMoniesLowest.LargeTierPerc := 0.001;
+  LSellForMoniesLowest.SmallTierSellPerc := 0.000001;
+  LSellForMoniesLowest.MidTierSellPerc := 0.000001;
+  LSellForMoniesLowest.LargeTierSellPerc := 0.000001;
+  LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
+  LSellForMoniesLowest.LimitFee := FLimitFee;
+  LSellForMoniesLowest.MarketFee := FMarketFee;
+  LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
+  LSellForMoniesLowest.MinReduction := 0.0000001;
+  LSellForMoniesLowest.OnlyProfit := True;
+  LSellForMoniesLowest.MinProfit := 0.001;
+  LSellForMoniesLowest.MaxScaledBuyPerc := 8;
+
+  //configure the lowest acceleration
+  LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 4);
+  LAccelLowest.LeadStartPercent := 0.635;
+  LAccelLowest.LeadEndPercent := 1.0;
+  LAccelLowest.PositionPercent := 0.03;
+  LAccelLowest.RiskyPositionPercent := 0.05;
+  LAccelLowest.CrossThresholdPercent := 3.5;
+  LAccelLowest.CrossDownThresholdPercent := 2;
+  LAccelLowest.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)
+  LAccelLowest.UseDynamicPositions := False; //fixed
+
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FLowestAccelStrategy := LAccelLowest;
+  LSellForMoniesLowest.ActiveCriteria := GetLowestAccelCriteria;
+  LSellForMoniesLowest.ActiveCriteriaData := @FLowestAccelStrategy;
+
+  //----------------------------------------------------------------------------
+  //configure the sell for monies to sell for higher profits
+  LSellForMoniesLow.UseMarketBuy := False;
+  LSellForMoniesLow.UseMarketSell := False;
+  LSellForMoniesLow.ChannelStrategy.WindowSizeInMilli := 2700000;
+  LSellForMoniesLow.AvoidChop := False;
+  LSellForMoniesLow.GTFOPerc := 0;
+  LSellForMoniesLow.SmallTierPerc := 0.0005;
+  LSellForMoniesLow.MidTierPerc := 0.0005;
+  LSellForMoniesLow.LargeTierPerc := 0.001;
+  LSellForMoniesLow.SmallTierSellPerc := 0.005;
+  LSellForMoniesLow.MidTierSellPerc := 0.005;
+  LSellForMoniesLow.LargeTierSellPerc := 0.01;
+  LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
+  LSellForMoniesLow.LimitFee := FLimitFee;
+  LSellForMoniesLow.MarketFee := FMarketFee;
+  LSellForMoniesLow.OnlyLowerAAC := False;
+  LSellForMoniesLow.MinReduction := 0;
+  LSellForMoniesLow.OnlyProfit := True;
+  LSellForMoniesLow.MinProfit := 0.005;
+  LSellForMoniesLow.MaxScaledBuyPerc := 8;
+
+  //configure the low acceleration
+  LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
+  LAccelLow.LeadStartPercent := 0.635;
+  LAccelLow.LeadEndPercent := 1.0;
+  LAccelLow.PositionPercent := 0.15;
+  LAccelLow.RiskyPositionPercent := 0.2;
+  LAccelLow.CrossThresholdPercent := 3.5;
+  LAccelLow.CrossDownThresholdPercent := 2;
+  LAccelLow.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)
+  LAccelLow.UseDynamicPositions := False; //fixed
+
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FLowAccelStrategy := LAccelLow;
+  LSellForMoniesLow.ActiveCriteria := GetLowAccelCriteria;
+  LSellForMoniesLow.ActiveCriteriaData := @FLowAccelStrategy;
+
+  //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
   LSellForMonies.UseMarketBuy := False;
   LSellForMonies.UseMarketSell := False;
@@ -726,8 +844,8 @@ begin
   LSellForMonies.MidTierSellPerc := 0.01;
   LSellForMonies.LargeTierSellPerc := 0.03;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
-  LSellForMonies.LimitFee := 0.001;
-  LSellForMonies.MarketFee := 0.002;
+  LSellForMonies.LimitFee := FLimitFee;
+  LSellForMonies.MarketFee := FMarketFee;
   LSellForMonies.OnlyLowerAAC := False;
   LSellForMonies.MinReduction := 0;
   LSellForMonies.OnlyProfit := True;
@@ -735,14 +853,14 @@ begin
   LSellForMonies.MaxScaledBuyPerc := 12;
 
   //configure the highest acceleration
-  LAccelHighest.WindowSizeInMilli := 172800000; //48hr
+  LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 1;
+  LAccelHighest.PositionPercent := 0.85;
   LAccelHighest.RiskyPositionPercent := 0.635;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
-  LAccelHighest.AvoidChopThreshold := 0.035;
+  LAccelHighest.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)
   LAccelHighest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -754,6 +872,10 @@ begin
   FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
 
   //add all strategies
+  FEngine.Strategies.Add(LAccelLowest);
+  FEngine.Strategies.Add(LSellForMoniesLowest);
+  FEngine.Strategies.Add(LAccelLow);
+  FEngine.Strategies.Add(LSellForMoniesLow);
   FEngine.Strategies.Add(LAccelHighest);
   FEngine.Strategies.Add(LSellForMonies);
 
@@ -767,6 +889,9 @@ begin
   //prompt for pre-loading of tickers
   PreloadTickers;
 
+  //update again after preload due to positions being postponed
+  FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
+
   //start the engine to accept tickers
   if not FEngine.Start(LError) then
     LogError(LError);
@@ -779,8 +904,9 @@ begin
   ignition_main.Status:='Started';
 
   //disable all controls that would cause issues
-  FAuth.Enabled:=False;
-  FProducts.Enabled:=False;
+  FAuth.Enabled := False;
+  FProducts.Enabled := False;
+
   LogInfo('Strategy Started');
 end;
 
@@ -924,31 +1050,22 @@ begin
     );
 end;
 
-function TMain.GetMoonCriteria: TActiveCriteriaCallbackArray;
-begin
-  SetLength(Result,4);
-  Result[0]:=MoonSideBuy;
-  Result[1]:=MoonParentReady;
-  Result[2]:=MoonLowInventory;
-  Result[3]:=MoonRisingPrice;
-end;
-
-function TMain.GetMidCriteria: TActiveCriteriaCallbackArray;
-begin
-  SetLength(Result,0);
-  if FAccelWindowFactor < 1 then
-    Exit
-  else
-  begin
-    SetLength(Result,1);
-    Result[0]:=MidAccelStratPositve;
-  end;
-end;
-
 function TMain.GetAccelCriteria: TActiveCriteriaCallbackArray;
 begin
   SetLength(Result,1);
   Result[0] := @AccelStrategyInPosition;
+end;
+
+function TMain.GetLowAccelCriteria: TActiveCriteriaCallbackArray;
+begin
+  SetLength(Result,1);
+  Result[0] := @AccelLowStrategyInPosition;
+end;
+
+function TMain.GetLowestAccelCriteria: TActiveCriteriaCallbackArray;
+begin
+  SetLength(Result,1);
+  Result[0] := @AccelLowestStrategyInPosition;
 end;
 
 

@@ -86,7 +86,8 @@ type
     FCompletedOrders,
     FHighWindowSize: Cardinal;
     FMarketFee,
-    FLimitFee: Single;
+    FLimitFee,
+    FHighTakeProfit: Single;
     FAccelStrategy,
     FLowAccelStrategy,
     FLowestAccelStrategy : IAccelerationStrategy;
@@ -420,7 +421,8 @@ begin
   FLimitFee := StrToFloatDef(json_main.ReadString('limit_fee','0.005'),0.005);
 
   //temp settings
-  FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size','14400000'), 14400000);
+  FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size', '14400000'), 14400000);
+  FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -469,6 +471,7 @@ begin
 
   //temp
   json_main.WriteString('high_window_size', IntToStr(FHighWindowSize));
+  json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -764,17 +767,17 @@ begin
   LSellForMoniesLowest.SmallTierPerc := 0.0005;
   LSellForMoniesLowest.MidTierPerc := 0.0005;
   LSellForMoniesLowest.LargeTierPerc := 0.001;
-  LSellForMoniesLowest.SmallTierSellPerc := 0.000001;
-  LSellForMoniesLowest.MidTierSellPerc := 0.000001;
-  LSellForMoniesLowest.LargeTierSellPerc := 0.000001;
+  LSellForMoniesLowest.SmallTierSellPerc := 0.005;
+  LSellForMoniesLowest.MidTierSellPerc := 0.005;
+  LSellForMoniesLowest.LargeTierSellPerc := 0.01;
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
   LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
   LSellForMoniesLowest.MinReduction := 0.0000001;
   LSellForMoniesLowest.OnlyProfit := True;
-  LSellForMoniesLowest.MinProfit := 0.001;
-  LSellForMoniesLowest.MaxScaledBuyPerc := 8;
+  LSellForMoniesLowest.MinProfit := FHighTakeProfit / 4;
+  LSellForMoniesLowest.MaxScaledBuyPerc := 10;
 
   //configure the lowest acceleration
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 4);
@@ -802,17 +805,17 @@ begin
   LSellForMoniesLow.SmallTierPerc := 0.0005;
   LSellForMoniesLow.MidTierPerc := 0.0005;
   LSellForMoniesLow.LargeTierPerc := 0.001;
-  LSellForMoniesLow.SmallTierSellPerc := 0.005;
-  LSellForMoniesLow.MidTierSellPerc := 0.005;
-  LSellForMoniesLow.LargeTierSellPerc := 0.01;
+  LSellForMoniesLow.SmallTierSellPerc := 0.01;
+  LSellForMoniesLow.MidTierSellPerc := 0.01;
+  LSellForMoniesLow.LargeTierSellPerc := 0.02;
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
   LSellForMoniesLow.OnlyLowerAAC := False;
   LSellForMoniesLow.MinReduction := 0;
   LSellForMoniesLow.OnlyProfit := True;
-  LSellForMoniesLow.MinProfit := 0.005;
-  LSellForMoniesLow.MaxScaledBuyPerc := 8;
+  LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
+  LSellForMoniesLow.MaxScaledBuyPerc := 10;
 
   //configure the low acceleration
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
@@ -840,8 +843,8 @@ begin
   LSellForMonies.SmallTierPerc := 0.0005;
   LSellForMonies.MidTierPerc := 0.0005;
   LSellForMonies.LargeTierPerc := 0.002;
-  LSellForMonies.SmallTierSellPerc := 0.01;
-  LSellForMonies.MidTierSellPerc := 0.01;
+  LSellForMonies.SmallTierSellPerc := 0.02;
+  LSellForMonies.MidTierSellPerc := 0.02;
   LSellForMonies.LargeTierSellPerc := 0.03;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
@@ -849,15 +852,15 @@ begin
   LSellForMonies.OnlyLowerAAC := False;
   LSellForMonies.MinReduction := 0;
   LSellForMonies.OnlyProfit := True;
-  LSellForMonies.MinProfit := 0.03;
-  LSellForMonies.MaxScaledBuyPerc := 12;
+  LSellForMonies.MinProfit := FHighTakeProfit;
+  LSellForMonies.MaxScaledBuyPerc := 15;
 
   //configure the highest acceleration
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0.85;
-  LAccelHighest.RiskyPositionPercent := 0.635;
+  LAccelHighest.PositionPercent := 0.20;
+  LAccelHighest.RiskyPositionPercent := 0.30;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   LAccelHighest.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)

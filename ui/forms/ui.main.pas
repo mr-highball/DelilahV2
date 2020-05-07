@@ -783,11 +783,11 @@ begin
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 4);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := 0.03;
-  LAccelLowest.RiskyPositionPercent := 0.05;
+  LAccelLowest.PositionPercent := 0.10;
+  LAccelLowest.RiskyPositionPercent := 0.15;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
-  LAccelLowest.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)
+  LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
   LAccelLowest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -805,9 +805,9 @@ begin
   LSellForMoniesLow.SmallTierPerc := 0.0005;
   LSellForMoniesLow.MidTierPerc := 0.0005;
   LSellForMoniesLow.LargeTierPerc := 0.001;
-  LSellForMoniesLow.SmallTierSellPerc := 0.01;
-  LSellForMoniesLow.MidTierSellPerc := 0.01;
-  LSellForMoniesLow.LargeTierSellPerc := 0.02;
+  LSellForMoniesLow.SmallTierSellPerc := 0.005;
+  LSellForMoniesLow.MidTierSellPerc := 0.005;
+  LSellForMoniesLow.LargeTierSellPerc := 0.015;
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
@@ -821,11 +821,11 @@ begin
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.15;
-  LAccelLow.RiskyPositionPercent := 0.2;
+  LAccelLow.PositionPercent := 0.20;
+  LAccelLow.RiskyPositionPercent := 0.25;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
-  LAccelLow.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)
+  LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
   LAccelLow.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -843,8 +843,8 @@ begin
   LSellForMonies.SmallTierPerc := 0.0005;
   LSellForMonies.MidTierPerc := 0.0005;
   LSellForMonies.LargeTierPerc := 0.002;
-  LSellForMonies.SmallTierSellPerc := 0.02;
-  LSellForMonies.MidTierSellPerc := 0.02;
+  LSellForMonies.SmallTierSellPerc := 0.01;
+  LSellForMonies.MidTierSellPerc := 0.01;
   LSellForMonies.LargeTierSellPerc := 0.03;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
@@ -859,11 +859,11 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0.20;
-  LAccelHighest.RiskyPositionPercent := 0.30;
+  LAccelHighest.PositionPercent := 0.30;
+  LAccelHighest.RiskyPositionPercent := 0.35;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
-  LAccelHighest.AvoidChopThreshold := 0.0000044;//0.035; (old price based number)
+  LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
   LAccelHighest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"

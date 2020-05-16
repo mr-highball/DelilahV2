@@ -91,6 +91,8 @@ type
     FAccelStrategy,
     FLowAccelStrategy,
     FLowestAccelStrategy : IAccelerationStrategy;
+    FUseMarketBuy,
+    FUseMarketSell: Boolean;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -423,6 +425,8 @@ begin
   //temp settings
   FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size', '14400000'), 14400000);
   FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
+  FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
+  FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -472,6 +476,8 @@ begin
   //temp
   json_main.WriteString('high_window_size', IntToStr(FHighWindowSize));
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
+  json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
+  json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -759,8 +765,8 @@ begin
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
-  LSellForMoniesLowest.UseMarketBuy := False;
-  LSellForMoniesLowest.UseMarketSell := False;
+  LSellForMoniesLowest.UseMarketBuy :=  FUseMarketBuy;
+  LSellForMoniesLowest.UseMarketSell := FUseMarketSell;
   LSellForMoniesLowest.ChannelStrategy.WindowSizeInMilli := 2000000;
   LSellForMoniesLowest.AvoidChop := False;
   LSellForMoniesLowest.GTFOPerc := 0;
@@ -797,8 +803,8 @@ begin
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
-  LSellForMoniesLow.UseMarketBuy := False;
-  LSellForMoniesLow.UseMarketSell := False;
+  LSellForMoniesLow.UseMarketBuy := FUseMarketBuy;
+  LSellForMoniesLow.UseMarketSell := FUseMarketSell;
   LSellForMoniesLow.ChannelStrategy.WindowSizeInMilli := 2700000;
   LSellForMoniesLow.AvoidChop := False;
   LSellForMoniesLow.GTFOPerc := 0;
@@ -835,8 +841,8 @@ begin
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
-  LSellForMonies.UseMarketBuy := False;
-  LSellForMonies.UseMarketSell := False;
+  LSellForMonies.UseMarketBuy := FUseMarketBuy;
+  LSellForMonies.UseMarketSell := FUseMarketSell;
   LSellForMonies.ChannelStrategy.WindowSizeInMilli := 3600000;
   LSellForMonies.AvoidChop := False;
   LSellForMonies.GTFOPerc := 0;

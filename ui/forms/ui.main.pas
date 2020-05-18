@@ -43,6 +43,7 @@ type
     icons: TImageList;
     menu: TImageList;
     json_main: TJSONPropStorage;
+    mi_gunslinger: TMenuItem;
     mi_email_setup: TMenuItem;
     mi_email_enabled: TMenuItem;
     mi_file_settings: TMenuItem;
@@ -70,6 +71,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
+    procedure mi_gunslingerClick(Sender: TObject);
     procedure mi_auto_startClick(Sender: TObject);
     procedure mi_email_enabledClick(Sender: TObject);
     procedure mi_email_setupClick(Sender: TObject);
@@ -80,7 +82,9 @@ type
     FAuth : TAuthenticator;
     FProducts : TProducts;
     FProductInit : Boolean;
-    FFunds : TSingleLine;
+    FFundsCtrl,
+    FMarketFeeCtrl,
+    FLimitFeeCtrl: TSingleLine;
     FInit : Boolean;
     FEngine : IDelilah;
     FCompletedOrders,
@@ -93,6 +97,7 @@ type
     FLowestAccelStrategy : IAccelerationStrategy;
     FUseMarketBuy,
     FUseMarketSell: Boolean;
+    FFunds: Single;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -378,8 +383,9 @@ begin
   FAuth.Secret := json_main.ReadString('secret','');
   FAuth.Key := json_main.ReadString('key','');
   FAuth.Passphrase := json_main.ReadString('pass','');;
-  FFunds.Text := json_main.ReadString('funds','0.0');
-  FEngine.Funds := StrToFloatDef(FFunds.Text,0);
+  FFunds := StrToFloatDef(json_main.ReadString('funds','0.0'), 0);
+  FEngine.Funds := FFunds;
+  FFundsCtrl.Text := FloatToStr(FFunds);;
   FAuth.IsSanboxMode := json_main.ReadBoolean('sandbox_mode',True);
   FEngine.AAC := StrToFloatDef(json_main.ReadString('aac','0.0'),0);
 
@@ -420,7 +426,9 @@ begin
   FCompletedOrders:=json_main.ReadInteger('completed_orders',0);
 
   FMarketFee := StrToFloatDef(json_main.ReadString('market_fee','0.005'),0.005);
+  FMarketFeeCtrl.Text := FloatToStr(FMarketFee);
   FLimitFee := StrToFloatDef(json_main.ReadString('limit_fee','0.005'),0.005);
+  FLimitFeeCtrl.Text := FloatToStr(FLimitFee);
 
   //temp settings
   FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size', '14400000'), 14400000);
@@ -462,7 +470,7 @@ begin
   json_main.WriteString('secret',FAuth.Secret);
   json_main.WriteString('key',FAuth.Key);
   json_main.WriteString('pass',FAuth.Passphrase);
-  json_main.WriteString('funds',FloatToStr(StrToFloatDef(FFunds.Text,0)));
+  json_main.WriteString('funds',FloatToStr(StrToFloatDef(FFundsCtrl.Text,0)));
   json_main.WriteBoolean('sandbox_mode',FAuth.IsSanboxMode);
   json_main.WriteString('aac',FloatToStr(FEngine.AAC));
   json_main.WriteInteger('completed_orders',FCompletedOrders);
@@ -478,6 +486,11 @@ begin
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
+end;
+
+procedure TMain.mi_gunslingerClick(Sender: TObject);
+begin
+  Gunslinger1.Visible := mi_gunslinger.Checked;
 end;
 
 procedure TMain.mi_auto_startClick(Sender: TObject);
@@ -562,8 +575,10 @@ begin
   if not FInit then
   begin
     json_main.Restore;
+
     //main tab
     pctrl_main.ActivePage:=ts_auth;
+
     //logger
     multi_log.Options:=multi_log.Options - [ucAuthor];
     multi_log.Title:='Strategy Logger';
@@ -571,11 +586,17 @@ begin
     chk_log_error.Checked:=True;
     chk_log_warn.Checked:=True;
     chk_log_info.Checked:=True;
+
+    //gunslinger
+    Gunslinger1.Visible := False;
+    mi_gunslinger.Checked := False;
+
     //authenticator
     FAuth:=TAuthenticator.Create(Self);
     FAuth.Parent:=ts_auth;
     FAuth.AnchorHorizontalCenterTo(ts_auth);
     FAuth.AnchorVerticalCenterTo(ts_auth);
+
     //products
     FProducts:=TProducts.Create(Self);
     FProducts.Parent:=ts_product;
@@ -585,21 +606,47 @@ begin
     FProducts.ProductFrame.OnTick:=ProductTick;
     FProducts.ProductFrame.TickerInterval:=1500;
     FProductInit:=False;
+
     //strategy
     ignition_main.OnRequestStart:=CheckCanStart;
     ignition_main.OnRequestStop:=CheckCanStop;
     ignition_main.OnStart:=StartStrategy;
     ignition_main.OnStop:=StopStrategy;
     ignition_main.Status:='Stopped';
-    FFunds:=TSingleLine.Create(Self);
-    FFunds.Parent:=scroll_strategy;
-    FFunds.Align:=TAlign.alTop;
-    FFunds.Options:=FFunds.Options - [ucAuthor];
-    FFunds.Title:='Funds';
-    FFunds.Description:='specify "how much" quote currency is available to spend trading';
-    FFunds.Height:=100;
-    FFunds.Control.Constraints.MaxWidth:=200;
-    //FFunds.Text:='0.0';
+
+    FFundsCtrl:=TSingleLine.Create(Self);
+    FFundsCtrl.Name := 'Funds';
+    FFundsCtrl.Align:=TAlign.alTop;
+    FFundsCtrl.Title:='Funds';
+    FFundsCtrl.Description:='specify "how much" quote currency is available to spend trading';
+    FFundsCtrl.Height:=300;
+    FFundsCtrl.ControlWidthPercent := 0.3;
+    FFundsCtrl.Options:=FFundsCtrl.Options - [ucAuthor];
+    FFundsCtrl.Text := FLoatToStr(FFunds);
+    FFundsCtrl.Parent:=scroll_strategy;
+
+    FLimitFeeCtrl := TSingleLine.Create(Self);
+    FLimitFeeCtrl.Name := 'LimitFee';
+    FLimitFeeCtrl.Align := TAlign.alTop;
+    FLimitFeeCtrl.Title := 'Limit Fee';
+    FLimitFeeCtrl.Description := 'specify the fee incurred on a "limit" order (based on your volume under the "orders" -> "fees" tab)';
+    FLimitFeeCtrl.Height := 300;
+    FLimitFeeCtrl.ControlWidthPercent := 0.30;
+    FLimitFeeCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+    FLimitFeeCtrl.Text := FloatToStr(FLimitFee);
+    FLimitFeeCtrl.Parent := scroll_strategy;
+
+    FMarketFeeCtrl := TSingleLine.Create(Self);
+    FMarketFeeCtrl.Name := 'MarketFee';
+    FMarketFeeCtrl.Align := TAlign.alTop;
+    FMarketFeeCtrl.Title := 'Market Fee';
+    FMarketFeeCtrl.Description := 'specify the fee incurred on a "market" order (based on your volume under the "orders" -> "fees" tab)';
+    FMarketFeeCtrl.Height := 300;
+    FMarketFeeCtrl.ControlWidthPercent := 0.30;
+    FMarketFeeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FMarketFeeCtrl.Text := FloatToStr(FMarketFee);
+    FMarketFeeCtrl.Parent := scroll_strategy;
+
     FInit:=True;
   end;
 end;
@@ -756,6 +803,13 @@ begin
   //clear chart source
   chart_source.Clear;
 
+  //set the engine specific data
+  FFunds := StrToFloatDef(FFundsCtrl.Text, 0.0);
+  FEngine.Funds := FFunds;
+  FLimitFee := StrToFloatDef(FLimitFeeCtrl.Text, 0.0);
+  FMarketFee := StrToFloatDef(FMarketFeeCtrl.Text, 0.0);
+
+  //init strategies
   LSellForMoniesLowest := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelLowest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LSellForMoniesLow := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
@@ -892,8 +946,8 @@ begin
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
 
   //if the funds has changed since the last time this was run, reset it
-  if FEngine.Funds<>StrToFloatDef(FFunds.Text,0) then
-    FEngine.Funds:=StrToFloatDef(FFunds.Text,0);
+  if FEngine.Funds<>StrToFloatDef(FFundsCtrl.Text,0) then
+    FEngine.Funds:=StrToFloatDef(FFundsCtrl.Text,0);
 
   //prompt for pre-loading of tickers
   PreloadTickers;

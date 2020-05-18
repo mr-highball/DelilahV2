@@ -38,18 +38,17 @@ end;
 
 procedure TSingleLine.SetText(AValue: String);
 begin
-  TEdit(Control).Text:=AValue;
+  TEdit(Control).Text := AValue;
 end;
 
 procedure TSingleLine.DoInitControls;
 begin
   inherited DoInitControls;
-  Control.Visible:=True;
-  Control.AnchorVerticalCenterTo(pnl_control);
+
+  //align to the center of the control panel
   Control.AnchorHorizontalCenterTo(pnl_control);
-  Control.AnchorSide[akRight].Side:=asrRight;
-  Control.AnchorSide[akRight].Control:=pnl_control;
-  Control.Anchors:=Control.Anchors + [akLeft,akRight];
+  Control.AnchorVerticalCenterTo(pnl_control);
+
   Options:=[ucTitle,ucDescr,ucAuthor,ucControl];
 end;
 

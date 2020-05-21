@@ -1,4 +1,4 @@
-unit tickerparser.main;
+unit utilities.tickerparser.main;
 
 {$mode delphi}{$H+}
 
@@ -36,13 +36,13 @@ type
     FInv: Extended;
     FJSON : String;
     FIsBuy,
-    FIsSell : Boolean;
+    FIsSell: Boolean;
     FProf: Extended;
     function GetIsBuy: Boolean;
     function GetIsSell: Boolean;
     function GetJSON: String;
-    procedure SetIsBuy(AValue: Boolean);
-    procedure SetIsSell(AValue: Boolean);
+    procedure SetIsBuy(const AValue: Boolean);
+    procedure SetIsSell(const AValue: Boolean);
   public
     property JSON : String read GetJSON;
     property IsBuy : Boolean read GetIsBuy write SetIsBuy;
@@ -78,6 +78,8 @@ type
     edit_directory_csv: TEdit;
     edit_fee_perc: TEdit;
     edit_product_min: TEdit;
+    lbl_demo_info: TLabel;
+    lbl_load_info: TLabel;
     memo_load_order: TMemo;
     pctrl_main: TPageControl;
     pnl_ctrls: TPanel;
@@ -103,11 +105,13 @@ type
   strict private
     FTickers : TTickerList;
     FStrategies : TStrategies;
-    FCancelSim : Boolean;
+    FCancelSim,
+    FDemo: Boolean;
     FCurrentSimIndex : Integer;
     FCurrentEngine : IDelilah;
     FStrategyList : TFPGObjectList<TCheckBox>;
 
+    function GetDemo: Boolean;
     function GetStrategies: TStrategies;
     procedure ConfigureNewStrategy(const AName : String = '';
       const AStrategy : IStrategy = nil);
@@ -115,6 +119,7 @@ type
     procedure MonitorOrderPlace(Const ADetails:IOrderDetails; Const AID:String);
     procedure SaveNewStrategy(const ASender : TConfigureStrategy; const AName : String;
       const AStrategy : IStrategy);
+    procedure SetDemo(const AValue: Boolean);
   strict protected
     procedure SaveCSV;
     procedure SimulateStrategy;
@@ -122,6 +127,7 @@ type
     procedure PickFiles;
     procedure LoadFiles(const AFiles : TStrings);
   public
+    property DemoMode : Boolean read GetDemo write SetDemo;
     property Strategies : TStrategies read GetStrategies;
   end;
 
@@ -193,14 +199,26 @@ var
   I: Integer;
 begin
   //add checked strategies
-  for I := 0 to Pred(FStrategyList.Count) do
-    if FStrategyList[I].Checked then
-      AStrategies.Add(FStrategies[FStrategyList[I].Tag]);
+  if not FDemo then
+  begin
+    for I := 0 to Pred(FStrategyList.Count) do
+      if FStrategyList[I].Checked then
+        AStrategies.Add(FStrategies[FStrategyList[I].Tag])
+  end
+  //otherwise, add them all
+  else
+    for I := 0 to Pred(FStrategies.Count) do
+      AStrategies.Add(FStrategies[I]);
 end;
 
 function TTickerParser.GetStrategies: TStrategies;
 begin
   Result := FStrategies;
+end;
+
+function TTickerParser.GetDemo: Boolean;
+begin
+  Result := FDemo;
 end;
 
 procedure TTickerParser.ConfigureNewStrategy(const AName : String; const AStrategy : IStrategy = nil);
@@ -265,6 +283,14 @@ begin
 
   //add to list
   FStrategyList.Add(LCheck);
+end;
+
+procedure TTickerParser.SetDemo(const AValue: Boolean);
+begin
+  FDemo := AValue;
+  lbl_demo_info.Visible := AValue;
+  btn_add_strategy.Visible := not AValue;
+  btn_edit_strategy.Visible := not AValue;
 end;
 
 procedure TTickerParser.SaveCSV;
@@ -352,7 +378,7 @@ begin
 
   //create and setup order manager
   LManager := TMockOrderManagerImpl.Create;
-  LManager.FeePercentage := StrToFloatDef(edit_fee_perc.Text, 0) / 100;
+  LManager.FeePercentage := StrToFloatDef(edit_fee_perc.Text, 0);
   LEngine.OrderManager := LManager;
 
   //get the strategy to use for simulation and add to the engine
@@ -523,12 +549,12 @@ begin
   Result := FIsSell;
 end;
 
-procedure TTickerLoader.SetIsBuy(AValue: Boolean);
+procedure TTickerLoader.SetIsBuy(const AValue: Boolean);
 begin
   FIsBuy := AValue;
 end;
 
-procedure TTickerLoader.SetIsSell(AValue: Boolean);
+procedure TTickerLoader.SetIsSell(const AValue: Boolean);
 begin
   FIsSell := AValue;
 end;

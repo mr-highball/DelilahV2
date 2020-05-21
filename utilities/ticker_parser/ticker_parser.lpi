@@ -115,56 +115,54 @@
         <IsPartOfProject Value="True"/>
       </Unit0>
       <Unit1>
-        <Filename Value="main.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="TickerParser"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-      </Unit1>
-      <Unit2>
         <Filename Value="mock.manager.pas"/>
         <IsPartOfProject Value="True"/>
-      </Unit2>
-      <Unit3>
+      </Unit1>
+      <Unit2>
         <Filename Value="..\..\ui\frames\ui.strategy.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ConfigureStrategy"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
-      </Unit3>
-      <Unit4>
+      </Unit2>
+      <Unit3>
         <Filename Value="..\..\ui\forms\ui.strategyconfig.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="StrategyHolder"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-      </Unit4>
-      <Unit5>
+      </Unit3>
+      <Unit4>
         <Filename Value="..\..\ui\frames\ui.strategy.tiers.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ConfigureTiers"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
-      </Unit5>
-      <Unit6>
+      </Unit4>
+      <Unit5>
         <Filename Value="..\..\ui\frames\ui.strategy.acceleration.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ConfigureAcceleration"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
-      </Unit6>
-      <Unit7>
+      </Unit5>
+      <Unit6>
         <Filename Value="..\..\ui\frames\ui.strategy.acceleration.gdax.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ConfigureAccelerationGDAX"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
-      </Unit7>
-      <Unit8>
+      </Unit6>
+      <Unit7>
         <Filename Value="..\..\ui\forms\ui.strategypicker.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="StrategyPicker"/>
         <ResourceBaseClass Value="Form"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="utilities.tickerparser.main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
       </Unit8>
     </Units>
   </ProjectOptions>

@@ -1,0 +1,374 @@
+object TickerParser: TTickerParser
+  Left = 996
+  Height = 648
+  Top = 398
+  Width = 1021
+  Caption = 'Strategy Analyzer'
+  ClientHeight = 648
+  ClientWidth = 1021
+  DesignTimePPI = 192
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  ShowHint = True
+  LCLVersion = '2.0.2.0'
+  object pctrl_main: TPageControl
+    Left = 0
+    Height = 648
+    Top = 0
+    Width = 1021
+    ActivePage = Simulate
+    Align = alClient
+    TabIndex = 1
+    TabOrder = 0
+    object ts_load: TTabSheet
+      Caption = 'Load'
+      ClientHeight = 590
+      ClientWidth = 1005
+      object edit_directory: TEdit
+        AnchorSideLeft.Control = ts_load
+        AnchorSideTop.Control = lbl_load_info
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        Left = 50
+        Height = 40
+        Top = 114
+        Width = 805
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 50
+        BorderSpacing.Top = 50
+        BorderSpacing.Right = 150
+        TabOrder = 0
+        TextHint = 'C:\'
+      end
+      object btn_open_picker: TSpeedButton
+        AnchorSideLeft.Control = edit_directory
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = edit_directory
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = edit_directory
+        AnchorSideBottom.Side = asrCenter
+        Left = 855
+        Height = 40
+        Top = 114
+        Width = 50
+        Anchors = [akTop, akRight, akBottom]
+        BorderSpacing.Right = 100
+        Caption = '...'
+        OnClick = btn_open_pickerClick
+      end
+      object pnl_ctrls: TPanel
+        Left = 0
+        Height = 100
+        Top = 490
+        Width = 1005
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 1005
+        TabOrder = 1
+        object btn_load: TButton
+          AnchorSideTop.Control = pnl_ctrls
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls
+          AnchorSideRight.Side = asrBottom
+          Left = 847
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Load'
+          OnClick = btn_loadClick
+          TabOrder = 0
+        end
+      end
+      object memo_load_order: TMemo
+        AnchorSideLeft.Control = edit_directory
+        AnchorSideTop.Control = edit_directory
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_directory
+        AnchorSideRight.Side = asrBottom
+        Left = 50
+        Height = 180
+        Top = 194
+        Width = 805
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 40
+        ReadOnly = True
+        TabOrder = 2
+      end
+      object lbl_load_info: TLabel
+        Left = 0
+        Height = 64
+        Top = 0
+        Width = 1005
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'select a folder containing saved ticker files, then press the "load" button to import all the tickers'
+        ParentColor = False
+        WordWrap = True
+      end
+    end
+    object Simulate: TTabSheet
+      Caption = 'Simulate'
+      ClientHeight = 590
+      ClientWidth = 1005
+      object pnl_ctrls_simulate: TPanel
+        Left = 0
+        Height = 100
+        Top = 490
+        Width = 1005
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 1005
+        TabOrder = 0
+        object btn_save_simulate: TButton
+          AnchorSideTop.Control = pnl_ctrls_simulate
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls_simulate
+          AnchorSideRight.Side = asrBottom
+          Left = 847
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Simulate'
+          OnClick = btn_save_simulateClick
+          TabOrder = 0
+        end
+        object btn_cance_simulate: TButton
+          AnchorSideLeft.Control = pnl_ctrls_simulate
+          AnchorSideTop.Control = pnl_ctrls_simulate
+          AnchorSideTop.Side = asrCenter
+          Left = 8
+          Height = 50
+          Top = 25
+          Width = 150
+          BorderSpacing.Left = 8
+          Caption = 'Cancel'
+          OnClick = btn_cance_simulateClick
+          TabOrder = 1
+        end
+      end
+      object edit_funds: TEdit
+        Left = 32
+        Height = 40
+        Hint = 'amount of funds'
+        Top = 40
+        Width = 272
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 1
+        Text = '1000'
+        TextHint = 'funds'
+      end
+      object edit_fee_perc: TEdit
+        AnchorSideLeft.Control = edit_funds
+        AnchorSideTop.Control = edit_funds
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_funds
+        AnchorSideRight.Side = asrBottom
+        Left = 32
+        Height = 40
+        Hint = 'fee percentage (0.01 = 1%)'
+        Top = 90
+        Width = 272
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 10
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 2
+        Text = '0.02'
+        TextHint = 'fee %'
+      end
+      object progress_simulate: TProgressBar
+        AnchorSideLeft.Control = Simulate
+        AnchorSideTop.Control = pnl_ctrls_simulate
+        AnchorSideRight.Control = Simulate
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = pnl_ctrls_simulate
+        Left = 50
+        Height = 40
+        Top = 430
+        Width = 905
+        Anchors = [akLeft, akRight, akBottom]
+        BorderSpacing.Left = 50
+        BorderSpacing.Right = 50
+        BorderSpacing.Bottom = 20
+        TabOrder = 3
+      end
+      object edit_product: TEdit
+        AnchorSideLeft.Control = edit_fee_perc
+        AnchorSideTop.Control = edit_fee_perc
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_fee_perc
+        AnchorSideRight.Side = asrBottom
+        Left = 32
+        Height = 40
+        Hint = 'the trading pair for the loaded tickers (BTC-USD, LTC-USD, etc...)'
+        Top = 140
+        Width = 272
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 10
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 4
+        Text = 'BTC-USD'
+        TextHint = 'product ID'
+      end
+      object edit_product_min: TEdit
+        AnchorSideLeft.Control = edit_product
+        AnchorSideTop.Control = edit_product
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = edit_product
+        AnchorSideRight.Side = asrBottom
+        Left = 32
+        Height = 40
+        Hint = 'the smallest unit that can be purchased, consult the coinbase api docs'
+        Top = 190
+        Width = 272
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 10
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 5
+        Text = '0.001'
+        TextHint = 'min size'
+      end
+      object scroll_strategies: TScrollBox
+        AnchorSideLeft.Control = Simulate
+        AnchorSideTop.Control = Simulate
+        AnchorSideRight.Control = Simulate
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = progress_simulate
+        Left = 400
+        Height = 342
+        Top = 8
+        Width = 597
+        HorzScrollBar.Page = 559
+        VertScrollBar.Page = 304
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        BorderSpacing.Left = 400
+        BorderSpacing.Top = 8
+        BorderSpacing.Right = 8
+        BorderSpacing.Bottom = 80
+        ClientHeight = 304
+        ClientWidth = 559
+        TabOrder = 6
+        object lbl_demo_info: TLabel
+          Left = 0
+          Height = 544
+          Top = 0
+          Width = 679
+          Align = alTop
+          Caption = 'To simulate the strategy first,'#13#10'1.) load ticker data'#13#10'2.) type in the amount of "funds" you wish to use'#13#10'3.) the fee should already be brought in, but if you'#13#10'     wish to simulate different tiers, change it next'#13#10'4.) the pair should also have been brought it, but '#13#10'     if the loaded data is different than what was selected'#13#10'     on the SimpleBot product tab, this will manually need'#13#10'     to be typed in'#13#10'5.) like the pair, the minimum purchase amount needs'#13#10'     to be properly set, for reference you will need to'#13#10'     look this up at coinbase docs if different than what'#13#10'     was selected on the product tab'#13#10'6.) press the simulate button start. at any time during the sim'#13#10'     you can export the data via the export tab to check progress'#13#10'     but otherwise can wait until everything has finished'#13#10'     using the visual loading bar as the indicator'
+          ParentColor = False
+        end
+      end
+      object btn_add_strategy: TButton
+        AnchorSideTop.Control = scroll_strategies
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = scroll_strategies
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = progress_simulate
+        Left = 897
+        Height = 50
+        Top = 355
+        Width = 100
+        Anchors = [akRight, akBottom]
+        BorderSpacing.Bottom = 25
+        Caption = 'Add...'
+        OnClick = btn_add_strategyClick
+        TabOrder = 7
+      end
+      object btn_edit_strategy: TButton
+        AnchorSideTop.Control = scroll_strategies
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = btn_add_strategy
+        AnchorSideBottom.Control = progress_simulate
+        Left = 789
+        Height = 50
+        Top = 355
+        Width = 100
+        Anchors = [akRight, akBottom]
+        BorderSpacing.Right = 8
+        BorderSpacing.Bottom = 25
+        Caption = 'Edit'
+        OnClick = btn_edit_strategyClick
+        TabOrder = 8
+      end
+    end
+    object ts_export: TTabSheet
+      Caption = 'Export'
+      ClientHeight = 590
+      ClientWidth = 1005
+      object pnl_ctrls1: TPanel
+        Left = 0
+        Height = 100
+        Top = 490
+        Width = 1005
+        Align = alBottom
+        BevelOuter = bvNone
+        ClientHeight = 100
+        ClientWidth = 1005
+        TabOrder = 0
+        object btn_save_csv: TButton
+          AnchorSideTop.Control = pnl_ctrls1
+          AnchorSideTop.Side = asrCenter
+          AnchorSideRight.Control = pnl_ctrls1
+          AnchorSideRight.Side = asrBottom
+          Left = 847
+          Height = 50
+          Top = 25
+          Width = 150
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 8
+          Caption = 'Save'
+          OnClick = btn_save_csvClick
+          TabOrder = 0
+        end
+      end
+      object edit_directory_csv: TEdit
+        AnchorSideLeft.Control = ts_load
+        AnchorSideTop.Control = ts_load
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        Left = 50
+        Height = 40
+        Top = 50
+        Width = 805
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 50
+        BorderSpacing.Top = 50
+        BorderSpacing.Right = 150
+        TabOrder = 1
+        TextHint = 'C:\'
+      end
+      object btn_open_picker_csv: TSpeedButton
+        AnchorSideLeft.Control = edit_directory_csv
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = edit_directory_csv
+        AnchorSideRight.Control = ts_load
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = edit_directory_csv
+        AnchorSideBottom.Side = asrCenter
+        Left = 855
+        Height = 40
+        Top = 50
+        Width = 50
+        Anchors = [akTop, akRight, akBottom]
+        BorderSpacing.Right = 100
+        Caption = '...'
+        OnClick = btn_open_picker_csvClick
+      end
+    end
+  end
+  object dialog_directory: TSelectDirectoryDialog
+    left = 832
+    top = 160
+  end
+end

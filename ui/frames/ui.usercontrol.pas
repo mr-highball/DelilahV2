@@ -49,7 +49,7 @@ type
     procedure SetDescr(AValue: String);
     procedure SetOptions(AValue: TUserControlOptions);
     procedure SetTitle(AValue: String);
-    procedure ResizeEdit(Sender : TObject);
+    procedure ResizeControl(Sender : TObject);
   protected
     procedure Loaded; override;
     procedure DoInitControls;virtual;
@@ -180,7 +180,7 @@ begin
   lbl_title.Caption := AValue;
 end;
 
-procedure TUserControl.ResizeEdit(Sender: TObject);
+procedure TUserControl.ResizeControl(Sender: TObject);
 begin
   if Assigned(Control) and (FWidthPerc > 0) then
     Control.Width := Round(pnl_control.Width * FWidthPerc);
@@ -207,8 +207,15 @@ begin
     FControl.Visible:=True;
   end;
 
-  //default to showing nothing (allow children to define)
-  Options := [];
+  //align to the center of the control panel
+  if Assigned(FControl) then
+  begin
+    FControl.AnchorHorizontalCenterTo(pnl_control);
+    FControl.AnchorVerticalCenterTo(pnl_control);
+  end;
+
+  //default to showing everything
+  Options := [ucTitle, ucDescr, ucAuthor, ucControl];
 end;
 
 procedure TUserControl.InitControls;
@@ -221,7 +228,7 @@ begin
   inherited Create(TheOwner);
   FHeightPerc := 0;
   FWidthPerc := 0;
-  pnl_control.AddHandlerOnResize(ResizeEdit);
+  pnl_control.AddHandlerOnResize(ResizeControl);
 end;
 
 end.

@@ -17,7 +17,7 @@ type
     function GetText: String;
     procedure SetText(AValue: String);
   protected
-    procedure DoInitControls; override;
+    procedure InitControls;
   public
     property Text : String read GetText write SetText;
     constructor Create(TheOwner: TComponent); override;
@@ -41,15 +41,10 @@ begin
   TEdit(Control).Text := AValue;
 end;
 
-procedure TSingleLine.DoInitControls;
+procedure TSingleLine.InitControls;
 begin
-  inherited DoInitControls;
-
-  //align to the center of the control panel
-  Control.AnchorHorizontalCenterTo(pnl_control);
-  Control.AnchorVerticalCenterTo(pnl_control);
-
-  Options:=[ucTitle,ucDescr,ucAuthor,ucControl];
+  inherited;
+  Text := '';
 end;
 
 constructor TSingleLine.Create(TheOwner: TComponent);

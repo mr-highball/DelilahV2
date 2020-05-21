@@ -73,7 +73,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="34">
+    <Units Count="38">
       <Unit0>
         <Filename Value="SimpleBot.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -255,6 +255,33 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
       </Unit33>
+      <Unit34>
+        <Filename Value="frames\ui.usercontrol.slider.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Slider"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="frames\ui.usercontrol.slider.control.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="SliderControl"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="frames\ui.usercontrol.profittarget.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ProfitTarget"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="frames\ui.usercontrol.profittarget.control.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ProfitTargetControl"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit37>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

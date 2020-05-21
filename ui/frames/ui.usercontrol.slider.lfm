@@ -1,0 +1,4 @@
+inherited Slider: TSlider
+  DesignLeft = 1195
+  DesignTop = 388
+end

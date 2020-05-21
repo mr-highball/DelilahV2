@@ -1,0 +1,75 @@
+object ProfitTargetControl: TProfitTargetControl
+  Left = 0
+  Height = 480
+  Top = 0
+  Width = 640
+  ClientHeight = 480
+  ClientWidth = 640
+  DesignTimePPI = 192
+  ParentFont = False
+  TabOrder = 0
+  DesignLeft = 990
+  DesignTop = 409
+  object radio_group: TRadioGroup
+    Left = 0
+    Height = 73
+    Top = 0
+    Width = 640
+    Align = alTop
+    AutoFill = True
+    AutoSize = True
+    ChildSizing.LeftRightSpacing = 6
+    ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+    ChildSizing.EnlargeVertical = crsHomogenousChildResize
+    ChildSizing.ShrinkHorizontal = crsScaleChilds
+    ChildSizing.ShrinkVertical = crsScaleChilds
+    ChildSizing.Layout = cclLeftToRightThenTopToBottom
+    ChildSizing.ControlsPerLine = 7
+    ClientHeight = 36
+    ClientWidth = 636
+    Columns = 7
+    Items.Strings = (
+      '0.5%'
+      '1%'
+      '2%'
+      '3%'
+      '5%'
+      '10%'
+      'Custom'
+    )
+    TabOrder = 0
+  end
+  object edit_custom: TEdit
+    AnchorSideLeft.Control = radio_group
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = lbl_info
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = radio_group
+    AnchorSideRight.Side = asrBottom
+    Left = 220
+    Height = 40
+    Top = 167
+    Width = 200
+    BorderSpacing.Top = 10
+    NumbersOnly = True
+    TabOrder = 1
+    TextHint = '0.00'
+  end
+  object lbl_info: TLabel
+    AnchorSideLeft.Control = radio_group
+    AnchorSideTop.Control = radio_group
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = radio_group
+    AnchorSideRight.Side = asrBottom
+    Left = 0
+    Height = 64
+    Top = 93
+    Width = 640
+    Alignment = taCenter
+    Anchors = [akTop, akLeft, akRight]
+    BorderSpacing.Top = 20
+    Caption = 'type a custom profit percentage below '#13#10'(ie. 0.10 is 10%)'
+    ParentColor = False
+    WordWrap = True
+  end
+end

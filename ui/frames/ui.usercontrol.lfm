@@ -6,6 +6,7 @@ object UserControl: TUserControl
   ClientHeight = 480
   ClientWidth = 640
   DesignTimePPI = 192
+  LCLVersion = '1.8.2.0'
   ParentFont = False
   ParentShowHint = False
   ShowHint = True

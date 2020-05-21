@@ -1,0 +1,4 @@
+inherited ProfitTarget: TProfitTarget
+  DesignLeft = 999
+  DesignTop = 362
+end

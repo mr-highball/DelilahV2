@@ -10,7 +10,8 @@ uses
   Menus, ui.ignition, ui.authenticator, ui.usercontrol.multiline,
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
-  delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration;
+  delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration,
+  ui.usercontrol.slider, ui.usercontrol.profittarget;
 
 type
 
@@ -43,6 +44,8 @@ type
     icons: TImageList;
     menu: TImageList;
     json_main: TJSONPropStorage;
+    mi_tools: TMenuItem;
+    mi_sim: TMenuItem;
     mi_gunslinger: TMenuItem;
     mi_email_setup: TMenuItem;
     mi_email_enabled: TMenuItem;
@@ -55,6 +58,7 @@ type
     menu_main: TMainMenu;
     memo_licenses: TMemo;
     multi_log: TMultiLine;
+    pnl_strat_ctrl_container: TPanel;
     pnl_log_clear: TPanel;
     pctrl_main: TPageControl;
     scroll_strategy: TScrollBox;
@@ -77,7 +81,9 @@ type
     procedure mi_email_setupClick(Sender: TObject);
     procedure mi_file_settingsClick(Sender: TObject);
     procedure mi_log_tabClick(Sender: TObject);
+    procedure mi_simClick(Sender: TObject);
     procedure pctrl_mainChange(Sender: TObject);
+    procedure scroll_strategyResize(Sender: TObject);
   private
     FAuth : TAuthenticator;
     FProducts : TProducts;
@@ -85,10 +91,16 @@ type
     FFundsCtrl,
     FMarketFeeCtrl,
     FLimitFeeCtrl: TSingleLine;
+    FTimeFrameCtrl,
+    FPosSizeCtrl,
+    FDCASizeCtrl: TSlider;
+    FProfitCtrl: TProfitTarget;
     FInit : Boolean;
     FEngine : IDelilah;
     FCompletedOrders,
     FHighWindowSize: Cardinal;
+    FHighPosSize,
+    FHighDCASize: Single;
     FMarketFee,
     FLimitFee,
     FHighTakeProfit: Single;
@@ -105,6 +117,7 @@ type
     procedure InitControls;
     procedure EnableAutoStart;
     procedure PreloadTickers;
+    procedure SimulateStrategy;
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
     procedure StartStrategy(Sender:TObject);
@@ -119,6 +132,43 @@ type
     function GetAccelCriteria : TActiveCriteriaCallbackArray;
     function GetLowAccelCriteria : TActiveCriteriaCallbackArray;
     function GetLowestAccelCriteria : TActiveCriteriaCallbackArray;
+  private
+    const
+      (*
+        min and max times associated to the strategy time slider
+      *)
+      MIN_TIME = 86400000; //24 hours
+      MAX_TIME = 432000000; //5 days
+
+      (*
+        min and max main position sizes associated to the strategy pos size slider
+      *)
+      MIN_POS_SIZE = 0.10; //10% for highest risky accel pos
+      MAX_POS_SIZE = 0.50; //50% for highest risky accel pos
+
+      (*
+        min and max dca position sizes associated to the strategy dca pos size slider
+      *)
+      MIN_DCA_SIZE = 0.001; //0.1% applied to highest dca strat
+      MAX_DCA_SIZE = 0.01; //1% applied to highest dca strat
+  protected
+    (*
+      provided an input time (read from setting) will output the interpolated
+      value against the new slider settings
+    *)
+    procedure InterpolateTimeSetting(var Time : Cardinal; const AIsReload : Boolean = False);
+
+    (*
+      provided an input position size (read from setting) will output the interpolated
+      value against the new slider settings
+    *)
+    procedure InterpolatePositionSetting(var Position : Single; const AIsReload : Boolean = False);
+
+    (*
+      provided an input DCA position size (read from setting) will output the interpolated
+      value against the new slider settings
+    *)
+    procedure InterpolateDCAPositionSetting(var Position : Single; const AIsReload : Boolean = False);
   public
   end;
 
@@ -431,7 +481,15 @@ begin
   FLimitFeeCtrl.Text := FloatToStr(FLimitFee);
 
   //temp settings
-  FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size', '14400000'), 14400000);
+  FHighWindowSize := StrToIntDef(json_main.ReadString('high_window_size', ''), Round(MIN_TIME + (MAX_TIME - MIN_TIME) / 2));
+  InterpolateTimeSetting(FHighWindowSize, True);
+
+  FHighPosSize := StrToFloatDef(json_main.ReadString('high_position_size', ''), MIN_POS_SIZE + (MAX_POS_SIZE - MIN_POS_SIZE) / 2);
+  InterpolatePositionSetting(FHighPosSize, True);
+
+  FHighDCASize := StrToFloatDef(json_main.ReadString('high_dca_size', ''), MIN_DCA_SIZE + (MAX_DCA_SIZE - MIN_DCA_SIZE) / 2);
+  InterpolateDCAPositionSetting(FHighDCASize, True);
+
   FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
   FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
   FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
@@ -482,7 +540,15 @@ begin
   json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
 
   //temp
+  InterpolateTimeSetting(FHighWindowSize);
   json_main.WriteString('high_window_size', IntToStr(FHighWindowSize));
+
+  InterpolatePositionSetting(FHighPosSize);
+  json_main.WriteString('high_position_size', FloatToStr(FHighPosSize));
+
+  InterpolateDCAPositionSetting(FHighDCASize);
+  json_main.WriteString('high_dca_size', FloatToStr(FHighDCASize));
+
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
@@ -518,6 +584,11 @@ begin
   SetupLogTab;
 end;
 
+procedure TMain.mi_simClick(Sender: TObject);
+begin
+
+end;
+
 procedure TMain.pctrl_mainChange(Sender: TObject);
 begin
   if pctrl_main.ActivePage=ts_product then
@@ -540,6 +611,12 @@ begin
         ''
       );
     end;
+end;
+
+procedure TMain.scroll_strategyResize(Sender: TObject);
+begin
+  pnl_strat_ctrl_container.Width := scroll_strategy.Width;
+  pnl_strat_ctrl_container.Left := 0;
 end;
 
 procedure TMain.SetupEmail;
@@ -583,9 +660,11 @@ begin
     multi_log.Options:=multi_log.Options - [ucAuthor];
     multi_log.Title:='Strategy Logger';
     multi_log.Description:='logging for the strategy';
-    chk_log_error.Checked:=True;
-    chk_log_warn.Checked:=True;
-    chk_log_info.Checked:=True;
+    chk_log_error.Checked:=False;
+    chk_log_warn.Checked:=False;
+    chk_log_info.Checked:=False;
+    multi_log.ControlWidthPercent := 1;
+    multi_log.ControlHeightPercent := 1;
 
     //gunslinger
     Gunslinger1.Visible := False;
@@ -601,10 +680,13 @@ begin
     FProducts:=TProducts.Create(Self);
     FProducts.Parent:=ts_product;
     FProducts.Align:=TAlign.alClient;
+    FProducts.ControlWidthPercent := 1;
+    FProducts.ControlHeightPercent := 1;
     FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
     FProducts.ProductFrame.OnError:=ProductError;
     FProducts.ProductFrame.OnTick:=ProductTick;
     FProducts.ProductFrame.TickerInterval:=1500;
+    FProducts.ProductFrame.LogTickers := True;
     FProductInit:=False;
 
     //strategy
@@ -623,7 +705,6 @@ begin
     FFundsCtrl.ControlWidthPercent := 0.3;
     FFundsCtrl.Options:=FFundsCtrl.Options - [ucAuthor];
     FFundsCtrl.Text := FLoatToStr(FFunds);
-    FFundsCtrl.Parent:=scroll_strategy;
 
     FLimitFeeCtrl := TSingleLine.Create(Self);
     FLimitFeeCtrl.Name := 'LimitFee';
@@ -634,7 +715,6 @@ begin
     FLimitFeeCtrl.ControlWidthPercent := 0.30;
     FLimitFeeCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
     FLimitFeeCtrl.Text := FloatToStr(FLimitFee);
-    FLimitFeeCtrl.Parent := scroll_strategy;
 
     FMarketFeeCtrl := TSingleLine.Create(Self);
     FMarketFeeCtrl.Name := 'MarketFee';
@@ -645,7 +725,62 @@ begin
     FMarketFeeCtrl.ControlWidthPercent := 0.30;
     FMarketFeeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FMarketFeeCtrl.Text := FloatToStr(FMarketFee);
-    FMarketFeeCtrl.Parent := scroll_strategy;
+
+    FTimeFrameCtrl := TSlider.Create(Self);
+    FTimeFrameCtrl.Name := 'TimeFrame';
+    FTimeFrameCtrl.Align := TAlign.alTop;
+    FTimeFrameCtrl.Height := 300;
+    FTimeFrameCtrl.ControlWidthPercent := 1;
+    FTimeFrameCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FTimeFrameCtrl.MinValue := 1;
+    FTimeFrameCtrl.MaxValue := 100;
+    FTimeFrameCtrl.Title := 'Time Frame';
+    FTimeFrameCtrl.Description := 'adjusts the timeframe used to make trades. longer timeframes are less likely to exit earlier at the expense of possibly entering later';
+    FTimeFrameCtrl.MinDescr := 'Shorter';
+    FTimeFrameCtrl.MaxDescr := 'Longer';
+
+    FPosSizeCtrl := TSlider.Create(Self);
+    FPosSizeCtrl.Name := 'PositionSize';
+    FPosSizeCtrl.Align := TAlign.alTop;
+    FPosSizeCtrl.Height := 300;
+    FPosSizeCtrl.ControlWidthPercent := 1;
+    FPosSizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FPosSizeCtrl.MinValue := 1;
+    FPosSizeCtrl.MaxValue := 100;
+    FPosSizeCtrl.Title := 'Position Size';
+    FPosSizeCtrl.Description := 'adjust how large main positions should be relative to the amount of funds';
+    FPosSizeCtrl.MinDescr := 'Smaller';
+    FPosSizeCtrl.MaxDescr := 'Larger';
+
+    FDCASizeCtrl := TSlider.Create(Self);
+    FDCASizeCtrl.Name := 'DCASize';
+    FDCASizeCtrl.Align := TAlign.alTop;
+    FDCASizeCtrl.Height := 300;
+    FDCASizeCtrl.ControlWidthPercent := 1;
+    FDCASizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FDCASizeCtrl.MinValue := 1;
+    FDCASizeCtrl.MaxValue := 100;
+    FDCASizeCtrl.Title := 'DCA Size';
+    FDCASizeCtrl.Description := 'adjust how large DCA positions should be relative to the amount of funds';
+    FDCASizeCtrl.MinDescr := 'Smaller';
+    FDCASizeCtrl.MaxDescr := 'Larger';
+
+    FProfitCtrl := TProfitTarget.Create(Self);
+    FProfitCtrl.Name := 'ProfitTarget';
+    FProfitCtrl.Align := TAlign.alTop;
+    FProfitCtrl.Height := 350;
+    FProfitCtrl.ControlWidthPercent := 1;
+    FProfitCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FProfitCtrl.Title := 'Target Profit';
+    FProfitCtrl.Description := 'used to allow the strategy to begin scaling out of a position. sell positions may vary though, depending on market conditions';
+
+    FProfitCtrl.Parent := pnl_strat_ctrl_container;
+    FDCASizeCtrl.Parent := pnl_strat_ctrl_container;
+    FPosSizeCtrl.Parent := pnl_strat_ctrl_container;
+    FTimeFrameCtrl.Parent := pnl_strat_ctrl_container;
+    FLimitFeeCtrl.Parent := pnl_strat_ctrl_container;
+    FMarketFeeCtrl.Parent := pnl_strat_ctrl_container;
+    FFundsCtrl.Parent := pnl_strat_ctrl_container;
 
     FInit:=True;
   end;
@@ -728,6 +863,11 @@ begin
     chk_log_info.Checked := True;
     chk_log_warn.Checked := True;
   end;
+end;
+
+procedure TMain.SimulateStrategy;
+begin
+  ShowMessage('Not Implemented');
 end;
 
 procedure TMain.CheckCanStart(Sender: TObject; var Continue: Boolean);
@@ -817,6 +957,11 @@ begin
   LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
 
+  //make sure we have the latest settings
+  InterpolateTimeSetting(FHighWindowSize);
+  InterpolatePositionSetting(FHighPosSize);
+  InterpolateDCAPositionSetting(FHighDCASize);
+
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
   LSellForMoniesLowest.UseMarketBuy :=  FUseMarketBuy;
@@ -824,9 +969,9 @@ begin
   LSellForMoniesLowest.ChannelStrategy.WindowSizeInMilli := 2000000;
   LSellForMoniesLowest.AvoidChop := False;
   LSellForMoniesLowest.GTFOPerc := 0;
-  LSellForMoniesLowest.SmallTierPerc := 0.0005;
-  LSellForMoniesLowest.MidTierPerc := 0.0005;
-  LSellForMoniesLowest.LargeTierPerc := 0.001;
+  LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
+  LSellForMoniesLowest.MidTierPerc := (FHighDCASize / 3) / 2;
+  LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
   LSellForMoniesLowest.SmallTierSellPerc := 0.005;
   LSellForMoniesLowest.MidTierSellPerc := 0.005;
   LSellForMoniesLowest.LargeTierSellPerc := 0.01;
@@ -836,15 +981,15 @@ begin
   LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
   LSellForMoniesLowest.MinReduction := 0.0000001;
   LSellForMoniesLowest.OnlyProfit := True;
-  LSellForMoniesLowest.MinProfit := FHighTakeProfit / 4;
+  LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
 
   //configure the lowest acceleration
-  LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 4);
+  LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := 0.10;
-  LAccelLowest.RiskyPositionPercent := 0.15;
+  LAccelLowest.PositionPercent := (FHighPosSize / 3) * 0.90;
+  LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
   LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
@@ -862,9 +1007,9 @@ begin
   LSellForMoniesLow.ChannelStrategy.WindowSizeInMilli := 2700000;
   LSellForMoniesLow.AvoidChop := False;
   LSellForMoniesLow.GTFOPerc := 0;
-  LSellForMoniesLow.SmallTierPerc := 0.0005;
-  LSellForMoniesLow.MidTierPerc := 0.0005;
-  LSellForMoniesLow.LargeTierPerc := 0.001;
+  LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
+  LSellForMoniesLow.MidTierPerc := (FHighDCASize / 2) / 2;
+  LSellForMoniesLow.LargeTierPerc := FHighDCASize / 2;
   LSellForMoniesLow.SmallTierSellPerc := 0.005;
   LSellForMoniesLow.MidTierSellPerc := 0.005;
   LSellForMoniesLow.LargeTierSellPerc := 0.015;
@@ -881,8 +1026,8 @@ begin
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0.20;
-  LAccelLow.RiskyPositionPercent := 0.25;
+  LAccelLow.PositionPercent := (FHighPosSize / 2) * 0.90;
+  LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
   LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
@@ -900,9 +1045,9 @@ begin
   LSellForMonies.ChannelStrategy.WindowSizeInMilli := 3600000;
   LSellForMonies.AvoidChop := False;
   LSellForMonies.GTFOPerc := 0;
-  LSellForMonies.SmallTierPerc := 0.0005;
-  LSellForMonies.MidTierPerc := 0.0005;
-  LSellForMonies.LargeTierPerc := 0.002;
+  LSellForMonies.SmallTierPerc := FHighDCASize / 2;
+  LSellForMonies.MidTierPerc := FHighDCASize / 2;
+  LSellForMonies.LargeTierPerc := FHighDCASize;
   LSellForMonies.SmallTierSellPerc := 0.01;
   LSellForMonies.MidTierSellPerc := 0.01;
   LSellForMonies.LargeTierSellPerc := 0.03;
@@ -919,8 +1064,8 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0.30;
-  LAccelHighest.RiskyPositionPercent := 0.35;
+  LAccelHighest.PositionPercent := FHighWindowSize * 0.9;
+  LAccelHighest.RiskyPositionPercent := FHighWindowSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
@@ -1129,6 +1274,106 @@ function TMain.GetLowestAccelCriteria: TActiveCriteriaCallbackArray;
 begin
   SetLength(Result,1);
   Result[0] := @AccelLowestStrategyInPosition;
+end;
+
+procedure TMain.InterpolateTimeSetting(var Time: Cardinal;
+  const AIsReload: Boolean);
+begin
+  //if input is larger or smaller then someone has chosen to use a custom setting outside
+  //of the bounds specified
+  if Time > MAX_TIME then
+  begin
+    if AIsReload then
+    begin
+      FTimeFrameCtrl.Value := FTimeFrameCtrl.MaxValue;
+      Exit;
+    end
+    //allow fallthrough if the user adjusted
+    else if FTimeFrameCtrl.Value >= FTimeFrameCtrl.MaxValue then
+      Exit;
+  end
+  else if Time < MIN_TIME then
+  begin
+    if AIsReload then
+    begin
+      FTimeFrameCtrl.Value := FTimeFrameCtrl.MinValue;
+      Exit;
+    end
+    else if FTimeFrameCtrl.Value <= FTimeFrameCtrl.MinValue then
+      Exit;
+  end;
+
+  //otherwise we need to set the time according to the slider value
+  if not AIsReload then
+    Time := MIN_TIME + Trunc((MAX_TIME - MIN_TIME) * (FTimeFrameCtrl.Value / FTimeFrameCtrl.MaxValue))
+  else
+    FTimeFrameCtrl.Value := FTimeFrameCtrl.MinValue + Trunc((FTimeFrameCtrl.MaxValue - FTimeFrameCtrl.MinValue) * ((Time - MIN_TIME) / (MAX_TIME - MIN_TIME)));
+end;
+
+procedure TMain.InterpolatePositionSetting(var Position: Single;
+  const AIsReload: Boolean);
+begin
+  //if input is larger or smaller then someone has chosen to use a custom setting outside
+  //of the bounds specified
+  if Position > MAX_POS_SIZE then
+  begin
+    if AIsReload then
+    begin
+      FPosSizeCtrl.Value := FPosSizeCtrl.MaxValue;
+      Exit;
+    end
+    else if FPosSizeCtrl.Value >= FPosSizeCtrl.MaxValue then
+      Exit;;
+  end
+  else if Position < MIN_POS_SIZE then
+  begin
+    if AIsReload then
+    begin
+      FPosSizeCtrl.Value := FPosSizeCtrl.MinValue;
+      Exit;
+    end
+    else if FPosSizeCtrl.Value <= FPosSizeCtrl.MinValue then
+      Exit;
+  end;
+
+  //otherwise we need to set the position according to the slider value
+  if not AIsReload then
+    Position := MIN_POS_SIZE + (MAX_POS_SIZE - MIN_POS_SIZE) * (FPosSizeCtrl.Value / FPosSizeCtrl.MaxValue)
+  else
+    FPosSizeCtrl.Value := FPosSizeCtrl.MinValue + Trunc((FPosSizeCtrl.MaxValue - FPosSizeCtrl.MinValue) * ((Position - MIN_POS_SIZE) / (MAX_POS_SIZE - MIN_POS_SIZE)));
+end;
+
+procedure TMain.InterpolateDCAPositionSetting(var Position: Single;
+  const AIsReload: Boolean);
+begin
+  //if input is larger or smaller then someone has chosen to use a custom setting outside
+  //of the bounds specified
+  if Position > MAX_DCA_SIZE then
+  begin
+    if AIsReload then
+    begin
+      FDCASizeCtrl.Value := FDCASizeCtrl.MaxValue;
+      Exit;
+    end
+    else if FDCASizeCtrl.Value >= FDCASizeCtrl.MaxValue then
+      Exit;
+  end
+  else if Position < MIN_DCA_SIZE then
+  begin
+    if AIsReload then
+    begin
+      FDCASizeCtrl.Value := FDCASizeCtrl.MinValue;
+      Exit;
+    end
+    else if FDCASizeCtrl.Value <= FDCASizeCtrl.MinValue then
+      Exit;
+  end;
+
+  //otherwise we need to set the position according to the slider value
+  if not AIsReload then
+    Position := MIN_DCA_SIZE + (MAX_DCA_SIZE - MIN_DCA_SIZE) * (FDCASizeCtrl.Value / FDCASizeCtrl.MaxValue)
+  else
+    FDCASizeCtrl.Value := FDCASizeCtrl.MinValue + Trunc((FDCASizeCtrl.MaxValue - FDCASizeCtrl.MinValue) * ((Position - MIN_DCA_SIZE) / (MAX_DCA_SIZE - MIN_DCA_SIZE)));
 end;
 
 

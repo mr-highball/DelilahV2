@@ -104,6 +104,9 @@ type
     FMarketFee,
     FLimitFee,
     FHighTakeProfit: Single;
+    FLowestTier,
+    FLowTier,
+    FTier: ITierStrategyGDAX;
     FAccelStrategy,
     FLowAccelStrategy,
     FLowestAccelStrategy : IAccelerationStrategy;
@@ -192,6 +195,21 @@ uses
 const
   LOG_ENTRY = '%s %s - %s';
 
+function StrategiesInPosition : Boolean;
+begin
+  if not (
+    Assigned(SimpleBot.FAccelStrategy)
+    or Assigned(SimpleBot.FLowAccelStrategy)
+    or Assigned(SimpleBot.FLowestAccelStrategy))
+  then
+    Exit(False);
+
+  //if we have one strategy in position, return true
+  Result := (SimpleBot.FAccelStrategy.Position <> TAccelPosition.apNone)
+    or (SimpleBot.FLowAccelStrategy.Position <> TAccelPosition.apNone)
+    or (SimpleBot.FLowestAccelStrategy.Position <> TAccelPosition.apNone)
+end;
+
 procedure AccelLowestStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
@@ -199,6 +217,9 @@ var
   LCurrentUtilization: Extended;
 begin
   Active := False;
+
+  //if we are not in position, allow selling at a loss
+  SimpleBot.FLowestTier.OnlyProfit := StrategiesInPosition;
 
   //only operate the lowest tiered strategy when we're in position and all
   //higher strategies are not
@@ -239,6 +260,9 @@ var
 begin
   Active := False;
 
+  //if we are not in position, allow selling at a loss
+  SimpleBot.FLowTier.OnlyProfit := StrategiesInPosition;
+
   //only operate the low tiered strategy when we're in position
   if PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull] then
   begin
@@ -269,6 +293,9 @@ end;
 procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 begin
+  //if we are not in position, allow selling at a loss
+  SimpleBot.FTier.OnlyProfit := StrategiesInPosition;
+
   //when we are selling, then don't require a position
   if not ADetails^.IsBuy then
     Active := True
@@ -962,6 +989,7 @@ begin
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+  FLowestTier := LSellForMoniesLowest;
 
   //configure the lowest acceleration
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
@@ -1000,6 +1028,7 @@ begin
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
   LSellForMoniesLow.MaxScaledBuyPerc := 10;
+  FLowTier := LSellForMoniesLow;
 
   //configure the low acceleration
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
@@ -1038,6 +1067,7 @@ begin
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
   LSellForMonies.MaxScaledBuyPerc := 15;
+  FTier := LSellForMonies;
 
   //configure the highest acceleration
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
@@ -1185,6 +1215,7 @@ begin
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+  FLowestTier := LSellForMoniesLowest;
 
   //configure the lowest acceleration
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
@@ -1223,6 +1254,7 @@ begin
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
   LSellForMoniesLow.MaxScaledBuyPerc := 10;
+  FLowTier := LSellForMoniesLow;
 
   //configure the low acceleration
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
@@ -1261,6 +1293,7 @@ begin
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
   LSellForMonies.MaxScaledBuyPerc := 15;
+  FTier := LSellForMonies;
 
   //configure the highest acceleration
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;

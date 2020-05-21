@@ -1,4 +1,4 @@
-object Main: TMain
+object SimpleBot: TSimpleBot
   Left = 973
   Height = 1006
   Top = 302
@@ -17,7 +17,7 @@ object Main: TMain
     Height = 663
     Top = 10
     Width = 1272
-    ActivePage = ts_strategy
+    ActivePage = ts_auth
     Align = alClient
     BorderSpacing.Left = 10
     BorderSpacing.Top = 10
@@ -25,7 +25,7 @@ object Main: TMain
     BorderSpacing.Bottom = 10
     Images = icons
     ParentFont = False
-    TabIndex = 2
+    TabIndex = 0
     TabOrder = 0
     OnChange = pctrl_mainChange
     object ts_auth: TTabSheet
@@ -256,7 +256,6 @@ object Main: TMain
         end
         inherited lbl_title: TLabel
           Left = 20
-          Height = 32
           Top = 20
           Width = 1196
           BorderSpacing.Left = 20
@@ -265,7 +264,6 @@ object Main: TMain
         end
         inherited lbl_descr: TLabel
           Left = 20
-          Height = 32
           Top = 72
           Width = 1196
           BorderSpacing.Left = 20
@@ -274,7 +272,6 @@ object Main: TMain
         end
         inherited lbl_author: TLabel
           Left = 20
-          Height = 32
           Top = 124
           Width = 1196
           BorderSpacing.Left = 20

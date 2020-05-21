@@ -11,14 +11,14 @@ uses
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
   delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration,
-  ui.usercontrol.slider, ui.usercontrol.profittarget;
+  ui.usercontrol.slider, ui.usercontrol.profittarget, utilities.tickerparser.main;
 
 type
 
   //alias due to same names... my bad
   TPreloadTick = TGDAXTickerImpl;
 
-  { TMain }
+  { TSimpleBot }
   (*
     this form allows for configuring a IDelilah engine for GDAX and offers
     some conveniences such as chart, visual logging, etc...
@@ -27,7 +27,7 @@ type
     up and running a strategy with minimal hassle as well as showing a use case
     for the GDAX api and engine core classes.
   *)
-  TMain = class(TForm)
+  TSimpleBot = class(TForm)
     btn_log_clear: TButton;
     chart_tools: TChartToolset;
     chart_toolsDataPointCrosshairTool1: TDataPointCrosshairTool;
@@ -118,6 +118,7 @@ type
     procedure EnableAutoStart;
     procedure PreloadTickers;
     procedure SimulateStrategy;
+    procedure AddStrategiesToSim(const ASim : TTickerParser);
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
     procedure StartStrategy(Sender:TObject);
@@ -173,7 +174,7 @@ type
   end;
 
 var
-  Main: TMain;
+  SimpleBot: TSimpleBot;
 
 implementation
 uses
@@ -202,8 +203,8 @@ begin
   //only operate the lowest tiered strategy when we're in position and all
   //higher strategies are not
   if (PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull])
-    and (Main.FLowAccelStrategy.Position in [apNone])
-    and (Main.FAccelStrategy.Position in [apNone])
+    and (SimpleBot.FLowAccelStrategy.Position in [apNone])
+    and (SimpleBot.FAccelStrategy.Position in [apNone])
   then
   begin
     //when we are selling and in position, allow the sell
@@ -212,20 +213,20 @@ begin
     else
     begin
       //no div by zero
-      if Main.FEngine.Funds = 0 then
+      if SimpleBot.FEngine.Funds = 0 then
         Exit;
 
       //calc the total percent the low strategy is alotted
       LTotalPerc := PAccelerationStrategy(ADetails.Data)^.RiskyPositionPercent + PAccelerationStrategy(ADetails.Data)^.PositionPercent;
 
       //then find the utilization of the funds
-      LCurrentUtilization := Main.FEngine.AvailableFunds / Main.FEngine.Funds;
+      LCurrentUtilization := SimpleBot.FEngine.AvailableFunds / SimpleBot.FEngine.Funds;
 
       //if we have utilized less, then allow the buy (does not account for compounding)
       if (1 - LCurrentUtilization) < LTotalPerc then
         Active := True;
 
-      Main.LogInfo(Format('AccelLowestStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
+      SimpleBot.LogInfo(Format('AccelLowestStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
     end;
   end;
 end;
@@ -247,20 +248,20 @@ begin
     else
     begin
       //no div by zero
-      if Main.FEngine.Funds = 0 then
+      if SimpleBot.FEngine.Funds = 0 then
         Exit;
 
       //calc the total percent the low strategy is alotted
       LTotalPerc := PAccelerationStrategy(ADetails.Data)^.RiskyPositionPercent + PAccelerationStrategy(ADetails.Data)^.PositionPercent;
 
       //then find the utilization of the funds
-      LCurrentUtilization := Main.FEngine.AvailableFunds / Main.FEngine.Funds;
+      LCurrentUtilization := SimpleBot.FEngine.AvailableFunds / SimpleBot.FEngine.Funds;
 
       //if we have utilized less, then allow the buy (does not account for compounding)
       if (1 - LCurrentUtilization) < LTotalPerc then
         Active := True;
 
-      Main.LogInfo(Format('AccelLowStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
+      SimpleBot.LogInfo(Format('AccelLowStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
     end;
   end;
 end;
@@ -340,17 +341,17 @@ begin
   LAvg:=GetAverageAccelPerTick(PTierStrategyGDAX(ADetails^.Data),LTimePerTick);
   if LAvg < 0 then
   begin
-    Main.LogInfo('Main::MoonRisingPrice::negative average acceleration per tick: ' + FloatToStr(LAvg));
+    SimpleBot.LogInfo('Main::MoonRisingPrice::negative average acceleration per tick: ' + FloatToStr(LAvg));
     Exit;
   end;
 
-  Main.LogInfo('Main::MoonRisingPrice::average acceleration per tick: ' + FloatToStr(LAvg));
+  SimpleBot.LogInfo('Main::MoonRisingPrice::average acceleration per tick: ' + FloatToStr(LAvg));
 
   //no need to project if the parent doesn't care about profit
   if not PTierStrategyGDAX(ADetails^.Data)^.OnlyProfit then
   begin
     Active:=True;
-    Main.LogInfo('Main::MoonRisingPrice::parent OnlyProfit is false, no projection');
+    SimpleBot.LogInfo('Main::MoonRisingPrice::parent OnlyProfit is false, no projection');
     Exit;
   end;
 
@@ -362,7 +363,7 @@ begin
 
   //(ticksInWindow * averageAccel) + currentPrice = projected
   LProjectedPrice:=(LParentWindow / LTimePerTick) * LAvg + ADetails^.Ticker^.Price;
-  Main.LogInfo('Main::MoonRisingPrice::projected price ' + FloatToStr(LProjectedPrice));
+  SimpleBot.LogInfo('Main::MoonRisingPrice::projected price ' + FloatToStr(LProjectedPrice));
 
   //find delta of current price and see if the percentage gain is at least
   //half min profit (doesn't account for fees etc...)
@@ -370,7 +371,7 @@ begin
 
   if (LAvg / ADetails^.Ticker^.Price) < (LMinProfit / 2) then
   begin
-    Main.LogInfo('Main::MoonRisingPrice::projected price is not high enough for min profit');
+    SimpleBot.LogInfo('Main::MoonRisingPrice::projected price is not high enough for min profit');
     Exit;
   end;
 
@@ -410,13 +411,13 @@ begin
 
   //find the average accel per tick and if we are postive, return true
   LAvg:=GetAverageAccelPerTick(LAccel,LTimePerTick);
-  Main.LogInfo('Main::MidAccelStratPositive::average acceleration per tick: ' + FloatToStr(LAvg));
+  SimpleBot.LogInfo('Main::MidAccelStratPositive::average acceleration per tick: ' + FloatToStr(LAvg));
   Active:=LAvg > 0;
 end;
 
-{ TMain }
+{ TSimpleBot }
 
-procedure TMain.json_mainRestoringProperties(Sender: TObject);
+procedure TSimpleBot.json_mainRestoringProperties(Sender: TObject);
 var
   LBal:Extended;
 begin
@@ -491,11 +492,13 @@ begin
   InterpolateDCAPositionSetting(FHighDCASize, True);
 
   FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
+  FProfitCtrl.Percent := FHighTakeProfit;
+
   FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
   FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
 end;
 
-procedure TMain.FormCreate(Sender: TObject);
+procedure TSimpleBot.FormCreate(Sender: TObject);
 var
   LManager:IGDAXOrderManager;
 begin
@@ -512,18 +515,18 @@ begin
   InitControls;
 end;
 
-procedure TMain.btn_log_clearClick(Sender: TObject);
+procedure TSimpleBot.btn_log_clearClick(Sender: TObject);
 begin
   multi_log.Lines.Clear;
 end;
 
-procedure TMain.FormDestroy(Sender: TObject);
+procedure TSimpleBot.FormDestroy(Sender: TObject);
 begin
   FAccelStrategy := nil;
   FLowAccelStrategy := nil;
 end;
 
-procedure TMain.json_mainSavingProperties(Sender: TObject);
+procedure TSimpleBot.json_mainSavingProperties(Sender: TObject);
 begin
   json_main.WriteString('secret',FAuth.Secret);
   json_main.WriteString('key',FAuth.Key);
@@ -549,47 +552,49 @@ begin
   InterpolateDCAPositionSetting(FHighDCASize);
   json_main.WriteString('high_dca_size', FloatToStr(FHighDCASize));
 
+  FHighTakeProfit := FProfitCtrl.Percent;
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
+
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
 end;
 
-procedure TMain.mi_gunslingerClick(Sender: TObject);
+procedure TSimpleBot.mi_gunslingerClick(Sender: TObject);
 begin
   Gunslinger1.Visible := mi_gunslinger.Checked;
 end;
 
-procedure TMain.mi_auto_startClick(Sender: TObject);
+procedure TSimpleBot.mi_auto_startClick(Sender: TObject);
 begin
   EnableAutoStart;
 end;
 
-procedure TMain.mi_email_enabledClick(Sender: TObject);
+procedure TSimpleBot.mi_email_enabledClick(Sender: TObject);
 begin
   EnableEmail;
 end;
 
-procedure TMain.mi_email_setupClick(Sender: TObject);
+procedure TSimpleBot.mi_email_setupClick(Sender: TObject);
 begin
   SetupEmail;
 end;
 
-procedure TMain.mi_file_settingsClick(Sender: TObject);
+procedure TSimpleBot.mi_file_settingsClick(Sender: TObject);
 begin
   SetupLogFile;
 end;
 
-procedure TMain.mi_log_tabClick(Sender: TObject);
+procedure TSimpleBot.mi_log_tabClick(Sender: TObject);
 begin
   SetupLogTab;
 end;
 
-procedure TMain.mi_simClick(Sender: TObject);
+procedure TSimpleBot.mi_simClick(Sender: TObject);
 begin
-
+  SimulateStrategy;
 end;
 
-procedure TMain.pctrl_mainChange(Sender: TObject);
+procedure TSimpleBot.pctrl_mainChange(Sender: TObject);
 begin
   if pctrl_main.ActivePage=ts_product then
     if not FProductInit then
@@ -613,13 +618,13 @@ begin
     end;
 end;
 
-procedure TMain.scroll_strategyResize(Sender: TObject);
+procedure TSimpleBot.scroll_strategyResize(Sender: TObject);
 begin
   pnl_strat_ctrl_container.Width := scroll_strategy.Width;
   pnl_strat_ctrl_container.Left := 0;
 end;
 
-procedure TMain.SetupEmail;
+procedure TSimpleBot.SetupEmail;
 var
   LEmail:TEmailSetup;
 begin
@@ -632,28 +637,28 @@ begin
   end;
 end;
 
-procedure TMain.EnableEmail;
+procedure TSimpleBot.EnableEmail;
 begin
   ShowMessage('not implemented');
 end;
 
-procedure TMain.SetupLogFile;
+procedure TSimpleBot.SetupLogFile;
 begin
   ShowMessage('not implemented');
 end;
 
-procedure TMain.SetupLogTab;
+procedure TSimpleBot.SetupLogTab;
 begin
   ShowMessage('not implemented');
 end;
 
-procedure TMain.InitControls;
+procedure TSimpleBot.InitControls;
 begin
   if not FInit then
   begin
     json_main.Restore;
 
-    //main tab
+    //SimpleBot tab
     pctrl_main.ActivePage:=ts_auth;
 
     //logger
@@ -786,12 +791,12 @@ begin
   end;
 end;
 
-procedure TMain.EnableAutoStart;
+procedure TSimpleBot.EnableAutoStart;
 begin
   ShowMessage('not implemented');
 end;
 
-procedure TMain.PreloadTickers;
+procedure TSimpleBot.PreloadTickers;
 var
   LFile: TOpenDialog;
   LTickers: TStringList;
@@ -865,12 +870,204 @@ begin
   end;
 end;
 
-procedure TMain.SimulateStrategy;
+procedure TSimpleBot.SimulateStrategy;
+var
+  LSim : TTickerParser;
 begin
-  ShowMessage('Not Implemented');
+  //we can't run while we're running the full strategy because I cheated and
+  //copy pasta'd this to get simulation working in simplebot
+  if FEngine.EngineState = esStarted then
+  begin
+    MessageDlg(
+      'Simulator cannot run while main strategy is running.',
+      TMsgDlgType.mtError,
+      [TMsgDlgBtn.mbOK],
+      -1
+    );
+
+    Exit;
+  end;
+
+  //create a simulation window
+  LSim := TTickerParser.Create(nil);
+  try
+    LSim.Position := poMainFormCenter;
+    LSim.Width := Trunc(Self.Width * 0.8);
+    LSim.Height := Trunc(Self.Height * 0.8);
+    LSim.DemoMode := True;
+    AddStrategiesToSim(LSim);
+    LSim.ShowModal;
+  finally
+    LSim.Free;
+  end;
 end;
 
-procedure TMain.CheckCanStart(Sender: TObject; var Continue: Boolean);
+procedure TSimpleBot.AddStrategiesToSim(const ASim: TTickerParser);
+var
+  LError : String;
+  LSellForMonies : ITierStrategyGDAX;
+  LAccelHighest : IAccelerationStrategy;
+  LSellForMoniesLow: ITierStrategyGDAX;
+  LAccelLow: IAccelerationStrategy;
+  LSellForMoniesLowest: ITierStrategyGDAX;
+  LAccelLowest: IAccelerationStrategy;
+  LHighDCAWindow: Cardinal;
+const
+  DCA_PERC = 0.0333;
+begin
+  //shameless copy paste from start strategy, downside is now there are
+  //two places to copy and paste to/from.... oh well
+
+
+  //set the engine specific data
+  ASim.edit_funds.Text := FLoatToStr(StrToFloatDef(FFundsCtrl.Text, 0.0));
+  ASim.edit_fee_perc.Text := FloatToStr(StrToFloatDef(FMarketFeeCtrl.Text, 0.0));
+
+  if Assigned(FProducts.ProductFrame.Product) then
+    ASim.edit_product_min.Text := FloatToStr(FProducts.ProductFrame.Product.BaseMinSize);
+
+  //init strategies
+  LSellForMoniesLowest := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelLowest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LSellForMoniesLow := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
+  LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+
+  //make sure we have the latest settings
+  InterpolateTimeSetting(FHighWindowSize);
+  InterpolatePositionSetting(FHighPosSize);
+  InterpolateDCAPositionSetting(FHighDCASize);
+  FHighTakeProfit := FProfitCtrl.Percent;
+  LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
+
+  //----------------------------------------------------------------------------
+  //configure the sell for monies to sell for higher profits
+  LSellForMoniesLowest.UseMarketBuy :=  FUseMarketBuy;
+  LSellForMoniesLowest.UseMarketSell := FUseMarketSell;
+  LSellForMoniesLowest.ChannelStrategy.WindowSizeInMilli := Round(LHighDCAWindow / 3);
+  LSellForMoniesLowest.AvoidChop := False;
+  LSellForMoniesLowest.GTFOPerc := 0;
+  LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
+  LSellForMoniesLowest.MidTierPerc := (FHighDCASize / 3) / 2;
+  LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
+  LSellForMoniesLowest.SmallTierSellPerc := 0.005;
+  LSellForMoniesLowest.MidTierSellPerc := 0.005;
+  LSellForMoniesLowest.LargeTierSellPerc := 0.01;
+  LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
+  LSellForMoniesLowest.LimitFee := FLimitFee;
+  LSellForMoniesLowest.MarketFee := FMarketFee;
+  LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
+  LSellForMoniesLowest.MinReduction := 0.0000001;
+  LSellForMoniesLowest.OnlyProfit := True;
+  LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
+  LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+
+  //configure the lowest acceleration
+  LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
+  LAccelLowest.LeadStartPercent := 0.635;
+  LAccelLowest.LeadEndPercent := 1.0;
+  LAccelLowest.PositionPercent := (FHighPosSize / 3) * 0.90;
+  LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
+  LAccelLowest.CrossThresholdPercent := 3.5;
+  LAccelLowest.CrossDownThresholdPercent := 2;
+  LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
+  LAccelLowest.UseDynamicPositions := False; //fixed
+
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FLowestAccelStrategy := LAccelLowest;
+  LSellForMoniesLowest.ActiveCriteria := GetLowestAccelCriteria;
+  LSellForMoniesLowest.ActiveCriteriaData := @FLowestAccelStrategy;
+
+  //----------------------------------------------------------------------------
+  //configure the sell for monies to sell for higher profits
+  LSellForMoniesLow.UseMarketBuy := FUseMarketBuy;
+  LSellForMoniesLow.UseMarketSell := FUseMarketSell;
+  LSellForMoniesLow.ChannelStrategy.WindowSizeInMilli := Round(LHighDCAWindow / 2);
+  LSellForMoniesLow.AvoidChop := False;
+  LSellForMoniesLow.GTFOPerc := 0;
+  LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
+  LSellForMoniesLow.MidTierPerc := (FHighDCASize / 2) / 2;
+  LSellForMoniesLow.LargeTierPerc := FHighDCASize / 2;
+  LSellForMoniesLow.SmallTierSellPerc := 0.005;
+  LSellForMoniesLow.MidTierSellPerc := 0.005;
+  LSellForMoniesLow.LargeTierSellPerc := 0.015;
+  LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
+  LSellForMoniesLow.LimitFee := FLimitFee;
+  LSellForMoniesLow.MarketFee := FMarketFee;
+  LSellForMoniesLow.OnlyLowerAAC := False;
+  LSellForMoniesLow.MinReduction := 0;
+  LSellForMoniesLow.OnlyProfit := True;
+  LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
+  LSellForMoniesLow.MaxScaledBuyPerc := 10;
+
+  //configure the low acceleration
+  LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
+  LAccelLow.LeadStartPercent := 0.635;
+  LAccelLow.LeadEndPercent := 1.0;
+  LAccelLow.PositionPercent := (FHighPosSize / 2) * 0.90;
+  LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
+  LAccelLow.CrossThresholdPercent := 3.5;
+  LAccelLow.CrossDownThresholdPercent := 2;
+  LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
+  LAccelLow.UseDynamicPositions := False; //fixed
+
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FLowAccelStrategy := LAccelLow;
+  LSellForMoniesLow.ActiveCriteria := GetLowAccelCriteria;
+  LSellForMoniesLow.ActiveCriteriaData := @FLowAccelStrategy;
+
+  //----------------------------------------------------------------------------
+  //configure the sell for monies to sell for higher profits
+  LSellForMonies.UseMarketBuy := FUseMarketBuy;
+  LSellForMonies.UseMarketSell := FUseMarketSell;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := LHighDCAWindow;
+  LSellForMonies.AvoidChop := False;
+  LSellForMonies.GTFOPerc := 0;
+  LSellForMonies.SmallTierPerc := FHighDCASize / 2;
+  LSellForMonies.MidTierPerc := FHighDCASize / 2;
+  LSellForMonies.LargeTierPerc := FHighDCASize;
+  LSellForMonies.SmallTierSellPerc := 0.01;
+  LSellForMonies.MidTierSellPerc := 0.01;
+  LSellForMonies.LargeTierSellPerc := 0.03;
+  LSellForMonies.IgnoreOnlyProfitThreshold := 0;
+  LSellForMonies.LimitFee := FLimitFee;
+  LSellForMonies.MarketFee := FMarketFee;
+  LSellForMonies.OnlyLowerAAC := False;
+  LSellForMonies.MinReduction := 0;
+  LSellForMonies.OnlyProfit := True;
+  LSellForMonies.MinProfit := FHighTakeProfit;
+  LSellForMonies.MaxScaledBuyPerc := 15;
+
+  //configure the highest acceleration
+  LAccelHighest.WindowSizeInMilli := FHighWindowSize;
+  LAccelHighest.LeadStartPercent := 0.635;
+  LAccelHighest.LeadEndPercent := 1.0;
+  LAccelHighest.PositionPercent := FHighWindowSize * 0.9;
+  LAccelHighest.RiskyPositionPercent := FHighWindowSize;
+  LAccelHighest.CrossThresholdPercent := 3.5;
+  LAccelHighest.CrossDownThresholdPercent := 2;
+  LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
+  LAccelHighest.UseDynamicPositions := False; //fixed
+
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FAccelStrategy := LAccelHighest;
+  LSellForMonies.ActiveCriteria := GetAccelCriteria;
+  LSellForMonies.ActiveCriteriaData := @FAccelStrategy;
+
+  //also update the strategy to hold any balance if a restart occurred
+  FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
+
+  //add all strategies
+  ASim.Strategies.Add(LAccelLowest);
+  ASim.Strategies.Add(LSellForMoniesLowest);
+  ASim.Strategies.Add(LAccelLow);
+  ASim.Strategies.Add(LSellForMoniesLow);
+  ASim.Strategies.Add(LAccelHighest);
+  ASim.Strategies.Add(LSellForMonies);
+end;
+
+procedure TSimpleBot.CheckCanStart(Sender: TObject; var Continue: Boolean);
 begin
   //products need to be initialized before we can start the strategy
   if not FProductInit then
@@ -917,7 +1114,7 @@ begin
   end;
 end;
 
-procedure TMain.CheckCanStop(Sender: TObject; var Continue: Boolean);
+procedure TSimpleBot.CheckCanStop(Sender: TObject; var Continue: Boolean);
 var
   LError:String;
 begin
@@ -930,7 +1127,7 @@ begin
     Continue:=True;
 end;
 
-procedure TMain.StartStrategy(Sender: TObject);
+procedure TSimpleBot.StartStrategy(Sender: TObject);
 var
   LError : String;
   LSellForMonies : ITierStrategyGDAX;
@@ -939,6 +1136,9 @@ var
   LAccelLow: IAccelerationStrategy;
   LSellForMoniesLowest: ITierStrategyGDAX;
   LAccelLowest: IAccelerationStrategy;
+  LHighDCAWindow: Cardinal;
+const
+  DCA_PERC = 0.0333;
 begin
   //clear chart source
   chart_source.Clear;
@@ -961,12 +1161,14 @@ begin
   InterpolateTimeSetting(FHighWindowSize);
   InterpolatePositionSetting(FHighPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
+  FHighTakeProfit := FProfitCtrl.Percent;
+  LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
   LSellForMoniesLowest.UseMarketBuy :=  FUseMarketBuy;
   LSellForMoniesLowest.UseMarketSell := FUseMarketSell;
-  LSellForMoniesLowest.ChannelStrategy.WindowSizeInMilli := 2000000;
+  LSellForMoniesLowest.ChannelStrategy.WindowSizeInMilli := Round(LHighDCAWindow / 3);
   LSellForMoniesLowest.AvoidChop := False;
   LSellForMoniesLowest.GTFOPerc := 0;
   LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
@@ -1004,7 +1206,7 @@ begin
   //configure the sell for monies to sell for higher profits
   LSellForMoniesLow.UseMarketBuy := FUseMarketBuy;
   LSellForMoniesLow.UseMarketSell := FUseMarketSell;
-  LSellForMoniesLow.ChannelStrategy.WindowSizeInMilli := 2700000;
+  LSellForMoniesLow.ChannelStrategy.WindowSizeInMilli := Round(LHighDCAWindow / 2);
   LSellForMoniesLow.AvoidChop := False;
   LSellForMoniesLow.GTFOPerc := 0;
   LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
@@ -1042,7 +1244,7 @@ begin
   //configure the sell for monies to sell for higher profits
   LSellForMonies.UseMarketBuy := FUseMarketBuy;
   LSellForMonies.UseMarketSell := FUseMarketSell;
-  LSellForMonies.ChannelStrategy.WindowSizeInMilli := 3600000;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := LHighDCAWindow;
   LSellForMonies.AvoidChop := False;
   LSellForMonies.GTFOPerc := 0;
   LSellForMonies.SmallTierPerc := FHighDCASize / 2;
@@ -1118,7 +1320,7 @@ begin
   LogInfo('Strategy Started');
 end;
 
-procedure TMain.StopStrategy(Sender: TObject);
+procedure TSimpleBot.StopStrategy(Sender: TObject);
 begin
   //stop the ticker collection
   FProducts.ProductFrame.Running:=False;
@@ -1131,12 +1333,12 @@ begin
   LogInfo('Strategy Stopped');
 end;
 
-procedure TMain.ProductError(const AProductID: String; const AError: String);
+procedure TSimpleBot.ProductError(const AProductID: String; const AError: String);
 begin
   LogError(Format('%s - %s',[AProductID,AError]));
 end;
 
-procedure TMain.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
+procedure TSimpleBot.ProductTick(Sender: TObject; const ATick: IGDAXTicker);
 var
   I:Integer;
   LError:String;
@@ -1224,7 +1426,7 @@ begin
   status_main.Panels[4].Text:='Completed ' + IntToStr(FCompletedOrders);
 end;
 
-procedure TMain.EngineStatus(const ADetails: IOrderDetails; const AID: String;
+procedure TSimpleBot.EngineStatus(const ADetails: IOrderDetails; const AID: String;
   const AOldStatus, ANewStatus: TOrderManagerStatus);
 begin
   if ANewStatus=omCompleted then
@@ -1234,7 +1436,7 @@ begin
   end;
 end;
 
-procedure TMain.LogError(const AMessage: String);
+procedure TSimpleBot.LogError(const AMessage: String);
 begin
   if chk_log_error.Checked then
     multi_log.Lines.Append(
@@ -1242,7 +1444,7 @@ begin
     );
 end;
 
-procedure TMain.LogInfo(const AMessage: String);
+procedure TSimpleBot.LogInfo(const AMessage: String);
 begin
   if chk_log_info.Checked then
     multi_log.Lines.Append(
@@ -1250,7 +1452,7 @@ begin
     );
 end;
 
-procedure TMain.LogWarn(const AMessage: String);
+procedure TSimpleBot.LogWarn(const AMessage: String);
 begin
   if chk_log_warn.Checked then
     multi_log.Lines.Append(
@@ -1258,25 +1460,25 @@ begin
     );
 end;
 
-function TMain.GetAccelCriteria: TActiveCriteriaCallbackArray;
+function TSimpleBot.GetAccelCriteria: TActiveCriteriaCallbackArray;
 begin
   SetLength(Result,1);
   Result[0] := @AccelStrategyInPosition;
 end;
 
-function TMain.GetLowAccelCriteria: TActiveCriteriaCallbackArray;
+function TSimpleBot.GetLowAccelCriteria: TActiveCriteriaCallbackArray;
 begin
   SetLength(Result,1);
   Result[0] := @AccelLowStrategyInPosition;
 end;
 
-function TMain.GetLowestAccelCriteria: TActiveCriteriaCallbackArray;
+function TSimpleBot.GetLowestAccelCriteria: TActiveCriteriaCallbackArray;
 begin
   SetLength(Result,1);
   Result[0] := @AccelLowestStrategyInPosition;
 end;
 
-procedure TMain.InterpolateTimeSetting(var Time: Cardinal;
+procedure TSimpleBot.InterpolateTimeSetting(var Time: Cardinal;
   const AIsReload: Boolean);
 begin
   //if input is larger or smaller then someone has chosen to use a custom setting outside
@@ -1310,7 +1512,7 @@ begin
     FTimeFrameCtrl.Value := FTimeFrameCtrl.MinValue + Trunc((FTimeFrameCtrl.MaxValue - FTimeFrameCtrl.MinValue) * ((Time - MIN_TIME) / (MAX_TIME - MIN_TIME)));
 end;
 
-procedure TMain.InterpolatePositionSetting(var Position: Single;
+procedure TSimpleBot.InterpolatePositionSetting(var Position: Single;
   const AIsReload: Boolean);
 begin
   //if input is larger or smaller then someone has chosen to use a custom setting outside
@@ -1343,7 +1545,7 @@ begin
     FPosSizeCtrl.Value := FPosSizeCtrl.MinValue + Trunc((FPosSizeCtrl.MaxValue - FPosSizeCtrl.MinValue) * ((Position - MIN_POS_SIZE) / (MAX_POS_SIZE - MIN_POS_SIZE)));
 end;
 
-procedure TMain.InterpolateDCAPositionSetting(var Position: Single;
+procedure TSimpleBot.InterpolateDCAPositionSetting(var Position: Single;
   const AIsReload: Boolean);
 begin
   //if input is larger or smaller then someone has chosen to use a custom setting outside

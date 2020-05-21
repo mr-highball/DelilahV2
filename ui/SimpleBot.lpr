@@ -7,7 +7,8 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces,
-  Forms, tachartlazaruspkg,
+  Forms,
+  tachartlazaruspkg,
   ui.main;
 
 {$R *.res}
@@ -16,7 +17,7 @@ begin
   RequireDerivedFormResource:=True;
   Application.Scaled:=True;
   Application.Initialize;
-  Application.CreateForm(TMain, Main);
+  Application.CreateForm(TSimpleBot, ui.main.SimpleBot);
   Application.Run;
 end.
 

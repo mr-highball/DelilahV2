@@ -78,6 +78,7 @@ type
     edit_directory_csv: TEdit;
     edit_fee_perc: TEdit;
     edit_product_min: TEdit;
+    lbl_decimate_info: TLabel;
     lbl_demo_info: TLabel;
     lbl_load_info: TLabel;
     memo_load_order: TMemo;
@@ -90,6 +91,7 @@ type
     progress_simulate: TProgressBar;
     scroll_strategies: TScrollBox;
     Simulate: TTabSheet;
+    trackbar_decimate: TTrackBar;
     ts_export: TTabSheet;
     ts_load: TTabSheet;
     procedure btn_add_strategyClick(Sender: TObject);
@@ -120,6 +122,7 @@ type
     procedure SaveNewStrategy(const ASender : TConfigureStrategy; const AName : String;
       const AStrategy : IStrategy);
     procedure SetDemo(const AValue: Boolean);
+    function DecimationPercent : Single;
   strict protected
     procedure SaveCSV;
     procedure SimulateStrategy;
@@ -185,6 +188,7 @@ begin
   FStrategyList := TFPGObjectList<TCheckBox>.Create;
   pctrl_main.ActivePage := ts_load;
   progress_simulate.Visible := False;
+  trackbar_decimate.Position := 0;
 end;
 
 procedure TTickerParser.FormDestroy(Sender: TObject);
@@ -293,6 +297,11 @@ begin
   btn_edit_strategy.Visible := not AValue;
 end;
 
+function TTickerParser.DecimationPercent: Single;
+begin
+  Result := trackbar_decimate.Position / trackbar_decimate.Max;
+end;
+
 procedure TTickerParser.SaveCSV;
 var
   LOutput : TStringList;
@@ -325,7 +334,7 @@ begin
         FloatToStr(FTickers[I].Bid) + ',' +
         FloatToStr(FTickers[I].Size) + ',' +
         FloatToStr(FTickers[I].Volume) + ',' +
-        FloatToStr(FTickers[I].Time) + ',' +
+        DateTimeToStr(FTickers[I].Time) + ',' +
         IfThen(FTickers[I].IsBuy or FTickers[I].IsSell, '1', '') + ',' +
         IfThen(FTickers[I].IsBuy, '1', '') + ',' +
         IfThen(FTickers[I].IsSell, '1', '') + ',' +
@@ -429,7 +438,7 @@ begin
     FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LFunds;
 
     //update the progress and process ui messages
-    if (I > 0) and (I mod LStep = 0) then
+    if (I > 0) and (LStep > 0) and (I mod LStep = 0) then
     begin
       progress_simulate.StepBy(5);
       Application.ProcessMessages;
@@ -501,7 +510,9 @@ procedure TTickerParser.LoadFiles(const AFiles: TStrings);
 var
   LFile: TStringList;
   LTicker: TTickerLoader;
-  I, J: Integer;
+  I, J, LTotSkipped, LCurSkip: Integer;
+  LDecimation : Single;
+  LSkip: Int64;
 begin
   FTickers.Clear;
 
@@ -526,6 +537,54 @@ begin
         FTickers.Add(LTicker);
         LTicker.Load(LFile[J]);
       end;
+    end;
+
+    //determine if we need to decimate to a more workable amount of tickers
+    LDecimation := DecimationPercent;
+
+    if (LDecimation > 0) and (FTickers.Count > 1) then
+    begin
+      LSkip := Round(FTickers.Count / ((1 - LDecimation) * FTickers.Count));
+      J := 0;
+
+      //count of total
+      LTotSkipped := 0;
+      LCurSkip := 0;
+
+      //todo - this is currently unbalanced in that all values are decimated from
+      //       the beginning of the files, which isn't super accurate, although
+      //       this may be fine since the beginning normally strategies aren't ready yet
+
+      //always add the first ticker
+      for I := 1 to Pred(FTickers.Count) do
+      begin
+        //if the current skip counter equals the number to skip, swap places
+        if LCurSkip >= LSkip then
+        begin
+          //reset the counter
+          LCurSkip := 0;
+
+          //increment swap index
+          Inc(J);
+
+          //increment total
+          Inc(LTotSkipped);
+
+          //swap the current index with the swap index
+          FTickers.Exchange(I, J);
+        end;
+
+        //current skip count
+        Inc(LCurSkip);
+
+        //if we have satisfied the decimation percent, then bail
+        if LTotSkipped >= ((1 - LDecimation) * FTickers.Count) then
+          Break;
+      end;
+
+      //in reverse order, delete until we make it one above the last kept index
+      for I := Pred(FTickers.Count) downto Succ(J) do
+        FTickers.Delete(Pred(FTickers.Count));
     end;
   finally
     LFile.Free;

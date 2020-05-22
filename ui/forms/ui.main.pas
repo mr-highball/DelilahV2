@@ -1089,9 +1089,6 @@ begin
   LSellForMonies.ActiveCriteria := GetAccelCriteria;
   LSellForMonies.ActiveCriteriaData := @FAccelStrategy;
 
-  //also update the strategy to hold any balance if a restart occurred
-  FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);
-
   //add all strategies
   ASim.Strategies.Add(LAccelLowest);
   ASim.Strategies.Add(LSellForMoniesLowest);

@@ -566,7 +566,11 @@ begin
   json_main.WriteString('holds_ledger',FloatToStr(FEngine.HoldsLedger.Balance));
   json_main.WriteString('inventory_ledger',FloatToStr(FEngine.InventoryLedger.Balance));
   json_main.WriteString('inventory_holds_ledger',FloatToStr(FEngine.HoldsInventoryLedger.Balance));
+
+  FMarketFee := StrToFloatDef(FMarketFeeCtrl.Text, '0.005');
   json_main.WriteString('market_fee',FloatToStr(FMarketFee));
+
+  FLimitFee := StrToFloatDef(FLimitFeeCtrl.Text, '0.005');
   json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
 
   //temp

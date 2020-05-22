@@ -280,6 +280,7 @@
         <Filename Value="frames\ui.usercontrol.profittarget.control.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="ProfitTargetControl"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Frame"/>
       </Unit37>
       <Unit38>

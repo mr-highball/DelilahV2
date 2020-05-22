@@ -51,7 +51,6 @@ object ProfitTargetControl: TProfitTargetControl
     Top = 167
     Width = 200
     BorderSpacing.Top = 10
-    NumbersOnly = True
     TabOrder = 1
     TextHint = '0.00'
   end

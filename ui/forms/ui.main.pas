@@ -96,7 +96,8 @@ type
     FDCASizeCtrl: TSlider;
     FProfitCtrl: TProfitTarget;
     FInit : Boolean;
-    FEngine : IDelilah;
+    FEngine,
+    FTempEngine: IDelilah;
     FCompletedOrders,
     FHighWindowSize: Cardinal;
     FHighPosSize,
@@ -121,6 +122,8 @@ type
     procedure EnableAutoStart;
     procedure PreloadTickers;
     procedure SimulateStrategy;
+    procedure DoOnStartSim(Sender : TObject);
+    procedure DoOnFinishSim(Sender : TObject);
     procedure AddStrategiesToSim(const ASim : TTickerParser);
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
@@ -922,6 +925,8 @@ begin
   //create a simulation window
   LSim := TTickerParser.Create(nil);
   try
+    LSim.OnStartSimulate := DoOnStartSim;
+    LSIm.OnFinishSimulate := DoOnFinishSim;
     LSim.Position := poMainFormCenter;
     LSim.Width := Trunc(Self.Width * 0.8);
     LSim.Height := Trunc(Self.Height * 0.8);
@@ -931,6 +936,19 @@ begin
   finally
     LSim.Free;
   end;
+end;
+
+procedure TSimpleBot.DoOnStartSim(Sender: TObject);
+begin
+  //store the current engine to temp
+  FTempEngine := FEngine;
+  FEngine := TTickerParser(Sender).Engine;
+end;
+
+procedure TSimpleBot.DoOnFinishSim(Sender: TObject);
+begin
+  FEngine := FTempEngine;
+  FTempEngine := nil
 end;
 
 procedure TSimpleBot.AddStrategiesToSim(const ASim: TTickerParser);

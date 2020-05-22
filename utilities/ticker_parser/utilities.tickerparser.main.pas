@@ -112,8 +112,13 @@ type
     FCurrentSimIndex : Integer;
     FCurrentEngine : IDelilah;
     FStrategyList : TFPGObjectList<TCheckBox>;
+    FOnStart,
+    FOnFinish : TNotifyEvent;
 
     function GetDemo: Boolean;
+    function GetEngine: IDelilah;
+    function GetOnFinish: TNotifyEvent;
+    function GetOnStart: TNotifyEvent;
     function GetStrategies: TStrategies;
     procedure ConfigureNewStrategy(const AName : String = '';
       const AStrategy : IStrategy = nil);
@@ -123,6 +128,8 @@ type
       const AStrategy : IStrategy);
     procedure SetDemo(const AValue: Boolean);
     function DecimationPercent : Single;
+    procedure SetOnFinish(const AValue: TNotifyEvent);
+    procedure SetOnStart(const AValue: TNotifyEvent);
   strict protected
     procedure SaveCSV;
     procedure SimulateStrategy;
@@ -130,8 +137,12 @@ type
     procedure PickFiles;
     procedure LoadFiles(const AFiles : TStrings);
   public
+    property OnStartSimulate : TNotifyEvent read GetOnStart write SetOnStart;
+    property OnFinishSimulate : TNotifyEvent read GetOnFinish write SetOnFinish;
+
     property DemoMode : Boolean read GetDemo write SetDemo;
     property Strategies : TStrategies read GetStrategies;
+    property Engine : IDelilah read GetEngine;
   end;
 
 var
@@ -225,6 +236,21 @@ begin
   Result := FDemo;
 end;
 
+function TTickerParser.GetEngine: IDelilah;
+begin
+  Result := FCurrentEngine;
+end;
+
+function TTickerParser.GetOnFinish: TNotifyEvent;
+begin
+  Result := FOnFinish;
+end;
+
+function TTickerParser.GetOnStart: TNotifyEvent;
+begin
+  Result := FOnStart;
+end;
+
 procedure TTickerParser.ConfigureNewStrategy(const AName : String; const AStrategy : IStrategy = nil);
 var
   LPicker : TStrategyPicker;
@@ -302,6 +328,16 @@ begin
   Result := trackbar_decimate.Position / trackbar_decimate.Max;
 end;
 
+procedure TTickerParser.SetOnFinish(const AValue: TNotifyEvent);
+begin
+  FOnFinish := AValue;
+end;
+
+procedure TTickerParser.SetOnStart(const AValue: TNotifyEvent);
+begin
+  FOnStart := AValue;
+end;
+
 procedure TTickerParser.SaveCSV;
 var
   LOutput : TStringList;
@@ -364,6 +400,7 @@ var
   LFunds, LInventory, LTickPrice, LAAC: Extended;
   LFundsLed: Extended;
 begin
+  btn_save_simulate.Enabled := False;
   progress_simulate.Visible := True;
 
   FCancelSim := False;
@@ -395,6 +432,9 @@ begin
 
   //startup the engine to accept tickers
   LEngine.Start;
+
+  if Assigned(FOnStart) then
+    FOnStart(Self);
 
   progress_simulate.Position := 0;
   LStep := Trunc(FTickers.Count / 20);
@@ -452,12 +492,16 @@ begin
   //those don't free with the engine freeing
   LEngine.Stop;
 
+  if Assigned(FOnFinish) then
+    FOnFinish(Self);
+
   if FCancelSim then
     ShowMessage('Simulation Cancelled :(')
   else
     ShowMessage('Simulation Finished!');
 
   progress_simulate.Visible := False;
+  btn_save_simulate.Enabled := True;
 end;
 
 procedure TTickerParser.PickFiles;

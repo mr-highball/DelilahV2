@@ -48,15 +48,15 @@ begin
 
   if (AValue > 0) and ((AValue < 0.005) or (AValue > 0.10)) then
     radio_group.ItemIndex := Pred(radio_group.Items.Count)
-  else if AValue = 0.10 then
+  else if Round(AValue * 100) = 10 then
     radio_group.ItemIndex := 5
-  else if AValue = 0.05 then
+  else if Round(AValue * 100) = 5 then
     radio_group.ItemIndex := 4
-  else if AValue = 0.03 then
+  else if Round(AValue * 100) = 3 then
     radio_group.ItemIndex := 3
-  else if AValue = 0.02 then
+  else if Round(AValue * 100) = 2 then
     radio_group.ItemIndex := 2
-  else if AValue = 0.01 then
+  else if Round(AValue * 100) = 1 then
     radio_group.ItemIndex := 1
   else
     radio_group.ItemIndex := 0;

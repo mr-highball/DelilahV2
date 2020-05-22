@@ -56,7 +56,7 @@ begin
     radio_group.ItemIndex := 3
   else if Round(AValue * 100) = 2 then
     radio_group.ItemIndex := 2
-  else if Round(AValue * 100) = 1 then
+  else if (Round(AValue * 100) = 1) and (AValue > 0.005) then
     radio_group.ItemIndex := 1
   else
     radio_group.ItemIndex := 0;

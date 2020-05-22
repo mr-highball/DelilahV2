@@ -33,7 +33,13 @@ implementation
 
 function TProfitTargetControl.GetPerc: Single;
 begin
+  if radio_group.ItemIndex = Pred(radio_group.Items.Count) then
+    FPerc := StrToFloatDef(edit_custom.Text, 0.005)
+  else
+    FPerc := StrToFloatDef(radio_group.Items[radio_group.ItemIndex].Replace('%', ''), 0) / 100;
+
   Result := FPerc;
+  edit_custom.Text := FloatToStr(FPerc);
 end;
 
 procedure TProfitTargetControl.SetPerc(const AValue: Single);
@@ -54,6 +60,8 @@ begin
     radio_group.ItemIndex := 1
   else
     radio_group.ItemIndex := 0;
+
+  edit_custom.Text := FloatToStr(FPerc);
 end;
 
 end.

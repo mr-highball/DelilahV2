@@ -1021,7 +1021,7 @@ begin
   LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
-  LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
+  //LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
   LAccelLowest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -1060,7 +1060,7 @@ begin
   LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
-  LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
+  //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
   LAccelLow.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -1099,7 +1099,7 @@ begin
   LAccelHighest.RiskyPositionPercent := FHighWindowSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
-  LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
+  //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
   LAccelHighest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -1244,7 +1244,7 @@ begin
   LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
-  LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
+  //LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
   LAccelLowest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -1283,7 +1283,7 @@ begin
   LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
-  LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
+  //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
   LAccelLow.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
@@ -1322,7 +1322,7 @@ begin
   LAccelHighest.RiskyPositionPercent := FHighWindowSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
-  LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
+  //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
   LAccelHighest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"

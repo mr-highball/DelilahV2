@@ -131,11 +131,8 @@ type
     procedure SetOnFinish(const AValue: TNotifyEvent);
     procedure SetOnStart(const AValue: TNotifyEvent);
   strict protected
-    procedure SaveCSV;
-    procedure SimulateStrategy;
+    procedure PickDirectory;
 
-    procedure PickFiles;
-    procedure LoadFiles(const AFiles : TStrings);
   public
     property OnStartSimulate : TNotifyEvent read GetOnStart write SetOnStart;
     property OnFinishSimulate : TNotifyEvent read GetOnFinish write SetOnFinish;
@@ -143,6 +140,11 @@ type
     property DemoMode : Boolean read GetDemo write SetDemo;
     property Strategies : TStrategies read GetStrategies;
     property Engine : IDelilah read GetEngine;
+    property LoadedTickers : TTickerList read FTickers;
+
+    procedure LoadFiles(const AFiles : TStrings);
+    procedure SimulateStrategy(const ASilentFinish : Boolean = False);
+    procedure SaveCSV(const AFileName : String = ''; const ASilentFinish : Boolean = False);
   end;
 
 var
@@ -338,10 +340,12 @@ begin
   FOnStart := AValue;
 end;
 
-procedure TTickerParser.SaveCSV;
+procedure TTickerParser.SaveCSV(const AFileName: String;
+  const ASilentFinish: Boolean);
 var
   LOutput : TStringList;
   I: Integer;
+  LFile: String;
 begin
   LOutput := TStringList.Create;
   try
@@ -380,14 +384,21 @@ begin
         FloatToStr(FTickers[I].Profit)
       );
 
-    LOutput.SaveToFile(edit_directory_csv.Text);
-    ShowMessage('saved to ' + edit_directory_csv.Text);
+    //use input, but fallback to visual filename
+    LFile := AFileName;
+    if LFile = '' then
+      LFile := edit_directory_csv.Text;
+
+    LOutput.SaveToFile(LFile);
+
+    if not ASilentFinish then
+      ShowMessage('saved to ' + LFile);
   finally
     LOutput.Free;
   end;
 end;
 
-procedure TTickerParser.SimulateStrategy;
+procedure TTickerParser.SimulateStrategy(const ASilentFinish: Boolean);
 var
   LEngine: IDelilah;
   LManager : IMockOrderManager;
@@ -495,16 +506,19 @@ begin
   if Assigned(FOnFinish) then
     FOnFinish(Self);
 
-  if FCancelSim then
-    ShowMessage('Simulation Cancelled :(')
-  else
-    ShowMessage('Simulation Finished!');
+  if not ASilentFinish then
+  begin;
+    if FCancelSim then
+      ShowMessage('Simulation Cancelled :(')
+    else
+      ShowMessage('Simulation Finished!');
+  end;
 
   progress_simulate.Visible := False;
   btn_save_simulate.Enabled := True;
 end;
 
-procedure TTickerParser.PickFiles;
+procedure TTickerParser.PickDirectory;
 var
   LSearch : TListFileSearcher;
   LFiles: TStringList;
@@ -527,7 +541,7 @@ end;
 
 procedure TTickerParser.btn_loadClick(Sender: TObject);
 begin
-  PickFiles;
+  PickDirectory;
   ShowMessage('Finished Loading');
 end;
 

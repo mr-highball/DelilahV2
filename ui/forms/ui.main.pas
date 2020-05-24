@@ -1095,8 +1095,8 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := FHighWindowSize * 0.9;
-  LAccelHighest.RiskyPositionPercent := FHighWindowSize;
+  LAccelHighest.PositionPercent := FHighPosSize * 0.9;
+  LAccelHighest.RiskyPositionPercent := FHighPosSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
@@ -1318,8 +1318,8 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := FHighWindowSize * 0.9;
-  LAccelHighest.RiskyPositionPercent := FHighWindowSize;
+  LAccelHighest.PositionPercent := FHighPosSize * 0.9;
+  LAccelHighest.RiskyPositionPercent := FHighPosSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)

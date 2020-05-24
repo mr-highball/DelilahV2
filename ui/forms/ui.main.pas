@@ -953,7 +953,6 @@ end;
 
 procedure TSimpleBot.AddStrategiesToSim(const ASim: TTickerParser);
 var
-  LError : String;
   LSellForMonies : ITierStrategyGDAX;
   LAccelHighest : IAccelerationStrategy;
   LSellForMoniesLow: ITierStrategyGDAX;

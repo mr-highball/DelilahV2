@@ -142,7 +142,7 @@ type
     property Engine : IDelilah read GetEngine;
     property LoadedTickers : TTickerList read FTickers;
 
-    procedure LoadFiles(const AFiles : TStrings);
+    procedure LoadFiles(const AFiles : TStrings; const ADecimation : Single = -1);
     procedure SimulateStrategy(const ASilentFinish : Boolean = False);
     procedure SaveCSV(const AFileName : String = ''; const ASilentFinish : Boolean = False);
   end;
@@ -564,7 +564,8 @@ begin
   ConfigureNewStrategy;
 end;
 
-procedure TTickerParser.LoadFiles(const AFiles: TStrings);
+procedure TTickerParser.LoadFiles(const AFiles: TStrings;
+  const ADecimation: Single);
 var
   LFile: TStringList;
   LTicker: TTickerLoader;
@@ -598,7 +599,10 @@ begin
     end;
 
     //determine if we need to decimate to a more workable amount of tickers
-    LDecimation := DecimationPercent;
+    if (ADecimation < 0) and (ADecimation <= 1) then
+      LDecimation := ADecimation
+    else
+      LDecimation := DecimationPercent;
 
     if (LDecimation > 0) and (FTickers.Count > 1) then
     begin

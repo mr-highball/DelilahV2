@@ -833,14 +833,23 @@ end;
 procedure TSimpleBot.PreloadTickers;
 var
   LFile: TOpenDialog;
-  LTickers: TStringList;
   I: Integer;
   LGDAXTick : IGDAXTicker;
   LTick : ITicker;
-  LError: String;
+  LError, LInput: String;
+  LParser : TTickerParser;
+  LDecimation: Single;
+  LLogError,
+  LLogInfo,
+  LLogWarn: Boolean;
 begin
+  LLogError := chk_log_error.Checked;
   chk_log_error.Checked := False;
+
+  LLogInfo := chk_log_info.Checked;
   chk_log_info.Checked := False;
+
+  LLogWarn := chk_log_warn.Checked;
   chk_log_warn.Checked := False;
 
   try
@@ -854,18 +863,26 @@ begin
     then
     begin
       LFile := TOpenDialog.Create(nil);
+      LFile.Options := LFile.Options + [TOpenOption.ofAllowMultiSelect];
 
       if LFile.Execute then
       begin
-        LTickers := TStringList.Create;
-        LTickers.LoadFromFile(LFile.FileName);
+        //prompt for
+        LDecimation := 0;
+        if DefaultInputDialog(
+          'Decimation %',
+          'Input a decimation percent:',
+          False,
+          LInput
+        )
+        then
+          LDecimation := StrToFloatDef(LInput, 0);
 
-        for I := 0 to Pred(LTickers.Count) do
+        LParser := TTickerParser.Create(nil);
+        LParser.LoadFiles(LFile.Files, LDecimation);
+
+        for I := 0 to Pred(LParser.LoadedTickers.Count) do
         begin
-          //sanity check for json
-          if (LTickers[I].Length < 1) or (LTickers[I][1] <> '{') then
-            Continue;
-
           //create a gdax ticker
           LGDAXTick := TPreloadTick.Create;
 
@@ -873,7 +890,7 @@ begin
           LGDAXTick.Product := FProducts.ProductFrame.Product;
 
           //attempt to load from json
-          if not LGDAXTick.LoadFromJSON(LTickers[I], LError) then
+          if not LGDAXTick.LoadFromJSON(LParser.LoadedTickers[I].JSON, LError) then
             raise Exception.Create(LError);
 
           //make a delilah ticker
@@ -886,21 +903,21 @@ begin
           LGDAXTick := nil;
           LTick := nil;
 
-          if I mod 20 = 0 then
+          if I mod 100 = 0 then
           begin
             ignition_main.lbl_status.Caption := 'loaded: ' + IntToStr(Succ(I));
             Application.ProcessMessages;
           end;
         end;
 
-        LTickers.Free;
+        LParser.Free;
       end;
       LFile.Free;
     end;
   finally
-    chk_log_error.Checked := True;
-    chk_log_info.Checked := True;
-    chk_log_warn.Checked := True;
+    chk_log_error.Checked := LLogError;
+    chk_log_info.Checked := LLogInfo;
+    chk_log_warn.Checked := LLogWarn;
   end;
 end;
 
@@ -971,8 +988,12 @@ begin
   ASim.edit_funds.Text := FLoatToStr(StrToFloatDef(FFundsCtrl.Text, 0.0));
   ASim.edit_fee_perc.Text := FloatToStr(StrToFloatDef(FMarketFeeCtrl.Text, 0.0));
 
+  //preload some ui settings if a product is specified
   if Assigned(FProducts.ProductFrame.Product) then
+  begin
     ASim.edit_product_min.Text := FloatToStr(FProducts.ProductFrame.Product.BaseMinSize);
+    ASim.edit_product.Text := FProducts.ProductFrame.Product.ID;
+  end;
 
   //init strategies
   LSellForMoniesLowest := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);

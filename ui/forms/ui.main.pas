@@ -979,7 +979,7 @@ var
   LHighDCAWindow: Cardinal;
 const
   DCA_PERC = 0.0333;
-  LEAD_POS_PERC = 0.6;
+  LEAD_POS_PERC = 0.75;
 begin
   //shameless copy paste from start strategy, downside is now there are
   //two places to copy and paste to/from.... oh well
@@ -1248,7 +1248,7 @@ var
   LHighDCAWindow: Cardinal;
 const
   DCA_PERC = 0.0333;
-  LEAD_POS_PERC = 0.6;
+  LEAD_POS_PERC = 0.75;
 begin
   //clear chart source
   chart_source.Clear;

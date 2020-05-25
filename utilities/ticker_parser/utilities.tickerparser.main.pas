@@ -529,7 +529,7 @@ begin
   LFiles := TStringList.Create;
   LSearch := TListFileSearcher.Create(LFiles);
   try
-    LSearch.Search(edit_directory.Text);
+    LSearch.Search(edit_directory.Text, '', False);
     LoadFiles(LFiles);
     memo_load_order.Lines.Assign(LFiles);
     Application.ProcessMessages;

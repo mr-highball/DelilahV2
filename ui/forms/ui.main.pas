@@ -867,7 +867,7 @@ begin
 
       if LFile.Execute then
       begin
-        //prompt for
+        //prompt for decimation, default to none if cancelled
         LDecimation := 0;
         if DefaultInputDialog(
           'Decimation %',
@@ -979,6 +979,7 @@ var
   LHighDCAWindow: Cardinal;
 const
   DCA_PERC = 0.0333;
+  LEAD_POS_PERC = 0.6;
 begin
   //shameless copy paste from start strategy, downside is now there are
   //two places to copy and paste to/from.... oh well
@@ -1022,7 +1023,7 @@ begin
   LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
   LSellForMoniesLowest.SmallTierSellPerc := 0.005;
   LSellForMoniesLowest.MidTierSellPerc := 0.005;
-  LSellForMoniesLowest.LargeTierSellPerc := 0.01;
+  LSellForMoniesLowest.LargeTierSellPerc := 0.01; //todo - needs to be configurable via slider (sell size? scale out size?)
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
@@ -1037,7 +1038,7 @@ begin
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := (FHighPosSize / 3) * 0.90;
+  LAccelLowest.PositionPercent := (FHighPosSize / 3) * LEAD_POS_PERC;
   LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
@@ -1076,12 +1077,51 @@ begin
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := (FHighPosSize / 2) * 0.90;
+  LAccelLow.PositionPercent := (FHighPosSize / 2) * LEAD_POS_PERC;
   LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
   //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
   LAccelLow.UseDynamicPositions := False; //fixed
+
+  //now setup the tier strategy with a pointer to the acceleration "parent"
+  FLowAccelStrategy := LAccelLow;
+  LSellForMoniesLow.ActiveCriteria := GetLowAccelCriteria;
+  LSellForMoniesLow.ActiveCriteriaData := @FLowAccelStrategy;
+
+  //----------------------------------------------------------------------------
+  //configure the sell for monies to sell for higher profits
+  LSellForMonies.UseMarketBuy := FUseMarketBuy;
+  LSellForMonies.UseMarketSell := FUseMarketSell;
+  LSellForMonies.ChannelStrategy.WindowSizeInMilli := LHighDCAWindow;
+  LSellForMonies.AvoidChop := False;
+  LSellForMonies.GTFOPerc := 0;
+  LSellForMonies.SmallTierPerc := FHighDCASize / 2;
+  LSellForMonies.MidTierPerc := FHighDCASize / 2;
+  LSellForMonies.LargeTierPerc := FHighDCASize;
+  LSellForMonies.SmallTierSellPerc := 0.01;
+  LSellForMonies.MidTierSellPerc := 0.01;
+  LSellForMonies.LargeTierSellPerc := 0.03;
+  LSellForMonies.IgnoreOnlyProfitThreshold := 0;
+  LSellForMonies.LimitFee := FLimitFee;
+  LSellForMonies.MarketFee := FMarketFee;
+  LSellForMonies.OnlyLowerAAC := False;
+  LSellForMonies.MinReduction := 0;
+  LSellForMonies.OnlyProfit := True;
+  LSellForMonies.MinProfit := FHighTakeProfit;
+  LSellForMonies.MaxScaledBuyPerc := 15;
+  FTier := LSellForMonies;
+
+  //configure the highest acceleration
+  LAccelHighest.WindowSizeInMilli := FHighWindowSize;
+  LAccelHighest.LeadStartPercent := 0.635;
+  LAccelHighest.LeadEndPercent := 1.0;
+  LAccelHighest.PositionPercent := FHighPosSize * LEAD_POS_PERC;
+  LAccelHighest.RiskyPositionPercent := FHighPosSize;
+  LAccelHighest.CrossThresholdPercent := 3.5;
+  LAccelHighest.CrossDownThresholdPercent := 2;
+  //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
+  LAccelHighest.UseDynamicPositions := False; //fixed
 
   //now setup the tier strategy with a pointer to the acceleration "parent"
   FLowAccelStrategy := LAccelLow;
@@ -1208,6 +1248,7 @@ var
   LHighDCAWindow: Cardinal;
 const
   DCA_PERC = 0.0333;
+  LEAD_POS_PERC = 0.6;
 begin
   //clear chart source
   chart_source.Clear;
@@ -1260,7 +1301,7 @@ begin
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := (FHighPosSize / 3) * 0.90;
+  LAccelLowest.PositionPercent := (FHighPosSize / 3) * LEAD_POS_PERC;
   LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
@@ -1299,7 +1340,7 @@ begin
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := (FHighPosSize / 2) * 0.90;
+  LAccelLow.PositionPercent := (FHighPosSize / 2) * LEAD_POS_PERC;
   LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
@@ -1338,7 +1379,7 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := FHighPosSize * 0.9;
+  LAccelHighest.PositionPercent := FHighPosSize * LEAD_POS_PERC;
   LAccelHighest.RiskyPositionPercent := FHighPosSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;

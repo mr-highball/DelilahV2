@@ -599,7 +599,7 @@ begin
     end;
 
     //determine if we need to decimate to a more workable amount of tickers
-    if (ADecimation < 0) and (ADecimation <= 1) then
+    if (ADecimation > 0) and (ADecimation <= 1) then
       LDecimation := ADecimation
     else
       LDecimation := DecimationPercent;

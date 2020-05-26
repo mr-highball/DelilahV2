@@ -104,6 +104,7 @@ type
     procedure btn_save_simulateClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   strict private
     FTickers : TTickerList;
     FStrategies : TStrategies;
@@ -208,6 +209,11 @@ procedure TTickerParser.FormDestroy(Sender: TObject);
 begin
   FTickers.Free;
   FStrategies.Free;
+end;
+
+procedure TTickerParser.FormShow(Sender: TObject);
+begin
+  DemoMode := DemoMode;
 end;
 
 

@@ -9,6 +9,7 @@ object TickerParser: TTickerParser
   DesignTimePPI = 192
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
   ShowHint = True
   LCLVersion = '2.0.2.0'
   object pctrl_main: TPageControl

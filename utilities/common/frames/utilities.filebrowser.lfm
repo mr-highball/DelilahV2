@@ -1,0 +1,91 @@
+object DirectoryBrowser: TDirectoryBrowser
+  Left = 0
+  Height = 426
+  Top = 0
+  Width = 806
+  ClientHeight = 426
+  ClientWidth = 806
+  DesignTimePPI = 192
+  ParentFont = False
+  TabOrder = 0
+  DesignLeft = 1051
+  DesignTop = 451
+  object edit_directory: TEdit
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = btn_browse
+    AnchorSideRight.Side = asrBottom
+    Left = 50
+    Height = 40
+    Top = 10
+    Width = 706
+    Anchors = [akTop, akLeft, akRight]
+    BorderSpacing.Left = 50
+    BorderSpacing.Top = 10
+    TabOrder = 0
+    Text = 'C:\'
+  end
+  object btn_browse: TButton
+    AnchorSideLeft.Control = edit_directory
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = edit_directory
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 715
+    Height = 42
+    Top = 10
+    Width = 41
+    Anchors = [akTop, akRight]
+    AutoSize = True
+    BorderSpacing.Right = 50
+    Caption = '...'
+    OnClick = btn_browseClick
+    TabOrder = 1
+  end
+  object list_files: TCheckListBox
+    AnchorSideLeft.Control = edit_directory
+    AnchorSideTop.Control = edit_directory
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = btn_browse
+    AnchorSideBottom.Control = pnl_controls
+    Left = 50
+    Height = 256
+    Top = 60
+    Width = 665
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderSpacing.Top = 10
+    BorderSpacing.Bottom = 10
+    ItemHeight = 0
+    TabOrder = 2
+  end
+  object pnl_controls: TPanel
+    Left = 0
+    Height = 100
+    Top = 326
+    Width = 806
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 100
+    ClientWidth = 806
+    TabOrder = 3
+    object btn_load: TButton
+      AnchorSideTop.Control = pnl_controls
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = pnl_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 646
+      Height = 50
+      Top = 25
+      Width = 150
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 10
+      Caption = 'Load'
+      OnClick = btn_loadClick
+      TabOrder = 0
+    end
+  end
+  object directory_dialog: TSelectDirectoryDialog
+    left = 712
+    top = 144
+  end
+end

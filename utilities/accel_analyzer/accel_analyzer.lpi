@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
+      <Title Value="accel_analyzer"/>
+      <Scaled Value="True"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <XPManifest>
+        <DpiAware Value="True"/>
+      </XPManifest>
+      <Icon Value="0"/>
+    </General>
+    <BuildModes Count="2">
+      <Item1 Name="Debug" Default="True"/>
+      <Item2 Name="Release">
+        <CompilerOptions>
+          <Version Value="11"/>
+          <PathDelim Value="\"/>
+          <Target>
+            <Filename Value="accel_analyzer"/>
+          </Target>
+          <SearchPaths>
+            <IncludeFiles Value="$(ProjOutDir)"/>
+            <OtherUnitFiles Value="..\..\src\coinbase-pro\src;..\..\src\coinbase-pro\src\mORMot;..\..\src\coinbase-pro\src\mORMot\CrossPlatform;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Utils;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Base;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Nullable;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\NullDigest;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Checksum;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash32;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash64;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash128;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Include;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2BConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2SConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2BConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2SConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\KDF;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Bases;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Include;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Interfaces;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Utils;..\..\src\coinbase-pro\src\internettools\internet;..\..\src\coinbase-pro\src\internettools\data;..\..\src;..\..\src\ledger\src;..\..\src\AraratSynapse;..\..\ui\frames;..\..\ui\forms;..\ticker_parser;..\common;..\common\frames"/>
+            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+          </SearchPaths>
+          <Parsing>
+            <SyntaxOptions>
+              <SyntaxMode Value="Delphi"/>
+            </SyntaxOptions>
+          </Parsing>
+          <CodeGeneration>
+            <SmartLinkUnit Value="True"/>
+            <Optimizations>
+              <OptimizationLevel Value="3"/>
+            </Optimizations>
+          </CodeGeneration>
+          <Linking>
+            <Debugging>
+              <GenerateDebugInfo Value="False"/>
+            </Debugging>
+            <LinkSmart Value="True"/>
+            <Options>
+              <Win32>
+                <GraphicApplication Value="True"/>
+              </Win32>
+            </Options>
+          </Linking>
+        </CompilerOptions>
+      </Item2>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <UseFileFilters Value="True"/>
+    </PublishOptions>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0"/>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="TAChartLazarusPkg"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="4">
+      <Unit0>
+        <Filename Value="accel_analyzer.lpr"/>
+        <IsPartOfProject Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="utilities.accel.main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="AccelAnalyzer"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\common\utilities.mock.manager.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\common\frames\utilities.filebrowser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="DirectoryBrowser"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit3>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="accel_analyzer"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="..\..\src\coinbase-pro\src;..\..\src\coinbase-pro\src\mORMot;..\..\src\coinbase-pro\src\mORMot\CrossPlatform;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Utils;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Base;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Nullable;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\NullDigest;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Checksum;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash32;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash64;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Hash128;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Include;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2BConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Interfaces\IBlake2SConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2BConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\Crypto\Blake2SConfigurations;..\..\src\coinbase-pro\src\HashLib4Pascal\HashLib\src\KDF;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Bases;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Include;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Interfaces;..\..\src\coinbase-pro\src\SimpleBaseLib4Pascal\SimpleBaseLib\src\Utils;..\..\src\coinbase-pro\src\internettools\internet;..\..\src\coinbase-pro\src\internettools\data;..\..\src;..\..\src\ledger\src;..\..\src\AraratSynapse;..\..\ui\frames;..\..\ui\forms;..\ticker_parser;..\common;..\common\frames"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Parsing>
+      <SyntaxOptions>
+        <SyntaxMode Value="Delphi"/>
+        <IncludeAssertionCode Value="True"/>
+      </SyntaxOptions>
+    </Parsing>
+    <CodeGeneration>
+      <Checks>
+        <IOChecks Value="True"/>
+        <RangeChecks Value="True"/>
+        <OverflowChecks Value="True"/>
+        <StackChecks Value="True"/>
+      </Checks>
+      <VerifyObjMethodCallValidity Value="True"/>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf2Set"/>
+        <UseHeaptrc Value="True"/>
+        <TrashVariables Value="True"/>
+        <UseExternalDbgSyms Value="True"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

@@ -1,0 +1,120 @@
+object AccelAnalyzer: TAccelAnalyzer
+  Left = 980
+  Height = 688
+  Top = 431
+  Width = 975
+  Caption = 'AccelAnalyzer'
+  ClientHeight = 688
+  ClientWidth = 975
+  DesignTimePPI = 192
+  LCLVersion = '2.0.2.0'
+  object page_ctrl_main: TPageControl
+    Left = 0
+    Height = 688
+    Top = 0
+    Width = 975
+    ActivePage = ts_load
+    Align = alClient
+    TabIndex = 0
+    TabOrder = 0
+    object ts_load: TTabSheet
+      Caption = 'Load'
+      ClientHeight = 630
+      ClientWidth = 959
+      inline directory: TDirectoryBrowser
+        Height = 630
+        Width = 959
+        Align = alClient
+        ClientHeight = 630
+        ClientWidth = 959
+        inherited edit_directory: TEdit
+          AnchorSideLeft.Control = directory
+          AnchorSideTop.Control = directory
+          Width = 859
+        end
+        inherited btn_browse: TButton
+          AnchorSideRight.Control = directory
+          Left = 868
+        end
+        inherited list_files: TCheckListBox
+          Height = 460
+          Width = 818
+        end
+        inherited pnl_controls: TPanel
+          Top = 530
+          Width = 959
+          ClientWidth = 959
+          inherited btn_load: TButton
+            Left = 799
+          end
+        end
+      end
+    end
+    object ts_accel: TTabSheet
+      Caption = 'Acceleration'
+      ClientHeight = 630
+      ClientWidth = 959
+      object scroll_accel: TScrollBox
+        Left = 0
+        Height = 630
+        Top = 0
+        Width = 959
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Align = alClient
+        TabOrder = 0
+      end
+    end
+    object ts_analyze: TTabSheet
+      Caption = 'Analyze'
+      ClientHeight = 630
+      ClientWidth = 959
+      object scroll_analyze: TScrollBox
+        Left = 0
+        Height = 420
+        Top = 210
+        Width = 959
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Align = alClient
+        TabOrder = 0
+      end
+      object chart: TChart
+        Left = 0
+        Height = 200
+        Top = 0
+        Width = 959
+        AxisList = <        
+          item
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.LabelFont.Orientation = 900
+            Title.LabelBrush.Style = bsClear
+          end        
+          item
+            Alignment = calBottom
+            Marks.LabelBrush.Style = bsClear
+            Minors = <>
+            Title.LabelBrush.Style = bsClear
+          end>
+        Foot.Brush.Color = clBtnFace
+        Foot.Font.Color = clBlue
+        Title.Brush.Color = clBtnFace
+        Title.Font.Color = clBlue
+        Title.Text.Strings = (
+          'TAChart'
+        )
+        Align = alTop
+      end
+      object split_analyze: TSplitter
+        Cursor = crVSplit
+        Left = 0
+        Height = 10
+        Top = 200
+        Width = 959
+        Align = alTop
+        ResizeAnchor = akTop
+      end
+    end
+  end
+end

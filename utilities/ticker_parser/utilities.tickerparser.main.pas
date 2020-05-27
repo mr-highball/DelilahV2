@@ -19,7 +19,7 @@ uses
   gdax.api.ticker,
   gdax.api.types,
   delilah.ticker,
-  mock.manager,
+  utilities.mock.manager,
   delilah.types,
   delilah,
   ledger,

@@ -150,14 +150,14 @@ type
       (*
         min and max main position sizes associated to the strategy pos size slider
       *)
-      MIN_POS_SIZE = 0.10; //10% for highest risky accel pos
-      MAX_POS_SIZE = 0.50; //50% for highest risky accel pos
+      MIN_POS_SIZE = 0.001; //min sell percent
+      MAX_POS_SIZE = 1; //max sell percent
 
       (*
         min and max dca position sizes associated to the strategy dca pos size slider
       *)
       MIN_DCA_SIZE = 0.001; //0.1% applied to highest dca strat
-      MAX_DCA_SIZE = 0.01; //1% applied to highest dca strat
+      MAX_DCA_SIZE = 0.03; //3% applied to highest dca strat
   protected
     (*
       provided an input time (read from setting) will output the interpolated
@@ -216,95 +216,106 @@ end;
 procedure AccelLowestStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
-  LTotalPerc: Single;
-  LCurrentUtilization: Extended;
+  LIgnoreSell: Boolean;
 begin
-  Active := False;
+  try
+    Active := False;
+    LIgnoreSell := False;
 
-  //if we are not in position, allow selling at a loss
-  SimpleBot.FLowestTier.OnlyProfit := StrategiesInPosition;
+    if not PAccelerationStrategy(ADetails.Data)^.IsReady then
+      Exit;
 
-  //only operate the lowest tiered strategy when we're in position and all
-  //higher strategies are not
-  if (PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull])
-    and (SimpleBot.FLowAccelStrategy.Position in [apNone])
-    and (SimpleBot.FAccelStrategy.Position in [apNone])
-  then
-  begin
+    //if we're trending upwards using "our" acceleration strategy, then onlyprofit
+    //will be "on", otherwise, allow for selling at a loss
+    SimpleBot.FLowestTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel > 0) or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel));
+
+    //if the conditions are right for the other acceleration indicators, then
+    //exit without selling possible inventory they purchased at a loss
+    if not SimpleBot.FLowestTier.OnlyProfit and (SimpleBot.FLowAccelStrategy.IsReady) then
+      if (SimpleBot.FLowAccelStrategy.CurLagAccel > 0)
+        or (SimpleBot.FAccelStrategy.CurLagAccel > 0)
+      then
+        LIgnoreSell := True;
+
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
-      Active := True
-    else
     begin
-      //no div by zero
-      if SimpleBot.FEngine.Funds = 0 then
+      //bail if other acceleration indicators could have bought
+      if LIgnoreSell then
         Exit;
 
-      //calc the total percent the low strategy is alotted
-      LTotalPerc := PAccelerationStrategy(ADetails.Data)^.RiskyPositionPercent + PAccelerationStrategy(ADetails.Data)^.PositionPercent;
-
-      //then find the utilization of the funds
-      LCurrentUtilization := SimpleBot.FEngine.AvailableFunds / SimpleBot.FEngine.Funds;
-
-      //if we have utilized less, then allow the buy (does not account for compounding)
-      if (1 - LCurrentUtilization) < LTotalPerc then
-        Active := True;
-
-      SimpleBot.LogInfo(Format('AccelLowestStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
-    end;
+      Active := True;
+    end
+    //otherwise, we use the only profit setting as whether we can buy
+    else
+      Active := SimpleBot.FLowestTier.OnlyProfit;
+  finally
+    SimpleBot.LogInfo(Format('LowestTier::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FLowestTier.OnlyProfit, True)]));
   end;
 end;
 
 procedure AccelLowStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
-  LTotalPerc: Single;
-  LCurrentUtilization: Extended;
+  LIgnoreSell: Boolean;
 begin
-  Active := False;
+  try
+    Active := False;
+    LIgnoreSell := False;
 
-  //if we are not in position, allow selling at a loss
-  SimpleBot.FLowTier.OnlyProfit := StrategiesInPosition;
+    if not PAccelerationStrategy(ADetails.Data)^.IsReady then
+      Exit;
 
-  //only operate the low tiered strategy when we're in position
-  if PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull] then
-  begin
+    //if we're trending upwards using "our" acceleration strategy, then onlyprofit
+    //will be "on", otherwise, allow for selling at a loss
+    SimpleBot.FLowTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel > 0) or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel));
+
+    //if the conditions are right for the other acceleration indicators, then
+    //exit without selling possible inventory they purchased at a loss
+    if not SimpleBot.FLowTier.OnlyProfit and (SimpleBot.FAccelStrategy.IsReady) then
+      if (SimpleBot.FAccelStrategy.CurLagAccel > 0) then
+        LIgnoreSell := True;
+
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
-      Active := True
-    else
     begin
-      //no div by zero
-      if SimpleBot.FEngine.Funds = 0 then
+      //bail if other acceleration indicators could have bought
+      if LIgnoreSell then
         Exit;
 
-      //calc the total percent the low strategy is alotted
-      LTotalPerc := PAccelerationStrategy(ADetails.Data)^.RiskyPositionPercent + PAccelerationStrategy(ADetails.Data)^.PositionPercent;
-
-      //then find the utilization of the funds
-      LCurrentUtilization := SimpleBot.FEngine.AvailableFunds / SimpleBot.FEngine.Funds;
-
-      //if we have utilized less, then allow the buy (does not account for compounding)
-      if (1 - LCurrentUtilization) < LTotalPerc then
-        Active := True;
-
-      SimpleBot.LogInfo(Format('AccelLowStrategyInPosition::[currentUtilization]:%f [active]:%s', [LCurrentUtilization, BoolToStr(Active, True)]));
-    end;
+      Active := True;
+    end
+    //otherwise, we use the only profit setting as whether we can buy
+    else
+      Active := SimpleBot.FLowTier.OnlyProfit;
+  finally
+    SimpleBot.LogInfo(Format('Lowest::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FLowTier.OnlyProfit, True)]));
   end;
 end;
 
 procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 begin
-  //if we are not in position, allow selling at a loss
-  SimpleBot.FTier.OnlyProfit := StrategiesInPosition;
+  try
+    Active := False;
 
-  //when we are selling, then don't require a position
-  if not ADetails^.IsBuy then
-    Active := True
-  //make sure we are in a position before making any trades
-  else
-    Active:= PAccelerationStrategy(ADetails.Data)^.Position in [apRisky, apFull];
+    if not PAccelerationStrategy(ADetails.Data)^.IsReady then
+      Exit;
+
+    //if we're trending upwards using "our" acceleration strategy, then onlyprofit
+    //will be "on", otherwise, allow for selling at a loss
+    SimpleBot.FTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel > 0) or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel));
+
+    //when we are selling and in position, allow the sell
+    if not ADetails^.IsBuy then
+      Active := True
+    //otherwise, we use the only profit setting as whether we can buy
+    else
+      Active := SimpleBot.FTier.OnlyProfit;
+
+  finally
+    SimpleBot.LogInfo(Format('Tier::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FTier.OnlyProfit, True)]));
+  end;
 end;
 
 procedure MoonParentReady(Const ADetails : PActiveCriteriaDetails;
@@ -786,8 +797,8 @@ begin
     FPosSizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FPosSizeCtrl.MinValue := 1;
     FPosSizeCtrl.MaxValue := 100;
-    FPosSizeCtrl.Title := 'Position Size';
-    FPosSizeCtrl.Description := 'adjust how large main positions should be relative to the amount of funds';
+    FPosSizeCtrl.Title := 'Sell Position Size';
+    FPosSizeCtrl.Description := 'adjust how large sell positions should be relative to the amount of inventory';
     FPosSizeCtrl.MinDescr := 'Smaller';
     FPosSizeCtrl.MaxDescr := 'Larger';
 
@@ -814,8 +825,8 @@ begin
     FProfitCtrl.Description := 'used to allow the strategy to begin scaling out of a position. sell positions may vary though, depending on market conditions';
 
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
-    FDCASizeCtrl.Parent := pnl_strat_ctrl_container;
     FPosSizeCtrl.Parent := pnl_strat_ctrl_container;
+    FDCASizeCtrl.Parent := pnl_strat_ctrl_container;
     FTimeFrameCtrl.Parent := pnl_strat_ctrl_container;
     FLimitFeeCtrl.Parent := pnl_strat_ctrl_container;
     FMarketFeeCtrl.Parent := pnl_strat_ctrl_container;
@@ -1021,14 +1032,14 @@ begin
   LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.MidTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
-  LSellForMoniesLowest.SmallTierSellPerc := 0.005;
-  LSellForMoniesLowest.MidTierSellPerc := 0.005;
-  LSellForMoniesLowest.LargeTierSellPerc := 0.01; //todo - needs to be configurable via slider (sell size? scale out size?)
+  LSellForMoniesLowest.SmallTierSellPerc := (FHighPosSize / 3) / 2;
+  LSellForMoniesLowest.MidTierSellPerc := (FHighPosSize / 3) / 2;
+  LSellForMoniesLowest.LargeTierSellPerc := FHighPosSize / 3;
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
   LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
-  LSellForMoniesLowest.MinReduction := 0.0000001;
+  LSellForMoniesLowest.MinReduction := FHighDCASize / 10;
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
@@ -1038,8 +1049,8 @@ begin
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := (FHighPosSize / 3) * LEAD_POS_PERC;
-  LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
+  LAccelLowest.PositionPercent := 0; //(FHighPosSize / 3) * LEAD_POS_PERC;
+  LAccelLowest.RiskyPositionPercent := 0; //FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
   //LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
@@ -1060,9 +1071,9 @@ begin
   LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.MidTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.LargeTierPerc := FHighDCASize / 2;
-  LSellForMoniesLow.SmallTierSellPerc := 0.005;
-  LSellForMoniesLow.MidTierSellPerc := 0.005;
-  LSellForMoniesLow.LargeTierSellPerc := 0.015;
+  LSellForMoniesLow.SmallTierSellPerc := (FHighPosSize / 2) / 2;
+  LSellForMoniesLow.MidTierSellPerc := (FHighPosSize / 2) / 2;
+  LSellForMoniesLow.LargeTierSellPerc := FHighPosSize / 2;
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
@@ -1077,8 +1088,8 @@ begin
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := (FHighPosSize / 2) * LEAD_POS_PERC;
-  LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
+  LAccelLow.PositionPercent := 0; //(FHighPosSize / 2) * LEAD_POS_PERC;
+  LAccelLow.RiskyPositionPercent := 0; //FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
   //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
@@ -1099,9 +1110,9 @@ begin
   LSellForMonies.SmallTierPerc := FHighDCASize / 2;
   LSellForMonies.MidTierPerc := FHighDCASize / 2;
   LSellForMonies.LargeTierPerc := FHighDCASize;
-  LSellForMonies.SmallTierSellPerc := 0.01;
-  LSellForMonies.MidTierSellPerc := 0.01;
-  LSellForMonies.LargeTierSellPerc := 0.03;
+  LSellForMonies.SmallTierSellPerc := (FHighPosSize / 2);
+  LSellForMonies.MidTierSellPerc := (FHighPosSize / 2);
+  LSellForMonies.LargeTierSellPerc := FHighPosSize;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
@@ -1116,47 +1127,8 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := FHighPosSize * LEAD_POS_PERC;
-  LAccelHighest.RiskyPositionPercent := FHighPosSize;
-  LAccelHighest.CrossThresholdPercent := 3.5;
-  LAccelHighest.CrossDownThresholdPercent := 2;
-  //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
-  LAccelHighest.UseDynamicPositions := False; //fixed
-
-  //now setup the tier strategy with a pointer to the acceleration "parent"
-  FLowAccelStrategy := LAccelLow;
-  LSellForMoniesLow.ActiveCriteria := GetLowAccelCriteria;
-  LSellForMoniesLow.ActiveCriteriaData := @FLowAccelStrategy;
-
-  //----------------------------------------------------------------------------
-  //configure the sell for monies to sell for higher profits
-  LSellForMonies.UseMarketBuy := FUseMarketBuy;
-  LSellForMonies.UseMarketSell := FUseMarketSell;
-  LSellForMonies.ChannelStrategy.WindowSizeInMilli := LHighDCAWindow;
-  LSellForMonies.AvoidChop := False;
-  LSellForMonies.GTFOPerc := 0;
-  LSellForMonies.SmallTierPerc := FHighDCASize / 2;
-  LSellForMonies.MidTierPerc := FHighDCASize / 2;
-  LSellForMonies.LargeTierPerc := FHighDCASize;
-  LSellForMonies.SmallTierSellPerc := 0.01;
-  LSellForMonies.MidTierSellPerc := 0.01;
-  LSellForMonies.LargeTierSellPerc := 0.03;
-  LSellForMonies.IgnoreOnlyProfitThreshold := 0;
-  LSellForMonies.LimitFee := FLimitFee;
-  LSellForMonies.MarketFee := FMarketFee;
-  LSellForMonies.OnlyLowerAAC := False;
-  LSellForMonies.MinReduction := 0;
-  LSellForMonies.OnlyProfit := True;
-  LSellForMonies.MinProfit := FHighTakeProfit;
-  LSellForMonies.MaxScaledBuyPerc := 15;
-  FTier := LSellForMonies;
-
-  //configure the highest acceleration
-  LAccelHighest.WindowSizeInMilli := FHighWindowSize;
-  LAccelHighest.LeadStartPercent := 0.635;
-  LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := FHighPosSize * 0.9;
-  LAccelHighest.RiskyPositionPercent := FHighPosSize;
+  LAccelHighest.PositionPercent := 0; //FHighPosSize * LEAD_POS_PERC;
+  LAccelHighest.RiskyPositionPercent := 0; //FHighPosSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
@@ -1284,14 +1256,14 @@ begin
   LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.MidTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
-  LSellForMoniesLowest.SmallTierSellPerc := 0.005;
-  LSellForMoniesLowest.MidTierSellPerc := 0.005;
-  LSellForMoniesLowest.LargeTierSellPerc := 0.01;
+  LSellForMoniesLowest.SmallTierSellPerc := (FHighPosSize / 3) / 2;
+  LSellForMoniesLowest.MidTierSellPerc := (FHighPosSize / 3) / 2;
+  LSellForMoniesLowest.LargeTierSellPerc := FHighPosSize / 3;
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
   LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
-  LSellForMoniesLowest.MinReduction := 0.0000001;
+  LSellForMoniesLowest.MinReduction := FHighDCASize / 10;
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
@@ -1301,8 +1273,8 @@ begin
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := (FHighPosSize / 3) * LEAD_POS_PERC;
-  LAccelLowest.RiskyPositionPercent := FHighPosSize / 3;
+  LAccelLowest.PositionPercent := 0; //(FHighPosSize / 3) * LEAD_POS_PERC;
+  LAccelLowest.RiskyPositionPercent := 0; //FHighPosSize / 3;
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
   //LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
@@ -1323,9 +1295,9 @@ begin
   LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.MidTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.LargeTierPerc := FHighDCASize / 2;
-  LSellForMoniesLow.SmallTierSellPerc := 0.005;
-  LSellForMoniesLow.MidTierSellPerc := 0.005;
-  LSellForMoniesLow.LargeTierSellPerc := 0.015;
+  LSellForMoniesLow.SmallTierSellPerc := (FHighPosSize / 2) / 2;
+  LSellForMoniesLow.MidTierSellPerc := (FHighPosSize / 2) / 2;
+  LSellForMoniesLow.LargeTierSellPerc := FHighPosSize / 2;
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
@@ -1340,8 +1312,8 @@ begin
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := (FHighPosSize / 2) * LEAD_POS_PERC;
-  LAccelLow.RiskyPositionPercent := FHighPosSize / 2;
+  LAccelLow.PositionPercent := 0; //(FHighPosSize / 2) * LEAD_POS_PERC;
+  LAccelLow.RiskyPositionPercent := 0; //FHighPosSize / 2;
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
   //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
@@ -1362,9 +1334,9 @@ begin
   LSellForMonies.SmallTierPerc := FHighDCASize / 2;
   LSellForMonies.MidTierPerc := FHighDCASize / 2;
   LSellForMonies.LargeTierPerc := FHighDCASize;
-  LSellForMonies.SmallTierSellPerc := 0.01;
-  LSellForMonies.MidTierSellPerc := 0.01;
-  LSellForMonies.LargeTierSellPerc := 0.03;
+  LSellForMonies.SmallTierSellPerc := (FHighPosSize / 2);
+  LSellForMonies.MidTierSellPerc := (FHighPosSize / 2);
+  LSellForMonies.LargeTierSellPerc := FHighPosSize;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
@@ -1379,8 +1351,8 @@ begin
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := FHighPosSize * LEAD_POS_PERC;
-  LAccelHighest.RiskyPositionPercent := FHighPosSize;
+  LAccelHighest.PositionPercent := 0; //FHighPosSize * LEAD_POS_PERC;
+  LAccelHighest.RiskyPositionPercent := 0; //FHighPosSize;
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)

@@ -94,14 +94,16 @@ type
     FTimeFrameCtrl,
     FPosSizeCtrl,
     FDCASizeCtrl: TSlider;
-    FProfitCtrl: TProfitTarget;
+    FProfitCtrl,
+    FMinRedCtrl: TProfitTarget;
     FInit : Boolean;
     FEngine,
     FTempEngine: IDelilah;
     FCompletedOrders,
     FHighWindowSize: Cardinal;
     FHighPosSize,
-    FHighDCASize: Single;
+    FHighDCASize,
+    FHighMinRed: Single;
     FMarketFee,
     FLimitFee,
     FHighTakeProfit: Single;
@@ -227,13 +229,13 @@ begin
 
     //if we're trending upwards using "our" acceleration strategy, then onlyprofit
     //will be "on", otherwise, allow for selling at a loss
-    SimpleBot.FLowestTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel > 0) or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel));
+    SimpleBot.FLowestTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0) {or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel)});
 
     //if the conditions are right for the other acceleration indicators, then
     //exit without selling possible inventory they purchased at a loss
-    if not SimpleBot.FLowestTier.OnlyProfit and (SimpleBot.FLowAccelStrategy.IsReady) then
-      if (SimpleBot.FLowAccelStrategy.CurLagAccel > 0)
-        or (SimpleBot.FAccelStrategy.CurLagAccel > 0)
+    if not SimpleBot.FLowestTier.OnlyProfit then
+      if ((SimpleBot.FLowAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowAccelStrategy.IsReady))
+        or ((SimpleBot.FAccelStrategy.CurLagAccel > 0) and (SimpleBot.FAccelStrategy.IsReady))
       then
         LIgnoreSell := True;
 
@@ -268,12 +270,14 @@ begin
 
     //if we're trending upwards using "our" acceleration strategy, then onlyprofit
     //will be "on", otherwise, allow for selling at a loss
-    SimpleBot.FLowTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel > 0) or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel));
+    SimpleBot.FLowTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0) {or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel)});
 
     //if the conditions are right for the other acceleration indicators, then
     //exit without selling possible inventory they purchased at a loss
-    if not SimpleBot.FLowTier.OnlyProfit and (SimpleBot.FAccelStrategy.IsReady) then
-      if (SimpleBot.FAccelStrategy.CurLagAccel > 0) then
+    if not SimpleBot.FLowTier.OnlyProfit then
+      if ((SimpleBot.FLowestAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowestAccelStrategy.IsReady))
+        or ((SimpleBot.FAccelStrategy.CurLagAccel > 0) and (SimpleBot.FAccelStrategy.IsReady))
+      then
         LIgnoreSell := True;
 
     //when we are selling and in position, allow the sell
@@ -295,20 +299,37 @@ end;
 
 procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
+var
+  LIgnoreSell: Boolean;
 begin
   try
     Active := False;
+    LIgnoreSell := False;
 
     if not PAccelerationStrategy(ADetails.Data)^.IsReady then
       Exit;
 
     //if we're trending upwards using "our" acceleration strategy, then onlyprofit
     //will be "on", otherwise, allow for selling at a loss
-    SimpleBot.FTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel > 0) or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel));
+    SimpleBot.FTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0) {or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel)});
+
+    //if the conditions are right for the other acceleration indicators, then
+    //exit without selling possible inventory they purchased at a loss
+    if not SimpleBot.FTier.OnlyProfit then
+      if ((SimpleBot.FLowestAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowestAccelStrategy.IsReady))
+        or ((SimpleBot.FLowAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowAccelStrategy.IsReady))
+      then
+        LIgnoreSell := True;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
+    begin
+      //bail if other acceleration indicators could have bought
+      if LIgnoreSell then
+        Exit;
+
       Active := True
+    end
     //otherwise, we use the only profit setting as whether we can buy
     else
       Active := SimpleBot.FTier.OnlyProfit;
@@ -535,6 +556,9 @@ begin
   FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
   FProfitCtrl.Percent := FHighTakeProfit;
 
+  FHighMinRed := StrToFloatDef(json_main.ReadString('high_min_reduction','0.0'), 0.0);
+  FMinRedCtrl.Percent := FHighMinRed;
+
   FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
   FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
 end;
@@ -599,6 +623,9 @@ begin
 
   FHighTakeProfit := FProfitCtrl.Percent;
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
+
+  FHighMinRed := FMinRedCtrl.Percent;
+  json_main.WriteString('high_min_reduction', FloatToStr(FHighMinRed));
 
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
@@ -816,7 +843,7 @@ begin
     FDCASizeCtrl.MaxDescr := 'Larger';
 
     FProfitCtrl := TProfitTarget.Create(Self);
-    FProfitCtrl.Name := 'ProfitTarget';
+    FProfitCtrl.Name := 'Profit';
     FProfitCtrl.Align := TAlign.alTop;
     FProfitCtrl.Height := 350;
     FProfitCtrl.ControlWidthPercent := 1;
@@ -824,6 +851,16 @@ begin
     FProfitCtrl.Title := 'Target Profit';
     FProfitCtrl.Description := 'used to allow the strategy to begin scaling out of a position. sell positions may vary though, depending on market conditions';
 
+    FMinRedCtrl := TProfitTarget.Create(Self);
+    FMinRedCtrl.Name := 'MinReduction';
+    FMinRedCtrl.Align := TAlign.alTop;
+    FMinRedCtrl.Height := 350;
+    FMinRedCtrl.ControlWidthPercent := 1;
+    FMinRedCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FMinRedCtrl.Title := 'Minimum DCA Reduction';
+    FMinRedCtrl.Description := 'specify a minimum percentage to lower your cost. if you wish to allow trading without lowering, specify "0" in the "custom" box';
+
+    FMinRedCtrl.Parent := pnl_strat_ctrl_container;
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
     FPosSizeCtrl.Parent := pnl_strat_ctrl_container;
     FDCASizeCtrl.Parent := pnl_strat_ctrl_container;
@@ -1020,6 +1057,7 @@ begin
   InterpolatePositionSetting(FHighPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
   FHighTakeProfit := FProfitCtrl.Percent;
+  FHighMinRed := FMinRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
 
   //----------------------------------------------------------------------------
@@ -1038,11 +1076,19 @@ begin
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
-  LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
-  LSellForMoniesLowest.MinReduction := FHighDCASize / 10;
+
+  if FHighMinRed > 0 then
+  begin
+    LSellForMoniesLowest.OnlyLowerAAC := True;
+    LSellForMoniesLowest.MinReduction := FHighMinRed / 3;
+  end
+  else
+    LSellForMoniesLowest.OnlyLowerAAC := False;
+
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+  LSellForMoniesLowest.FixedProfit := False; //todo - add?
   FLowestTier := LSellForMoniesLowest;
 
   //configure the lowest acceleration
@@ -1077,11 +1123,19 @@ begin
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
-  LSellForMoniesLow.OnlyLowerAAC := False;
-  LSellForMoniesLow.MinReduction := 0;
+
+  if FHighMinRed > 0 then
+  begin
+    LSellForMoniesLow.OnlyLowerAAC := True;
+    LSellForMoniesLow.MinReduction := FHighMinRed / 2;
+  end
+  else
+    LSellForMoniesLow.OnlyLowerAAC := False;
+
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
   LSellForMoniesLow.MaxScaledBuyPerc := 10;
+  LSellForMoniesLow.FixedProfit := False; //todo - add?
   FLowTier := LSellForMoniesLow;
 
   //configure the low acceleration
@@ -1116,11 +1170,19 @@ begin
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
-  LSellForMonies.OnlyLowerAAC := False;
-  LSellForMonies.MinReduction := 0;
+
+  if FHighMinRed > 0 then
+  begin
+    LSellForMonies.OnlyLowerAAC := True;
+    LSellForMonies.MinReduction := FHighMinRed;
+  end
+  else
+    LSellForMonies.OnlyLowerAAC := False;
+
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
   LSellForMonies.MaxScaledBuyPerc := 15;
+  LSellForMonies.FixedProfit := True; //todo - add?
   FTier := LSellForMonies;
 
   //configure the highest acceleration
@@ -1244,6 +1306,7 @@ begin
   InterpolatePositionSetting(FHighPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
   FHighTakeProfit := FProfitCtrl.Percent;
+  FHighMinRed := FMinRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
 
   //----------------------------------------------------------------------------
@@ -1262,11 +1325,19 @@ begin
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
-  LSellForMoniesLowest.OnlyLowerAAC := True; //lowest only can lower aac
-  LSellForMoniesLowest.MinReduction := FHighDCASize / 10;
+
+  if FHighMinRed > 0 then
+  begin
+    LSellForMoniesLowest.OnlyLowerAAC := True;
+    LSellForMoniesLowest.MinReduction := FHighMinRed / 3;
+  end
+  else
+    LSellForMoniesLowest.OnlyLowerAAC := False;
+
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+  LSellForMoniesLowest.FixedProfit := False; //todo - add?
   FLowestTier := LSellForMoniesLowest;
 
   //configure the lowest acceleration
@@ -1301,11 +1372,19 @@ begin
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
-  LSellForMoniesLow.OnlyLowerAAC := False;
-  LSellForMoniesLow.MinReduction := 0;
+
+  if FHighMinRed > 0 then
+  begin
+    LSellForMoniesLow.OnlyLowerAAC := True;
+    LSellForMoniesLow.MinReduction := FHighMinRed / 2;
+  end
+  else
+    LSellForMoniesLow.OnlyLowerAAC := False;
+
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
   LSellForMoniesLow.MaxScaledBuyPerc := 10;
+  LSellForMoniesLow.FixedProfit := False; //todo - add?
   FLowTier := LSellForMoniesLow;
 
   //configure the low acceleration
@@ -1340,11 +1419,19 @@ begin
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
-  LSellForMonies.OnlyLowerAAC := False;
-  LSellForMonies.MinReduction := 0;
+
+  if FHighMinRed > 0 then
+  begin
+    LSellForMonies.OnlyLowerAAC := True;
+    LSellForMonies.MinReduction := FHighMinRed;
+  end
+  else
+    LSellForMonies.OnlyLowerAAC := False;
+
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
   LSellForMonies.MaxScaledBuyPerc := 15;
+  LSellForMonies.FixedProfit := True; //todo - add?
   FTier := LSellForMonies;
 
   //configure the highest acceleration

@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, delilah.strategy.channels, delilah.types,
-  delilah.strategy.gdax, fgl, delilah.strategy;
+  delilah.strategy.gdax, fgl, delilah.strategy,
+  delilah.ticker.gdax;
 
 type
 
@@ -71,6 +72,7 @@ type
     function GetActiveCriteriaData: Pointer;
     function GetAvoidChop: Boolean;
     function GetChannel: IChannelStrategy;
+    function GetFixedProfit: Boolean;
     function GetGTFOPerc: Single;
     function GetIgnoreProfit: Single;
     function GetLargePerc: Single;
@@ -91,6 +93,7 @@ type
     procedure SetActiveCritera(Const AValue: TActiveCriteriaCallbackArray);
     procedure SetActiveCriteriaData(Const AValue: Pointer);
     procedure SetAvoidChop(Const AValue: Boolean);
+    procedure SetFixedProfit(const AValue: Boolean);
     procedure SetGTFOPerc(Const AValue: Single);
     procedure SetIgnoreProfit(Const AValue: Single);
     procedure SetLargePerc(Const AValue: Single);
@@ -119,6 +122,14 @@ type
       when true, sell orders can only be placed if it would result in profit
     *)
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
+
+    (*
+      when only profit is true, and so is fixed profit, dynamic selling
+      points are ignored, and a "fixed" sell will occur when the profit
+      threshold is reached
+    *)
+    property FixedProfit : Boolean read GetFixedProfit write SetFixedProfit;
+
     (*
       when inventory makes up a certain "threshold" percentage compared
       to funds available, a sell is allowed. If this setting is not desired
@@ -237,7 +248,8 @@ type
     FLargeSell,
     FMidSell,
     FSmallSell,
-    FAvoidChop: Boolean;
+    FAvoidChop,
+    FFixed: Boolean;
     FIDS: TFPGList<String>;
     FActiveCriteria: TActiveCriteriaCallbackArray;
     FActiveCriteriaData: Pointer;
@@ -294,6 +306,8 @@ type
     function GetAvoidChop: Boolean;
     procedure SetAvoidChop(const AValue: Boolean);
     procedure SetMaxScaleBuy(const AValue: Single);
+    function GetFixedProfit: Boolean;
+    procedure SetFixedProfit(const AValue: Boolean);
   strict private
 
     (*
@@ -316,6 +330,7 @@ type
       returns true if we should take a particular position
     *)
     function GetPosition(Const AInventory:Extended;Out Size:TPositionSize;Out Percentage:Single;Out Sell:Boolean):Boolean;
+    function GetFixedSellPosition(Const AInventory:Extended; const AAAC : Extended; const ATicker : ITickerGDAX; Out Size:TPositionSize; Out Percentage:Single; Out Sell : Boolean):Boolean;
     (*
       after a call is made to GetPosition, call this method to report that
       we were successful placing to the order manager
@@ -331,6 +346,7 @@ type
 
     property ChannelStrategy : IChannelStrategy read GetChannel;
     property OnlyProfit : Boolean read GetOnlyProfit write SetOnlyProfit;
+    property FixedProfit : Boolean read GetFixedProfit write SetFixedProfit;
     property IgnoreOnlyProfitThreshold : Single read GetIgnoreProfit write SetIgnoreProfit;
     property MinProfit : Single read GetMinProfit write SetMinProfit;
     property OnlyLowerAAC : Boolean read GetOnlyLower write SetOnlyLower;
@@ -360,7 +376,6 @@ uses
   gdax.api.consts,
   gdax.api.types,
   gdax.api.orders,
-  delilah.ticker.gdax,
   delilah.order.gdax;
 
 { TTierStrategyGDAXImpl }
@@ -793,7 +808,8 @@ begin
     LGDAXOrder.Product:=LTicker.Ticker.Product;
 
     //get whether or not we should make a position
-    if GetPosition(AInventory,LSize,LPerc,LSell) then
+    if GetPosition(AInventory,LSize,LPerc,LSell)
+      or GetFixedSellPosition(AInventory, AAAC, LTicker, LSize, LPerc, LSell) then
     begin
       //this will remove any old limit orders outstanding
       ClearOldPositions(AManager);
@@ -1140,6 +1156,41 @@ begin
   end;
 end;
 
+function TTierStrategyGDAXImpl.GetFixedSellPosition(const AInventory: Extended;
+  const AAAC: Extended; const ATicker: ITickerGDAX; out Size: TPositionSize;
+  out Percentage: Single; out Sell: Boolean): Boolean;
+begin
+  Result := False;
+
+  if ATicker.Ticker.Ask < AAAC then
+    Exit;
+
+  if (AAAC <= 0) or (AInventory <= 0) then
+    Exit;
+
+  //if the asking price is at least the profit, then sell
+  if (1 - ATicker.Ticker.Ask / AAAC) >= FMinProfit then
+  begin;
+    Size := psSmall;
+    Percentage := FSmallSellPerc;
+
+    if Percentage <= 0 then
+    begin
+      Size := psMid;
+      Percentage := FMidSellPerc;
+    end;
+
+    if Percentage <= 0 then
+    begin
+      Size := psLarge;
+      Percentage := FLargeSellPerc;
+    end;
+
+    Sell := True;
+    Result := True;
+  end;
+end;
+
 procedure TTierStrategyGDAXImpl.PositionSuccess;
 begin
   //init all signal flags to false
@@ -1441,6 +1492,16 @@ begin
   LogInfo(Format('CalculateScaleBuyPercent::buy scaling applied [orig]:%f [new]:%f', [ABuyPerc, Result]));
 end;
 
+function TTierStrategyGDAXImpl.GetFixedProfit: Boolean;
+begin
+  Result := FFixed;
+end;
+
+procedure TTierStrategyGDAXImpl.SetFixedProfit(const AValue: Boolean);
+begin
+  FFixed := AValue;
+end;
+
 constructor TTierStrategyGDAXImpl.Create(const AOnInfo, AOnError,
   AOnWarn: TStrategyLogEvent);
 begin
@@ -1463,6 +1524,7 @@ begin
   FGTFOPerc := 0;
   FAvoidChop := False;
   FMaxScaleBuy := 0;
+  FFixed := False;
   InitChannel;
 end;
 

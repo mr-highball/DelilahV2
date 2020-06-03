@@ -46,7 +46,7 @@ procedure TProfitTargetControl.SetPerc(const AValue: Single);
 begin
   FPerc := AValue;
 
-  if (AValue > 0) and ((AValue < 0.005) or (AValue > 0.10)) then
+  if (AValue >= 0) and ((AValue < 0.005) or (AValue > 0.10)) then
     radio_group.ItemIndex := Pred(radio_group.Items.Count)
   else if Round(AValue * 100) = 10 then
     radio_group.ItemIndex := 5

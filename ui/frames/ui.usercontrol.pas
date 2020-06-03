@@ -32,6 +32,8 @@ type
     lbl_author: TLabel;
     pnl_control: TPanel;
   strict private
+    class var FInstance : Integer;
+  strict private
     FControl: TControl;
     FOptions: TUserControlOptions;
     FHeightPerc,
@@ -226,6 +228,12 @@ end;
 constructor TUserControl.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
+
+  if FInstance < 1 then
+    FInstance := 1;
+
+  Name := 'UserControl' + IntToStr(FInstance);
+  Inc(FInstance);
   FHeightPerc := 0;
   FWidthPerc := 0;
   pnl_control.AddHandlerOnResize(ResizeControl);

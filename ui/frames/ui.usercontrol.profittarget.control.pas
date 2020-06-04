@@ -59,7 +59,7 @@ begin
   else if (Round(AValue * 100) = 1) and (AValue > 0.005) then
     radio_group.ItemIndex := 1
   else
-    radio_group.ItemIndex := 0;
+    radio_group.ItemIndex := Pred(radio_group.Items.Count);
 
   edit_custom.Text := FloatToStr(FPerc);
 end;

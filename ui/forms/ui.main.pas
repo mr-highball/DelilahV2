@@ -11,7 +11,8 @@ uses
   ui.usercontrol.products, ui.usercontrol, gdax.api.types, delilah.order.gdax,
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
   delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration,
-  ui.usercontrol.slider, ui.usercontrol.profittarget, utilities.tickerparser.main;
+  ui.usercontrol.slider, ui.usercontrol.profittarget, utilities.tickerparser.main,
+  ui.usercontrol.boolean;
 
 type
 
@@ -91,6 +92,10 @@ type
     FFundsCtrl,
     FMarketFeeCtrl,
     FLimitFeeCtrl: TSingleLine;
+    FBuyOnUpCtrl,
+    FBuyOnDownCtrl,
+    FIgnoreOnUpCtrl,
+    FIgnoreOnDownCtrl : TBool;
     FTimeFrameCtrl,
     FPosSizeCtrl,
     FDCASizeCtrl: TSlider;
@@ -218,39 +223,37 @@ end;
 procedure AccelLowestStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
-  LIgnoreSell: Boolean;
+  LUptrend: Boolean;
 begin
   try
     Active := False;
-    LIgnoreSell := False;
 
     if not PAccelerationStrategy(ADetails.Data)^.IsReady then
       Exit;
 
     //if we're trending upwards using "our" acceleration strategy, then onlyprofit
     //will be "on", otherwise, allow for selling at a loss
-    SimpleBot.FLowestTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0) {or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel)});
+    LUptrend := (PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0);
 
-    //if the conditions are right for the other acceleration indicators, then
-    //exit without selling possible inventory they purchased at a loss
-    if not SimpleBot.FLowestTier.OnlyProfit then
-      if ((SimpleBot.FLowAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowAccelStrategy.IsReady))
-        or ((SimpleBot.FAccelStrategy.CurLagAccel > 0) and (SimpleBot.FAccelStrategy.IsReady))
-      then
-        LIgnoreSell := True;
+    //default to only profit
+    SimpleBot.FLowestTier.OnlyProfit := True;
+
+    //depending on price direction, adjust the strategy
+    if LUptrend then
+    begin
+      if SimpleBot.FIgnoreOnUpCtrl.Checked then
+        SimpleBot.FLowestTier.OnlyProfit := False;
+    end
+    //downtrend & ignore on down enabled
+    else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+      SimpleBot.FLowestTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
-    begin
-      //bail if other acceleration indicators could have bought
-      if LIgnoreSell then
-        Exit;
-
-      Active := True;
-    end
-    //otherwise, we use the only profit setting as whether we can buy
+      Active := True
+    //otherwise, buying is determined based on the trend / selection
     else
-      Active := SimpleBot.FLowestTier.OnlyProfit;
+      Active := (LUptrend and SimpleBot.FBuyOnUpCtrl.Checked) or (not LUptrend and SimpleBot.FBuyOnDownCtrl.Checked);
   finally
     SimpleBot.LogInfo(Format('LowestTier::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FLowestTier.OnlyProfit, True)]));
   end;
@@ -259,39 +262,37 @@ end;
 procedure AccelLowStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
-  LIgnoreSell: Boolean;
+  LUptrend: Boolean;
 begin
   try
     Active := False;
-    LIgnoreSell := False;
 
     if not PAccelerationStrategy(ADetails.Data)^.IsReady then
       Exit;
 
     //if we're trending upwards using "our" acceleration strategy, then onlyprofit
     //will be "on", otherwise, allow for selling at a loss
-    SimpleBot.FLowTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0) {or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel)});
+    LUptrend := (PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0);
 
-    //if the conditions are right for the other acceleration indicators, then
-    //exit without selling possible inventory they purchased at a loss
-    if not SimpleBot.FLowTier.OnlyProfit then
-      if ((SimpleBot.FLowestAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowestAccelStrategy.IsReady))
-        or ((SimpleBot.FAccelStrategy.CurLagAccel > 0) and (SimpleBot.FAccelStrategy.IsReady))
-      then
-        LIgnoreSell := True;
+    //default to only profit
+    SimpleBot.FLowTier.OnlyProfit := True;
+
+    //depending on price direction, adjust the strategy
+    if LUptrend then
+    begin
+      if SimpleBot.FIgnoreOnUpCtrl.Checked then
+        SimpleBot.FLowTier.OnlyProfit := False;
+    end
+    //downtrend & ignore on down enabled
+    else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+      SimpleBot.FLowTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
-    begin
-      //bail if other acceleration indicators could have bought
-      if LIgnoreSell then
-        Exit;
-
-      Active := True;
-    end
-    //otherwise, we use the only profit setting as whether we can buy
+      Active := True
+    //otherwise, buying is determined based on the trend / selection
     else
-      Active := SimpleBot.FLowTier.OnlyProfit;
+      Active := (LUptrend and SimpleBot.FBuyOnUpCtrl.Checked) or (not LUptrend and SimpleBot.FBuyOnDownCtrl.Checked);
   finally
     SimpleBot.LogInfo(Format('Lowest::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FLowTier.OnlyProfit, True)]));
   end;
@@ -300,40 +301,37 @@ end;
 procedure AccelStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
   Var Active : Boolean);
 var
-  LIgnoreSell: Boolean;
+  LUptrend: Boolean;
 begin
   try
     Active := False;
-    LIgnoreSell := False;
 
     if not PAccelerationStrategy(ADetails.Data)^.IsReady then
       Exit;
 
     //if we're trending upwards using "our" acceleration strategy, then onlyprofit
     //will be "on", otherwise, allow for selling at a loss
-    SimpleBot.FTier.OnlyProfit := ((PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0) {or (PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > PAccelerationStrategy(ADetails.Data)^.CurLagAccel)});
+    LUptrend := (PAccelerationStrategy(ADetails.Data)^.CurLagAccel + PAccelerationStrategy(ADetails.Data)^.CurLeadAccel > 0);
 
-    //if the conditions are right for the other acceleration indicators, then
-    //exit without selling possible inventory they purchased at a loss
-    if not SimpleBot.FTier.OnlyProfit then
-      if ((SimpleBot.FLowestAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowestAccelStrategy.IsReady))
-        or ((SimpleBot.FLowAccelStrategy.CurLagAccel > 0) and (SimpleBot.FLowAccelStrategy.IsReady))
-      then
-        LIgnoreSell := True;
+    //default to only profit
+    SimpleBot.FTier.OnlyProfit := True;
+
+    //depending on price direction, adjust the strategy
+    if LUptrend then
+    begin
+      if SimpleBot.FIgnoreOnUpCtrl.Checked then
+        SimpleBot.FTier.OnlyProfit := False;
+    end
+    //downtrend & ignore on down enabled
+    else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+      SimpleBot.FTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
-    begin
-      //bail if other acceleration indicators could have bought
-      if LIgnoreSell then
-        Exit;
-
       Active := True
-    end
-    //otherwise, we use the only profit setting as whether we can buy
+    //otherwise, buying is determined based on the trend / selection
     else
-      Active := SimpleBot.FTier.OnlyProfit;
-
+      Active := (LUptrend and SimpleBot.FBuyOnUpCtrl.Checked) or (not LUptrend and SimpleBot.FBuyOnDownCtrl.Checked);
   finally
     SimpleBot.LogInfo(Format('Tier::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FTier.OnlyProfit, True)]));
   end;
@@ -561,6 +559,11 @@ begin
 
   FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
   FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
+
+  FBuyOnUpCtrl.Checked := StrToBoolDef(json_main.ReadString('buy_uptrend','true'), True);
+  FBuyOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('buy_downtrend','true'), True);
+  FIgnoreOnUpCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_uptrend','false'), False);
+  FIgnoreOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_downtrend','false'), False);
 end;
 
 procedure TSimpleBot.FormCreate(Sender: TObject);
@@ -629,6 +632,11 @@ begin
 
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
+
+  json_main.WriteString('buy_uptrend', BoolToStr(FBuyOnUpCtrl.Checked, True));
+  json_main.WriteString('buy_downtrend', BoolToStr(FBuyOnDownCtrl.Checked, True));
+  json_main.WriteString('ignore_uptrend', BoolToStr(FIgnoreOnUpCtrl.Checked, False));
+  json_main.WriteString('ignore_downtrend', BoolToStr(FIgnoreOnDownCtrl.Checked, False));
 end;
 
 procedure TSimpleBot.mi_gunslingerClick(Sender: TObject);
@@ -860,6 +868,46 @@ begin
     FMinRedCtrl.Title := 'Minimum DCA Reduction';
     FMinRedCtrl.Description := 'specify a minimum percentage to lower your cost. if you wish to allow trading without lowering, specify "0" in the "custom" box';
 
+    FBuyOnUpCtrl := TBool.Create(Self);
+    FBuyOnUpCtrl.Name := 'BuyUp';
+    FBuyOnUpCtrl.Align := TAlign.alTop;
+    FBuyOnUpCtrl.Title := 'Buy on Uptrend';
+    FBuyOnUpCtrl.Description := 'when enabled, DCA buys will be performed on the uptrend';
+    FBuyOnUpCtrl.Height := 300;
+    FBuyOnUpCtrl.ControlWidthPercent := 0.30;
+    FBuyOnUpCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
+    FBuyOnDownCtrl := TBool.Create(Self);
+    FBuyOnDownCtrl.Name := 'BuyDown';
+    FBuyOnDownCtrl.Align := TAlign.alTop;
+    FBuyOnDownCtrl.Title := 'Buy on Downtrend';
+    FBuyOnDownCtrl.Description := 'when enabled, DCA buys will be performed on the downtrend';
+    FBuyOnDownCtrl.Height := 300;
+    FBuyOnDownCtrl.ControlWidthPercent := 0.30;
+    FBuyOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
+    FIgnoreOnUpCtrl := TBool.Create(Self);
+    FIgnoreOnUpCtrl.Name := 'IgnoreUp';
+    FIgnoreOnUpCtrl.Align := TAlign.alTop;
+    FIgnoreOnUpCtrl.Title := 'Ignore Profit on Uptrend';
+    FIgnoreOnUpCtrl.Description := 'when enabled, sells will be made without taking profit into consideration on the uptrend';
+    FIgnoreOnUpCtrl.Height := 300;
+    FIgnoreOnUpCtrl.ControlWidthPercent := 0.30;
+    FIgnoreOnUpCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
+    FIgnoreOnDownCtrl := TBool.Create(Self);
+    FIgnoreOnDownCtrl.Name := 'IgnoreDown';
+    FIgnoreOnDownCtrl.Align := TAlign.alTop;
+    FIgnoreOnDownCtrl.Title := 'Ignore Profit on Downtrend';
+    FIgnoreOnDownCtrl.Description := 'when enabled, sells will be made without taking profit into consideration on the downtrend';
+    FIgnoreOnDownCtrl.Height := 300;
+    FIgnoreOnDownCtrl.ControlWidthPercent := 0.30;
+    FIgnoreOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
+    FIgnoreOnDownCtrl.Parent := pnl_strat_ctrl_container;
+    FIgnoreOnUpCtrl.Parent := pnl_strat_ctrl_container;
+    FBuyOnDownCtrl.Parent := pnl_strat_ctrl_container;
+    FBuyOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FMinRedCtrl.Parent := pnl_strat_ctrl_container;
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
     FPosSizeCtrl.Parent := pnl_strat_ctrl_container;

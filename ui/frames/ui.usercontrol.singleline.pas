@@ -17,7 +17,7 @@ type
     function GetText: String;
     procedure SetText(AValue: String);
   protected
-    procedure InitControls;
+    procedure DoInitControls; override;
   public
     property Text : String read GetText write SetText;
     constructor Create(TheOwner: TComponent); override;
@@ -41,7 +41,7 @@ begin
   TEdit(Control).Text := AValue;
 end;
 
-procedure TSingleLine.InitControls;
+procedure TSingleLine.DoInitControls;
 begin
   inherited;
   Text := '';

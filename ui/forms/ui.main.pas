@@ -74,6 +74,7 @@ type
     procedure btn_log_clearClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure json_mainRestoringProperties(Sender: TObject);
     procedure json_mainSavingProperties(Sender: TObject);
     procedure mi_gunslingerClick(Sender: TObject);
@@ -98,6 +99,7 @@ type
     FIgnoreOnDownCtrl : TBool;
     FTimeFrameCtrl,
     FPosSizeCtrl,
+    FSellPosSizeCtrl,
     FDCASizeCtrl: TSlider;
     FProfitCtrl,
     FMinRedCtrl: TProfitTarget;
@@ -107,6 +109,7 @@ type
     FCompletedOrders,
     FHighWindowSize: Cardinal;
     FHighPosSize,
+    FHighSellPosSize,
     FHighDCASize,
     FHighMinRed: Single;
     FMarketFee,
@@ -128,21 +131,27 @@ type
     procedure InitControls;
     procedure EnableAutoStart;
     procedure PreloadTickers;
+
     procedure SimulateStrategy;
+    procedure AddStrategiesToSim(const ASim : TTickerParser);
     procedure DoOnStartSim(Sender : TObject);
     procedure DoOnFinishSim(Sender : TObject);
-    procedure AddStrategiesToSim(const ASim : TTickerParser);
+
     procedure CheckCanStart(Sender:TObject;Var Continue:Boolean);
     procedure CheckCanStop(Sender:TObject;Var Continue:Boolean);
+
     procedure StartStrategy(Sender:TObject);
     procedure StopStrategy(Sender:TObject);
+
     procedure ProductError(Const AProductID:String;Const AError:String);
     procedure ProductTick(Sender : TObject; Const ATick : IGDAXTicker);
     procedure EngineStatus(Const ADetails:IOrderDetails;Const AID:String;
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
+
     procedure LogError(Const AMessage:String);
     procedure LogInfo(Const AMessage:String);
     procedure LogWarn(Const AMessage:String);
+
     function GetAccelCriteria : TActiveCriteriaCallbackArray;
     function GetLowAccelCriteria : TActiveCriteriaCallbackArray;
     function GetLowestAccelCriteria : TActiveCriteriaCallbackArray;
@@ -158,7 +167,13 @@ type
         min and max main position sizes associated to the strategy pos size slider
       *)
       MIN_POS_SIZE = 0.001; //min sell percent
-      MAX_POS_SIZE = 1; //max sell percent
+      MAX_POS_SIZE = 1.0; //max sell percent
+
+      (*
+        min and max sell position sizes associated to the strategy sell pos size slider
+      *)
+      MIN_SELL_POS_SIZE = 0.001; //min sell percent
+      MAX_SELL_POS_SIZE = 1.0; //max sell percent
 
       (*
         min and max dca position sizes associated to the strategy dca pos size slider
@@ -177,6 +192,12 @@ type
       value against the new slider settings
     *)
     procedure InterpolatePositionSetting(var Position : Single; const AIsReload : Boolean = False);
+
+    (*
+      provided an input sell position size (read from setting) will output the interpolated
+      value against the new slider settings
+    *)
+    procedure InterpolateSellPositionSetting(var Position : Single; const AIsReload : Boolean = False);
 
     (*
       provided an input DCA position size (read from setting) will output the interpolated
@@ -548,6 +569,9 @@ begin
   FHighPosSize := StrToFloatDef(json_main.ReadString('high_position_size', ''), MIN_POS_SIZE + (MAX_POS_SIZE - MIN_POS_SIZE) / 2);
   InterpolatePositionSetting(FHighPosSize, True);
 
+  FHighSellPosSize := StrToFloatDef(json_main.ReadString('high_sell_position_size', ''), MIN_POS_SIZE + (MAX_POS_SIZE - MIN_POS_SIZE) / 2);
+  InterpolateSellPositionSetting(FHighSellPosSize, True);
+
   FHighDCASize := StrToFloatDef(json_main.ReadString('high_dca_size', ''), MIN_DCA_SIZE + (MAX_DCA_SIZE - MIN_DCA_SIZE) / 2);
   InterpolateDCAPositionSetting(FHighDCASize, True);
 
@@ -594,6 +618,25 @@ begin
   FLowAccelStrategy := nil;
 end;
 
+procedure TSimpleBot.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  //enter full screen mode with F11 key
+  if Key = VK_F11 then
+  begin
+    if Self.WindowState = wsFullScreen then
+    begin
+      Self.WindowState := wsNormal;
+      Self.BorderStyle := bsSizeable;
+    end
+    else
+    begin
+      Self.WindowState := wsFullScreen;
+      Self.BorderStyle := bsNone;
+    end;
+  end;
+end;
+
 procedure TSimpleBot.json_mainSavingProperties(Sender: TObject);
 begin
   json_main.WriteString('secret',FAuth.Secret);
@@ -620,6 +663,9 @@ begin
 
   InterpolatePositionSetting(FHighPosSize);
   json_main.WriteString('high_position_size', FloatToStr(FHighPosSize));
+
+  InterpolateSellPositionSetting(FHighSellPosSize);
+  json_main.WriteString('high_sell_position_size', FloatToStr(FHighSellPosSize));
 
   InterpolateDCAPositionSetting(FHighDCASize);
   json_main.WriteString('high_dca_size', FloatToStr(FHighDCASize));
@@ -733,6 +779,8 @@ begin
 end;
 
 procedure TSimpleBot.InitControls;
+var
+  I: Integer;
 begin
   if not FInit then
   begin
@@ -832,10 +880,23 @@ begin
     FPosSizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FPosSizeCtrl.MinValue := 1;
     FPosSizeCtrl.MaxValue := 100;
-    FPosSizeCtrl.Title := 'Sell Position Size';
-    FPosSizeCtrl.Description := 'adjust how large sell positions should be relative to the amount of inventory';
+    FPosSizeCtrl.Title := 'Position Size';
+    FPosSizeCtrl.Description := 'adjust how large main positions should be relative to the amount of inventory';
     FPosSizeCtrl.MinDescr := 'Smaller';
     FPosSizeCtrl.MaxDescr := 'Larger';
+
+    FSellPosSizeCtrl := TSlider.Create(Self);
+    FSellPosSizeCtrl.Name := 'SellPositionSize';
+    FSellPosSizeCtrl.Align := TAlign.alTop;
+    FSellPosSizeCtrl.Height := 300;
+    FSellPosSizeCtrl.ControlWidthPercent := 1;
+    FSellPosSizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FSellPosSizeCtrl.MinValue := 1;
+    FSellPosSizeCtrl.MaxValue := 100;
+    FSellPosSizeCtrl.Title := 'Sell Position Size';
+    FSellPosSizeCtrl.Description := 'adjust how large sell positions should be relative to the amount of inventory';
+    FSellPosSizeCtrl.MinDescr := 'Smaller';
+    FSellPosSizeCtrl.MaxDescr := 'Larger';
 
     FDCASizeCtrl := TSlider.Create(Self);
     FDCASizeCtrl.Name := 'DCASize';
@@ -904,18 +965,25 @@ begin
     FIgnoreOnDownCtrl.ControlWidthPercent := 0.30;
     FIgnoreOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
+    //reverse order (bottom first to show)
     FIgnoreOnDownCtrl.Parent := pnl_strat_ctrl_container;
     FIgnoreOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnDownCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FMinRedCtrl.Parent := pnl_strat_ctrl_container;
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
-    FPosSizeCtrl.Parent := pnl_strat_ctrl_container;
+    FSellPosSizeCtrl.Parent := pnl_strat_ctrl_container;
     FDCASizeCtrl.Parent := pnl_strat_ctrl_container;
+    FPosSizeCtrl.Parent := pnl_strat_ctrl_container;
     FTimeFrameCtrl.Parent := pnl_strat_ctrl_container;
     FLimitFeeCtrl.Parent := pnl_strat_ctrl_container;
     FMarketFeeCtrl.Parent := pnl_strat_ctrl_container;
     FFundsCtrl.Parent := pnl_strat_ctrl_container;
+
+    //hot keys
+    for I := 0 to Pred(Self.ControlCount) do
+      if Assigned(Self.Controls[I]) then
+        Self.Controls[I].AddHandlerOnKeyDown(FormKeyDown);
 
     FInit:=True;
   end;
@@ -1103,6 +1171,7 @@ begin
   //make sure we have the latest settings
   InterpolateTimeSetting(FHighWindowSize);
   InterpolatePositionSetting(FHighPosSize);
+  InterpolateSellPositionSetting(FHighSellPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
   FHighTakeProfit := FProfitCtrl.Percent;
   FHighMinRed := FMinRedCtrl.Percent;
@@ -1140,11 +1209,21 @@ begin
   FLowestTier := LSellForMoniesLowest;
 
   //configure the lowest acceleration
+  LAccelLowest.OnlyBuy := True;
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := 0; //(FHighPosSize / 3) * LEAD_POS_PERC;
-  LAccelLowest.RiskyPositionPercent := 0; //FHighPosSize / 3;
+
+  if FBuyOnUpCtrl.Checked then
+    LAccelLowest.PositionPercent := (FHighPosSize / 3) * LEAD_POS_PERC
+  else
+    LAccelLowest.PositionPercent := 0;
+
+  if FBuyOnDownCtrl.Checked then
+    LAccelLowest.RiskyPositionPercent := FHighPosSize / 3
+  else
+    LAccelLowest.RiskyPositionPercent := 0;
+
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
   //LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
@@ -1187,11 +1266,21 @@ begin
   FLowTier := LSellForMoniesLow;
 
   //configure the low acceleration
+  LAccelLow.OnlyBuy := True;
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0; //(FHighPosSize / 2) * LEAD_POS_PERC;
-  LAccelLow.RiskyPositionPercent := 0; //FHighPosSize / 2;
+
+  if FBuyOnUpCtrl.Checked then
+    LAccelLow.PositionPercent := (FHighPosSize / 2) * LEAD_POS_PERC
+  else
+    LAccelLow.PositionPercent := 0;
+
+  if FBuyOnDownCtrl.Checked then
+    LAccelLow.RiskyPositionPercent := FHighPosSize / 2
+  else
+    LAccelLow.RiskyPositionPercent := 0;
+
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
   //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
@@ -1234,11 +1323,21 @@ begin
   FTier := LSellForMonies;
 
   //configure the highest acceleration
+  LAccelHighest.OnlyBuy := True;
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0; //FHighPosSize * LEAD_POS_PERC;
-  LAccelHighest.RiskyPositionPercent := 0; //FHighPosSize;
+
+  if FBuyOnUpCtrl.Checked then
+    LAccelHighest.PositionPercent := FHighPosSize * LEAD_POS_PERC
+  else
+    LAccelHighest.PositionPercent := 0;
+
+  if FBuyOnDownCtrl.Checked then
+    LAccelHighest.RiskyPositionPercent := FHighPosSize
+  else
+    LAccelHighest.RiskyPositionPercent := 0;
+
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
@@ -1352,6 +1451,7 @@ begin
   //make sure we have the latest settings
   InterpolateTimeSetting(FHighWindowSize);
   InterpolatePositionSetting(FHighPosSize);
+  InterpolateSellPositionSetting(FHighSellPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
   FHighTakeProfit := FProfitCtrl.Percent;
   FHighMinRed := FMinRedCtrl.Percent;
@@ -1389,11 +1489,21 @@ begin
   FLowestTier := LSellForMoniesLowest;
 
   //configure the lowest acceleration
+  LAccelLowest.OnlyBuy := True;
   LAccelLowest.WindowSizeInMilli := Round(FHighWindowSize / 3);
   LAccelLowest.LeadStartPercent := 0.635;
   LAccelLowest.LeadEndPercent := 1.0;
-  LAccelLowest.PositionPercent := 0; //(FHighPosSize / 3) * LEAD_POS_PERC;
-  LAccelLowest.RiskyPositionPercent := 0; //FHighPosSize / 3;
+
+  if FBuyOnUpCtrl.Checked then
+    LAccelLowest.PositionPercent := (FHighPosSize / 3) * LEAD_POS_PERC
+  else
+    LAccelLowest.PositionPercent := 0;
+
+  if FBuyOnDownCtrl.Checked then
+    LAccelLowest.RiskyPositionPercent := FHighPosSize / 3
+  else
+    LAccelLowest.RiskyPositionPercent := 0;
+
   LAccelLowest.CrossThresholdPercent := 3.5;
   LAccelLowest.CrossDownThresholdPercent := 2;
   //LAccelLowest.AvoidChopThreshold := 0.0000025;//0.035; (old price based number)
@@ -1436,11 +1546,21 @@ begin
   FLowTier := LSellForMoniesLow;
 
   //configure the low acceleration
+  LAccelLow.OnlyBuy := True;
   LAccelLow.WindowSizeInMilli := Round(FHighWindowSize / 2);
   LAccelLow.LeadStartPercent := 0.635;
   LAccelLow.LeadEndPercent := 1.0;
-  LAccelLow.PositionPercent := 0; //(FHighPosSize / 2) * LEAD_POS_PERC;
-  LAccelLow.RiskyPositionPercent := 0; //FHighPosSize / 2;
+
+  if FBuyOnUpCtrl.Checked then
+    LAccelLow.PositionPercent := (FHighPosSize / 2) * LEAD_POS_PERC
+  else
+    LAccelLow.PositionPercent := 0;
+
+  if FBuyOnDownCtrl.Checked then
+    LAccelLow.RiskyPositionPercent := FHighPosSize / 2
+  else
+    LAccelLow.RiskyPositionPercent := 0;
+
   LAccelLow.CrossThresholdPercent := 3.5;
   LAccelLow.CrossDownThresholdPercent := 2;
   //LAccelLow.AvoidChopThreshold := 0.000003;//0.035; (old price based number)
@@ -1483,11 +1603,21 @@ begin
   FTier := LSellForMonies;
 
   //configure the highest acceleration
+  LAccelHighest.OnlyBuy := True;
   LAccelHighest.WindowSizeInMilli := FHighWindowSize;
   LAccelHighest.LeadStartPercent := 0.635;
   LAccelHighest.LeadEndPercent := 1.0;
-  LAccelHighest.PositionPercent := 0; //FHighPosSize * LEAD_POS_PERC;
-  LAccelHighest.RiskyPositionPercent := 0; //FHighPosSize;
+
+  if FBuyOnUpCtrl.Checked then
+    LAccelHighest.PositionPercent := FHighPosSize * LEAD_POS_PERC
+  else
+    LAccelHighest.PositionPercent := 0;
+
+  if FBuyOnDownCtrl.Checked then
+    LAccelHighest.RiskyPositionPercent := FHighPosSize
+  else
+    LAccelHighest.RiskyPositionPercent := 0;
+
   LAccelHighest.CrossThresholdPercent := 3.5;
   LAccelHighest.CrossDownThresholdPercent := 2;
   //LAccelHighest.AvoidChopThreshold := 0.0000035;//0.035; (old price based number)
@@ -1763,6 +1893,39 @@ begin
     Position := MIN_POS_SIZE + (MAX_POS_SIZE - MIN_POS_SIZE) * (FPosSizeCtrl.Value / FPosSizeCtrl.MaxValue)
   else
     FPosSizeCtrl.Value := FPosSizeCtrl.MinValue + Trunc((FPosSizeCtrl.MaxValue - FPosSizeCtrl.MinValue) * ((Position - MIN_POS_SIZE) / (MAX_POS_SIZE - MIN_POS_SIZE)));
+end;
+
+procedure TSimpleBot.InterpolateSellPositionSetting(var Position: Single;
+  const AIsReload: Boolean);
+begin
+  //if input is larger or smaller then someone has chosen to use a custom setting outside
+  //of the bounds specified
+  if Position > MAX_SELL_POS_SIZE then
+  begin
+    if AIsReload then
+    begin
+      FSellPosSizeCtrl.Value := FSellPosSizeCtrl.MaxValue;
+      Exit;
+    end
+    else if FSellPosSizeCtrl.Value >= FSellPosSizeCtrl.MaxValue then
+      Exit;
+  end
+  else if Position < MIN_SELL_POS_SIZE then
+  begin
+    if AIsReload then
+    begin
+      FSellPosSizeCtrl.Value := FSellPosSizeCtrl.MinValue;
+      Exit;
+    end
+    else if FSellPosSizeCtrl.Value <= FSellPosSizeCtrl.MinValue then
+      Exit;
+  end;
+
+  //otherwise we need to set the position according to the slider value
+  if not AIsReload then
+    Position := MIN_SELL_POS_SIZE + (MAX_SELL_POS_SIZE - MIN_SELL_POS_SIZE) * (FSellPosSizeCtrl.Value / FSellPosSizeCtrl.MaxValue)
+  else
+    FSellPosSizeCtrl.Value := FPosSizeCtrl.MinValue + Trunc((FSellPosSizeCtrl.MaxValue - FSellPosSizeCtrl.MinValue) * ((Position - MIN_SELL_POS_SIZE) / (MAX_SELL_POS_SIZE - MIN_SELL_POS_SIZE)));
 end;
 
 procedure TSimpleBot.InterpolateDCAPositionSetting(var Position: Single;

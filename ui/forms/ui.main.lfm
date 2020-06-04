@@ -9,6 +9,7 @@ object SimpleBot: TSimpleBot
   ClientWidth = 646
   Menu = menu_main
   OnCreate = FormCreate
+  Position = poWorkAreaCenter
   ShowHint = True
   LCLVersion = '1.8.4.0'
   object pctrl_main: TPageControl

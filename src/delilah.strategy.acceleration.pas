@@ -34,6 +34,7 @@ type
     function GetLeadEnd: Single;
     function GetLeadStart: Single;
     function GetMaxDecel: Extended;
+    function GetOnlyBuy: Boolean;
     function GetPosition: TAccelPosition;
     function GetPosPercent: Single;
     function GetRiskyPerc: Single;
@@ -44,6 +45,7 @@ type
     function GetAvoidChop: Extended;
     procedure SetLeadEnd(const AValue: Single);
     procedure SetLeadStart(const AValue: Single);
+    procedure SetOnlyBuy(const AValue: Boolean);
     procedure SetPosPercent(const AValue: Single);
     procedure SetRiskyPerc(const AValue: Single);
     procedure SetThresh(const AValue: Single);
@@ -205,6 +207,14 @@ type
     property AvoidChopThreshold : Extended read GetAvoidChop write SetAvoidChop;
 
     (*
+      when set to true, the strategy will only take the "open" action and
+      will not "close" the order, even if a crossdown has occurred. this option
+      is primarily to be used in tandem with other strategies that can
+      perform the sells
+    *)
+    property OnlyBuy : Boolean read GetOnlyBuy write SetOnlyBuy;
+
+    (*
       manually sets the position size this strategy is currently holding
     *)
     procedure UpdateCurrentPosition(const APositionSize : Extended);
@@ -246,9 +256,12 @@ type
     FAccels,
     FDecels,
     FLaggings: TArray<Extended>;
-    FUseDyn : Boolean;
+    FUseDyn,
+    FOnlyBuy: Boolean;
     FAvoidChop : Extended;
   protected
+    function GetOnlyBuy: Boolean;
+    procedure SetOnlyBuy(const AValue: Boolean);
     function GetAccelStd: Extended;
     function GetAMaxAccel: Extended;
     function GetAvgAccel: Extended;
@@ -349,6 +362,7 @@ type
     property DecelerationStdDev : Extended read GetDecelStd;
     property UseDynamicPositions : Boolean read GetUseDyn write SetUseDyn;
     property AvoidChopThreshold : Extended read GetAvoidChop write SetAvoidChop;
+    property OnlyBuy : Boolean read GetOnlyBuy write SetOnlyBuy;
 
     procedure UpdateCurrentPosition(const APositionSize : Extended);
 
@@ -736,6 +750,13 @@ begin
         Exit(True);
       end;
 
+      //handle and log the only-buy situation
+      if FOnlyBuy then
+      begin
+        LogInfo('position would be closed, but only-buy is set, exiting');
+        Exit(True);
+      end;
+
       //get the details for closing this position
       LDetails := ClosePosition(
         ATicker,
@@ -808,6 +829,7 @@ begin
   FThresh := 0.0025;
   FThreshDown := 0.0025;
   FAvoidChop := 0;
+  FOnlyBuy := False;
 end;
 
 destructor TAccelerationStrategyImpl.Destroy;
@@ -941,6 +963,16 @@ begin
 
     WriteLog;
   end;
+end;
+
+function TAccelerationStrategyImpl.GetOnlyBuy: Boolean;
+begin
+  Result := FOnlyBuy;
+end;
+
+procedure TAccelerationStrategyImpl.SetOnlyBuy(const AValue: Boolean);
+begin
+  FOnlyBuy := AValue;
 end;
 
 function TAccelerationStrategyImpl.GetAccelStd: Extended;

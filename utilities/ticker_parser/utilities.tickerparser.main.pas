@@ -435,7 +435,7 @@ begin
   //create and setup engine
   LEngine := TDelilahImpl.Create;
   LEngine.OnPlace := MonitorOrderPlace;
-  LEngine.Funds := StrToIntDef(edit_funds.Text, 1000);
+  LEngine.Funds := StrToFloatDef(edit_funds.Text, 1000);
   LEngine.Compound := True;
   FCurrentEngine := LEngine;
 

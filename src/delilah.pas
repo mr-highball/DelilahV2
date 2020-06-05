@@ -271,15 +271,12 @@ end;
 
 procedure TDelilahImpl.SetFunds(const AValue: Extended);
 begin
-  if not (FState=esStopped) then
+  if not (FState = esStopped) then
     raise Exception.Create('engine is running, stop first');
-  //if the funds is changing, re-balance the ledger
-  if (FFunds<>AValue) then
-    FFundsLedger.RecordEntry(
-      FFundsLedger.Balance,
-      ltDebit
-    );
+
+  FFundsLedger.Clear;
   FFunds:=AValue;
+
   //record an entry for the new funds
   FFundsLedger.RecordEntry(
     FFunds,

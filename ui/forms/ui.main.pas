@@ -114,7 +114,8 @@ type
     FHighMinRed: Single;
     FMarketFee,
     FLimitFee,
-    FHighTakeProfit: Single;
+    FHighTakeProfit,
+    FFundsBalance: Single;
     FLowestTier,
     FLowTier,
     FTier: ITierStrategyGDAX;
@@ -129,6 +130,7 @@ type
     procedure SetupLogFile;
     procedure SetupLogTab;
     procedure InitControls;
+    procedure InitFundsLedger;
     procedure EnableAutoStart;
     procedure PreloadTickers;
 
@@ -517,30 +519,22 @@ begin
   FAuth.Passphrase := json_main.ReadString('pass','');;
   FFunds := StrToFloatDef(json_main.ReadString('funds','0.0'), 0);
   FEngine.Funds := FFunds;
-  FFundsCtrl.Text := FloatToStr(FFunds);;
+  FFundsCtrl.Text := FloatToStr(FFunds);
   FAuth.IsSanboxMode := json_main.ReadBoolean('sandbox_mode',True);
   FEngine.AAC := StrToFloatDef(json_main.ReadString('aac','0.0'),0);
 
   //restoring funds requires us to see what was recorded in the ledger
   //as the balance, then subtract (balance - start funds) and then
   //credit by this amount (could be negative credit)
-  LBal:=StrToFloatDef(json_main.ReadString('funds_ledger','0.0'),0);
-
-  if LBal > 0 then
-    LBal:=LBal - FEngine.Funds;
-
-  //record to funds
-  if LBal <> 0 then
-    LBal := FEngine.FundsLedger.RecordEntry(
-      LBal,
-      ltCredit
-    ).Balance;
+  FFundsBalance := StrToFloatDef(json_main.ReadString('funds_ledger','0.0'), 0);
 
   //record to holds
   LBal := FEngine.HoldsLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('holds_ledger','0.0'),0),
     ltDebit
   ).Balance;
+
+  InitFundsLedger;
 
   //record to inventory
   LBal := FEngine.InventoryLedger.RecordEntry(
@@ -989,6 +983,23 @@ begin
   end;
 end;
 
+procedure TSimpleBot.InitFundsLedger;
+begin
+  FEngine.FundsLedger.Clear;
+  FFunds := StrToFloatDef(FFundsCtrl.Text, 0.0);
+  FEngine.Funds := FFunds;
+
+  if FFundsBalance > 0 then
+    FFundsBalance := FEngine.Funds - FFundsBalance;
+
+  //record to funds
+  if FFundsBalance <> 0 then
+    FFundsBalance := FEngine.FundsLedger.RecordEntry(
+      FFundsBalance,
+      ltDebit
+    ).Balance;
+end;
+
 procedure TSimpleBot.EnableAutoStart;
 begin
   ShowMessage('not implemented');
@@ -1435,8 +1446,7 @@ begin
   chart_source.Clear;
 
   //set the engine specific data
-  FFunds := StrToFloatDef(FFundsCtrl.Text, 0.0);
-  FEngine.Funds := FFunds;
+  InitFundsLedger;
   FLimitFee := StrToFloatDef(FLimitFeeCtrl.Text, 0.0);
   FMarketFee := StrToFloatDef(FMarketFeeCtrl.Text, 0.0);
 

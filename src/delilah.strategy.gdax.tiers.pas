@@ -874,12 +874,10 @@ begin
         end;
 
         //based on the threshold percentage and how much inventory to funds
-        //we currently have, we may allow selling at a loss when only profit is on
-        //or if we need to gtfo
+        //we currently have, we may allow selling at a loss or if we need to gtfo
         LAllowLoss:=
           (
-            FOnlyProfit
-            and (FIgnoreProfitPerc > 0)
+            (FIgnoreProfitPerc > 0)
             and ((AFunds + (AInventory * AAAC)) > 0)
             and (((AInventory * AAAC) / (AFunds + (AInventory * AAAC))) >= FIgnoreProfitPerc)
           )
@@ -898,7 +896,7 @@ begin
         end;
 
         if LAllowLoss then
-          LogInfo('DoFeed::SellMode::OnlyProfit is on and conditions were right to allow selling at a loss');
+          LogInfo('DoFeed::SellMode::conditions are right to allow selling at a loss');
 
         //if we are in only profit mode, we need to some validation before
         //placing an order
@@ -1098,6 +1096,7 @@ function TTierStrategyGDAXImpl.GetPosition(const AInventory: Extended; out
 begin
   Result:=False;
   Sell:=False;
+
   //prioritize an all sell above everything
   if FSellItAllNow and (AInventory > 0) and (FGTFOPerc > 0) then
   begin

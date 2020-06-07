@@ -100,7 +100,9 @@ type
     FTimeFrameCtrl,
     FPosSizeCtrl,
     FSellPosSizeCtrl,
-    FDCASizeCtrl: TSlider;
+    FDCASizeCtrl,
+    FUpFundCtrl,
+    FDownFundCtrl: TSlider;
     FProfitCtrl,
     FMinRedCtrl: TProfitTarget;
     FInit : Boolean;
@@ -262,14 +264,14 @@ begin
     SimpleBot.FLowestTier.OnlyProfit := True;
 
     //depending on price direction, adjust the strategy
-    if LUptrend then
-    begin
-      if SimpleBot.FIgnoreOnUpCtrl.Checked then
-        SimpleBot.FLowestTier.OnlyProfit := False;
-    end
-    //downtrend & ignore on down enabled
-    else if SimpleBot.FIgnoreOnDownCtrl.Checked then
-      SimpleBot.FLowestTier.OnlyProfit := False;
+    //if LUptrend then
+    //begin
+    //  if SimpleBot.FIgnoreOnUpCtrl.Checked then
+    //    SimpleBot.FLowestTier.OnlyProfit := False;
+    //end
+    ////downtrend & ignore on down enabled
+    //else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+    //  SimpleBot.FLowestTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
@@ -301,14 +303,14 @@ begin
     SimpleBot.FLowTier.OnlyProfit := True;
 
     //depending on price direction, adjust the strategy
-    if LUptrend then
-    begin
-      if SimpleBot.FIgnoreOnUpCtrl.Checked then
-        SimpleBot.FLowTier.OnlyProfit := False;
-    end
-    //downtrend & ignore on down enabled
-    else if SimpleBot.FIgnoreOnDownCtrl.Checked then
-      SimpleBot.FLowTier.OnlyProfit := False;
+    //if LUptrend then
+    //begin
+    //  if SimpleBot.FIgnoreOnUpCtrl.Checked then
+    //    SimpleBot.FLowTier.OnlyProfit := False;
+    //end
+    ////downtrend & ignore on down enabled
+    //else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+    //  SimpleBot.FLowTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
@@ -342,12 +344,29 @@ begin
     //depending on price direction, adjust the strategy
     if LUptrend then
     begin
+      //configure the ignore profit threshold
+      SimpleBot.FTier.IgnoreOnlyProfitThreshold := SimpleBot.FUpFundCtrl.Value / 100;
+
+      //set the ignore profit using the only profit property
       if SimpleBot.FIgnoreOnUpCtrl.Checked then
         SimpleBot.FTier.OnlyProfit := False;
     end
     //downtrend & ignore on down enabled
     else if SimpleBot.FIgnoreOnDownCtrl.Checked then
-      SimpleBot.FTier.OnlyProfit := False;
+    begin
+      SimpleBot.FTier.IgnoreOnlyProfitThreshold := SimpleBot.FDownFundCtrl.Value / 100;
+
+      //set the ignore profit using the only profit property
+      if SimpleBot.FIgnoreOnDownCtrl.Checked then
+        SimpleBot.FTier.OnlyProfit := False;
+    end;
+
+    //if the position is zero, then set it as close to zero but above since
+    //zero is used as a way of not using this functionality
+    if SimpleBot.FDownFundCtrl.Value <= 0 then
+      SimpleBot.FTier.IgnoreOnlyProfitThreshold := 0.0000001
+    else if SimpleBot.FDownFundCtrl.Value >= 100 then
+      SimpleBot.FTier.IgnoreOnlyProfitThreshold := 0;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
@@ -569,6 +588,9 @@ begin
   FHighDCASize := StrToFloatDef(json_main.ReadString('high_dca_size', ''), MIN_DCA_SIZE + (MAX_DCA_SIZE - MIN_DCA_SIZE) / 2);
   InterpolateDCAPositionSetting(FHighDCASize, True);
 
+  FUpFundCtrl.Value := Round(StrToFloatDef(json_main.ReadString('max_uptrend_fund_usage', '1'), 1) * 100);
+  FDownFundCtrl.Value := Round(StrToFloatDef(json_main.ReadString('max_downtrend_fund_usage', '1'), 1) * 100);
+
   FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
   FProfitCtrl.Percent := FHighTakeProfit;
 
@@ -663,6 +685,9 @@ begin
 
   InterpolateDCAPositionSetting(FHighDCASize);
   json_main.WriteString('high_dca_size', FloatToStr(FHighDCASize));
+
+  json_main.WriteString('max_uptrend_fund_usage', FloatToStr(FUpFundCtrl.Value / 100));
+  json_main.WriteString('max_downtrend_fund_usage', FloatToStr(FDownFundCtrl.Value / 100));
 
   FHighTakeProfit := FProfitCtrl.Percent;
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
@@ -905,6 +930,32 @@ begin
     FDCASizeCtrl.MinDescr := 'Smaller';
     FDCASizeCtrl.MaxDescr := 'Larger';
 
+    FUpFundCtrl := TSlider.Create(Self);
+    FUpFundCtrl.Name := 'UpFundUsage';
+    FUpFundCtrl.Align := TAlign.alTop;
+    FUpFundCtrl.Height := 300;
+    FUpFundCtrl.ControlWidthPercent := 1;
+    FUpFundCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FUpFundCtrl.MinValue := 0;
+    FUpFundCtrl.MaxValue := 100;
+    FUpFundCtrl.Title := 'Max Uptrend Fund Usage';
+    FUpFundCtrl.Description := 'when trending up, this controls the maximum percentage of funds to use. if funds fall below this, inventory may sell at a loss';
+    FUpFundCtrl.MinDescr := '0%';
+    FUpFundCtrl.MaxDescr := '100%';
+
+    FDownFundCtrl := TSlider.Create(Self);
+    FDownFundCtrl.Name := 'DownFundUsage';
+    FDownFundCtrl.Align := TAlign.alTop;
+    FDownFundCtrl.Height := 300;
+    FDownFundCtrl.ControlWidthPercent := 1;
+    FDownFundCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FDownFundCtrl.MinValue := 0;
+    FDownFundCtrl.MaxValue := 100;
+    FDownFundCtrl.Title := 'Max Downtrend Fund Usage';
+    FDownFundCtrl.Description := 'when trending down, this controls the maximum percentage of funds to use. if funds fall below this, inventory may sell at a loss';
+    FDownFundCtrl.MinDescr := '0%';
+    FDownFundCtrl.MaxDescr := '100%';
+
     FProfitCtrl := TProfitTarget.Create(Self);
     FProfitCtrl.Name := 'Profit';
     FProfitCtrl.Align := TAlign.alTop;
@@ -967,6 +1018,8 @@ begin
     FMinRedCtrl.Parent := pnl_strat_ctrl_container;
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
     FSellPosSizeCtrl.Parent := pnl_strat_ctrl_container;
+    FDownFundCtrl.Parent := pnl_strat_ctrl_container;
+    FUpFundCtrl.Parent := pnl_strat_ctrl_container;
     FDCASizeCtrl.Parent := pnl_strat_ctrl_container;
     FPosSizeCtrl.Parent := pnl_strat_ctrl_container;
     FTimeFrameCtrl.Parent := pnl_strat_ctrl_container;
@@ -1198,9 +1251,9 @@ begin
   LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.MidTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
-  LSellForMoniesLowest.SmallTierSellPerc := (FHighPosSize / 3) / 2;
-  LSellForMoniesLowest.MidTierSellPerc := (FHighPosSize / 3) / 2;
-  LSellForMoniesLowest.LargeTierSellPerc := FHighPosSize / 3;
+  LSellForMoniesLowest.SmallTierSellPerc := (FHighSellPosSize / 3) / 2;
+  LSellForMoniesLowest.MidTierSellPerc := (FHighSellPosSize / 3) / 2;
+  LSellForMoniesLowest.LargeTierSellPerc := FHighSellPosSize / 3;
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
@@ -1255,9 +1308,9 @@ begin
   LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.MidTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.LargeTierPerc := FHighDCASize / 2;
-  LSellForMoniesLow.SmallTierSellPerc := (FHighPosSize / 2) / 2;
-  LSellForMoniesLow.MidTierSellPerc := (FHighPosSize / 2) / 2;
-  LSellForMoniesLow.LargeTierSellPerc := FHighPosSize / 2;
+  LSellForMoniesLow.SmallTierSellPerc := (FHighSellPosSize / 2) / 2;
+  LSellForMoniesLow.MidTierSellPerc := (FHighSellPosSize / 2) / 2;
+  LSellForMoniesLow.LargeTierSellPerc := FHighSellPosSize / 2;
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
@@ -1312,9 +1365,9 @@ begin
   LSellForMonies.SmallTierPerc := FHighDCASize / 2;
   LSellForMonies.MidTierPerc := FHighDCASize / 2;
   LSellForMonies.LargeTierPerc := FHighDCASize;
-  LSellForMonies.SmallTierSellPerc := (FHighPosSize / 2);
-  LSellForMonies.MidTierSellPerc := (FHighPosSize / 2);
-  LSellForMonies.LargeTierSellPerc := FHighPosSize;
+  LSellForMonies.SmallTierSellPerc := (FHighSellPosSize / 2);
+  LSellForMonies.MidTierSellPerc := (FHighSellPosSize / 2);
+  LSellForMonies.LargeTierSellPerc := FHighSellPosSize;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
@@ -1477,9 +1530,9 @@ begin
   LSellForMoniesLowest.SmallTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.MidTierPerc := (FHighDCASize / 3) / 2;
   LSellForMoniesLowest.LargeTierPerc := FHighDCASize / 3;
-  LSellForMoniesLowest.SmallTierSellPerc := (FHighPosSize / 3) / 2;
-  LSellForMoniesLowest.MidTierSellPerc := (FHighPosSize / 3) / 2;
-  LSellForMoniesLowest.LargeTierSellPerc := FHighPosSize / 3;
+  LSellForMoniesLowest.SmallTierSellPerc := (FHighSellPosSize / 3) / 2;
+  LSellForMoniesLowest.MidTierSellPerc := (FHighSellPosSize / 3) / 2;
+  LSellForMoniesLowest.LargeTierSellPerc := FHighSellPosSize / 3;
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
@@ -1534,9 +1587,9 @@ begin
   LSellForMoniesLow.SmallTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.MidTierPerc := (FHighDCASize / 2) / 2;
   LSellForMoniesLow.LargeTierPerc := FHighDCASize / 2;
-  LSellForMoniesLow.SmallTierSellPerc := (FHighPosSize / 2) / 2;
-  LSellForMoniesLow.MidTierSellPerc := (FHighPosSize / 2) / 2;
-  LSellForMoniesLow.LargeTierSellPerc := FHighPosSize / 2;
+  LSellForMoniesLow.SmallTierSellPerc := (FHighSellPosSize / 2) / 2;
+  LSellForMoniesLow.MidTierSellPerc := (FHighSellPosSize / 2) / 2;
+  LSellForMoniesLow.LargeTierSellPerc := FHighSellPosSize / 2;
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
@@ -1591,9 +1644,9 @@ begin
   LSellForMonies.SmallTierPerc := FHighDCASize / 2;
   LSellForMonies.MidTierPerc := FHighDCASize / 2;
   LSellForMonies.LargeTierPerc := FHighDCASize;
-  LSellForMonies.SmallTierSellPerc := (FHighPosSize / 2);
-  LSellForMonies.MidTierSellPerc := (FHighPosSize / 2);
-  LSellForMonies.LargeTierSellPerc := FHighPosSize;
+  LSellForMonies.SmallTierSellPerc := (FHighSellPosSize / 2);
+  LSellForMonies.MidTierSellPerc := (FHighSellPosSize / 2);
+  LSellForMonies.LargeTierSellPerc := FHighSellPosSize;
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;

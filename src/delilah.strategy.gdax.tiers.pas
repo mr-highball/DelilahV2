@@ -1476,7 +1476,7 @@ begin
   //find the fund utilization percentage
   LTotalFunds := (AInventory * AAAC + AFunds);
 
-  if LTotalFunds = 0 then
+  if LTotalFunds <= 0 then
     Exit;
 
   LFundUsage := 1 - AFunds / LTotalFunds;

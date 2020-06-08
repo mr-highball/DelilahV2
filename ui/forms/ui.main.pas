@@ -92,7 +92,8 @@ type
     FProductInit : Boolean;
     FFundsCtrl,
     FMarketFeeCtrl,
-    FLimitFeeCtrl: TSingleLine;
+    FLimitFeeCtrl,
+    FScaledBuyCtrl: TSingleLine;
     FBuyOnUpCtrl,
     FBuyOnDownCtrl,
     FIgnoreOnUpCtrl,
@@ -600,6 +601,8 @@ begin
   FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
   FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
 
+  FScaledBuyCtrl.Text := FloatToStr(StrToFloatDef(json_main.ReadString('scaled_buy_percent', '0.0'), 0));
+
   FBuyOnUpCtrl.Checked := StrToBoolDef(json_main.ReadString('buy_uptrend','true'), True);
   FBuyOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('buy_downtrend','true'), True);
   FIgnoreOnUpCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_uptrend','false'), False);
@@ -697,6 +700,8 @@ begin
 
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
+
+  json_main.WriteString('scaled_buy_percent', FloatToStr(StrToFloatDef(FScaledBuyCtrl.Text, 0)));
 
   json_main.WriteString('buy_uptrend', BoolToStr(FBuyOnUpCtrl.Checked, True));
   json_main.WriteString('buy_downtrend', BoolToStr(FBuyOnDownCtrl.Checked, True));
@@ -974,6 +979,15 @@ begin
     FMinRedCtrl.Title := 'Minimum DCA Reduction';
     FMinRedCtrl.Description := 'specify a minimum percentage to lower your cost. if you wish to allow trading without lowering, specify "0" in the "custom" box';
 
+    FScaledBuyCtrl := TSingleLine.Create(Self);
+    FScaledBuyCtrl.Name := 'ScaledBuy';
+    FScaledBuyCtrl.Align := TAlign.alTop;
+    FScaledBuyCtrl.Title := 'Scaled Buy %';
+    FScaledBuyCtrl.Description := 'sets the buy scaling percentage to use as more inventory is accumulated. as inventory is accumulated this scale is proportionally applied to orders (future order are larger/smaller as inventory grows)';
+    FScaledBuyCtrl.Height := 300;
+    FScaledBuyCtrl.ControlWidthPercent := 0.30;
+    FScaledBuyCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
     FBuyOnUpCtrl := TBool.Create(Self);
     FBuyOnUpCtrl.Name := 'BuyUp';
     FBuyOnUpCtrl.Align := TAlign.alTop;
@@ -1015,6 +1029,7 @@ begin
     FIgnoreOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnDownCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnUpCtrl.Parent := pnl_strat_ctrl_container;
+    FScaledBuyCtrl.Parent := pnl_strat_ctrl_container;
     FMinRedCtrl.Parent := pnl_strat_ctrl_container;
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
     FSellPosSizeCtrl.Parent := pnl_strat_ctrl_container;
@@ -1205,6 +1220,7 @@ var
   LSellForMoniesLowest: ITierStrategyGDAX;
   LAccelLowest: IAccelerationStrategy;
   LHighDCAWindow: Cardinal;
+  LScaledBuy: Extended;
 const
   DCA_PERC = 0.0333;
   LEAD_POS_PERC = 0.75;
@@ -1240,6 +1256,7 @@ begin
   FHighTakeProfit := FProfitCtrl.Percent;
   FHighMinRed := FMinRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
+  LScaledBuy := StrToFloatDef(FScaledBuyCtrl.Text, 0);
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
@@ -1268,7 +1285,7 @@ begin
 
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
-  LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+  LSellForMoniesLowest.MaxScaledBuyPerc := LScaledBuy;
   LSellForMoniesLowest.FixedProfit := False; //todo - add?
   FLowestTier := LSellForMoniesLowest;
 
@@ -1325,7 +1342,7 @@ begin
 
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
-  LSellForMoniesLow.MaxScaledBuyPerc := 10;
+  LSellForMoniesLow.MaxScaledBuyPerc := LScaledBuy;
   LSellForMoniesLow.FixedProfit := False; //todo - add?
   FLowTier := LSellForMoniesLow;
 
@@ -1382,7 +1399,7 @@ begin
 
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
-  LSellForMonies.MaxScaledBuyPerc := 15;
+  LSellForMonies.MaxScaledBuyPerc := LScaledBuy;
   LSellForMonies.FixedProfit := True; //todo - add?
   FTier := LSellForMonies;
 
@@ -1491,6 +1508,7 @@ var
   LSellForMoniesLowest: ITierStrategyGDAX;
   LAccelLowest: IAccelerationStrategy;
   LHighDCAWindow: Cardinal;
+  LScaledBuy: Extended;
 const
   DCA_PERC = 0.0333;
   LEAD_POS_PERC = 0.75;
@@ -1519,6 +1537,7 @@ begin
   FHighTakeProfit := FProfitCtrl.Percent;
   FHighMinRed := FMinRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
+  LScaledBuy := StrToFloatDef(FScaledBuyCtrl.Text, 0);
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
@@ -1547,7 +1566,7 @@ begin
 
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
-  LSellForMoniesLowest.MaxScaledBuyPerc := 10;
+  LSellForMoniesLowest.MaxScaledBuyPerc := LScaledBuy;
   LSellForMoniesLowest.FixedProfit := False; //todo - add?
   FLowestTier := LSellForMoniesLowest;
 
@@ -1604,7 +1623,7 @@ begin
 
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
-  LSellForMoniesLow.MaxScaledBuyPerc := 10;
+  LSellForMoniesLow.MaxScaledBuyPerc := LScaledBuy;
   LSellForMoniesLow.FixedProfit := False; //todo - add?
   FLowTier := LSellForMoniesLow;
 
@@ -1661,7 +1680,7 @@ begin
 
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
-  LSellForMonies.MaxScaledBuyPerc := 15;
+  LSellForMonies.MaxScaledBuyPerc := LScaledBuy;
   LSellForMonies.FixedProfit := True; //todo - add?
   FTier := LSellForMonies;
 

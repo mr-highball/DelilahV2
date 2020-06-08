@@ -12,7 +12,8 @@ uses
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
   delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration,
   ui.usercontrol.slider, ui.usercontrol.profittarget, utilities.tickerparser.main,
-  ui.usercontrol.boolean;
+  ui.usercontrol.boolean
+  {, ezthreads};
 
 type
 
@@ -128,6 +129,7 @@ type
     FUseMarketBuy,
     FUseMarketSell: Boolean;
     FFunds: Single;
+    //FDoggy : IEZThread;
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -136,6 +138,8 @@ type
     procedure InitFundsLedger;
     procedure EnableAutoStart;
     procedure PreloadTickers;
+    procedure ValidateLicense;
+    procedure LaunchWatchdog;
 
     procedure SimulateStrategy;
     procedure AddStrategiesToSim(const ASim : TTickerParser);
@@ -214,6 +218,7 @@ type
 
 var
   SimpleBot: TSimpleBot;
+  EXPIRED : Boolean;
 
 implementation
 uses
@@ -221,7 +226,7 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  math, dateutils, delilah.strategy.acceleration.gdax
+  math, dateutils, delilah.strategy.acceleration.gdax, ui.license
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};
@@ -624,6 +629,7 @@ begin
   FEngine.OnStatus:=EngineStatus;
 
   InitControls;
+  LaunchWatchdog;
 end;
 
 procedure TSimpleBot.btn_log_clearClick(Sender: TObject);
@@ -1047,6 +1053,8 @@ begin
       if Assigned(Self.Controls[I]) then
         Self.Controls[I].AddHandlerOnKeyDown(FormKeyDown);
 
+    if EXPIRED then
+      status_main.Panels[0].Text := 'LICENSE EXPIRED';
     FInit:=True;
   end;
 end;
@@ -1153,10 +1161,49 @@ begin
   end;
 end;
 
+procedure TSimpleBot.ValidateLicense;
+begin
+  //don't terminate if our authenticator isn't initialized
+  if not Assigned(FAuth) or (FAuth.Authenticator.Key.IsEmpty) or (FAuth.Authenticator.Secret.IsEmpty) then
+    Exit;
+
+  HashCreds(FAuth.Key, FAuth.Secret);
+  ValidateOrKill;
+end;
+
+procedure TSimpleBot.LaunchWatchdog;
+begin
+  //todo - below is an implementation for monitoring, but needs either
+  //       changes in ezthreads to check for latest compiler (needs generic.collection)
+  //       or need to finish porting this to be trunk compatible
+
+//  procedure Sniffer(const AThread : IEZThread);
+//  begin
+//    while Assigned(Application) and (not Application.Terminated) then
+//    begin
+//      if SimpleBot.FEngine.EngineState = TEngineState.esStarted then
+//      begin
+//        HashCreds(SimpleBot.FAuth.Key, SimpleBot.FAuth.Secret);
+//        ValidateOrKill;
+//        Sleep(30000);
+//      end;
+//    end;
+//  end;
+//
+//begin
+//  //create a watchdog thread to have secondary license checking while running
+//  FDoggy := NewEZThread;
+//  FDoggy
+//    .Setup(Sniffer)
+//    .Start;
+end;
+
 procedure TSimpleBot.SimulateStrategy;
 var
   LSim : TTickerParser;
 begin
+  ValidateLicense;
+
   //we can't run while we're running the full strategy because I cheated and
   //copy pasta'd this to get simulation working in simplebot
   if FEngine.EngineState = esStarted then
@@ -1502,6 +1549,8 @@ const
   DCA_PERC = 0.0333;
   LEAD_POS_PERC = 0.75;
 begin
+  ValidateLicense;
+
   //clear chart source
   chart_source.Clear;
 
@@ -2028,6 +2077,8 @@ begin
     FDCASizeCtrl.Value := FDCASizeCtrl.MinValue + Trunc((FDCASizeCtrl.MaxValue - FDCASizeCtrl.MinValue) * ((Position - MIN_DCA_SIZE) / (MAX_DCA_SIZE - MIN_DCA_SIZE)));
 end;
 
-
+initialization
+  HashCreds('', '');
+  EXPIRED := IsLicenseExpired;
 end.
 

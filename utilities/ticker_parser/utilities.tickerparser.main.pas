@@ -415,7 +415,7 @@ var
   LLoader: TTickerLoader;
   LProduct : IGDAXProduct;
   LFunds, LInventory, LTickPrice, LAAC: Extended;
-  LFundsLed: Extended;
+  LFundsLed, LStartingFunds: Extended;
 begin
   btn_save_simulate.Enabled := False;
   progress_simulate.Visible := True;
@@ -436,6 +436,7 @@ begin
   LEngine := TDelilahImpl.Create;
   LEngine.OnPlace := MonitorOrderPlace;
   LEngine.Funds := StrToFloatDef(edit_funds.Text, 1000);
+  LStartingFunds := LEngine.Funds;
   LEngine.Compound := True;
   FCurrentEngine := LEngine;
 
@@ -481,7 +482,6 @@ begin
     LEngine.Feed(LTicker, LError);
 
     //ripped from simple bot main form
-    LFunds := FCurrentEngine.Funds;
     LInventory := FCurrentEngine.AvailableInventory;
     LTickPrice := FTickers[FCurrentSimIndex].Price;
     LAAC := FCurrentEngine.AAC;
@@ -492,7 +492,7 @@ begin
     FTickers[FCurrentSimIndex].Inventory := LInventory;
     FTickers[FCurrentSimIndex].AAC := LAAC;
 
-    FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LFunds;
+    FTickers[FCurrentSimIndex].Profit := ((LFundsLed + (LAAC * LInventory)) + LInventory * (LTickPrice - LAAC)) - LStartingFunds;
 
     //update the progress and process ui messages
     if (I > 0) and (LStep > 0) and (I mod LStep = 0) then

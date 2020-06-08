@@ -538,7 +538,6 @@ begin
   FAuth.Key := json_main.ReadString('key','');
   FAuth.Passphrase := json_main.ReadString('pass','');;
   FFunds := StrToFloatDef(json_main.ReadString('funds','0.0'), 0);
-  FEngine.Funds := FFunds;
   FFundsCtrl.Text := FloatToStr(FFunds);
   FAuth.IsSanboxMode := json_main.ReadBoolean('sandbox_mode',True);
   FEngine.AAC := StrToFloatDef(json_main.ReadString('aac','0.0'),0);
@@ -548,13 +547,14 @@ begin
   //credit by this amount (could be negative credit)
   FFundsBalance := StrToFloatDef(json_main.ReadString('funds_ledger','0.0'), 0);
 
+  //set the actual ledger to the balance
+  FEngine.Funds := FFundsBalance;
+
   //record to holds
   LBal := FEngine.HoldsLedger.RecordEntry(
     StrToFloatDef(json_main.ReadString('holds_ledger','0.0'),0),
     ltDebit
   ).Balance;
-
-  InitFundsLedger;
 
   //record to inventory
   LBal := FEngine.InventoryLedger.RecordEntry(
@@ -1053,19 +1053,8 @@ end;
 
 procedure TSimpleBot.InitFundsLedger;
 begin
-  FEngine.FundsLedger.Clear;
+  FFundsBalance := FEngine.FundsLedger.Balance;
   FFunds := StrToFloatDef(FFundsCtrl.Text, 0.0);
-  FEngine.Funds := FFunds;
-
-  if FFundsBalance > 0 then
-    FFundsBalance := FEngine.Funds - FFundsBalance;
-
-  //record to funds
-  if FFundsBalance <> 0 then
-    FFundsBalance := FEngine.FundsLedger.RecordEntry(
-      FFundsBalance,
-      ltDebit
-    ).Balance;
 end;
 
 procedure TSimpleBot.EnableAutoStart;
@@ -1724,10 +1713,6 @@ begin
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
 
-  //if the funds has changed since the last time this was run, reset it
-  if FEngine.Funds<>StrToFloatDef(FFundsCtrl.Text,0) then
-    FEngine.Funds:=StrToFloatDef(FFundsCtrl.Text,0);
-
   //prompt for pre-loading of tickers
   PreloadTickers;
 
@@ -1839,7 +1824,7 @@ begin
   chart_ticker.Refresh;
 
   //for debugging assign local variables
-  LFunds:=FEngine.Funds;
+  LFunds:=FFunds;
   LInventory:=FEngine.AvailableInventory;
   LTickPrice:=LTick.Price;
   LAAC:=FEngine.AAC;

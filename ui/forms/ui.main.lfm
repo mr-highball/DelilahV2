@@ -12,7 +12,7 @@ object SimpleBot: TSimpleBot
   OnCreate = FormCreate
   Position = poWorkAreaCenter
   ShowHint = True
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.8.0'
   object pctrl_main: TPageControl
     Left = 10
     Height = 663

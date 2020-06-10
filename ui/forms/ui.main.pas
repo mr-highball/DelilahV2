@@ -541,7 +541,8 @@ begin
   //now read from our json file
   FAuth.Secret := json_main.ReadString('secret','');
   FAuth.Key := json_main.ReadString('key','');
-  FAuth.Passphrase := json_main.ReadString('pass','');;
+  FAuth.Passphrase := json_main.ReadString('pass','');
+
   FFunds := StrToFloatDef(json_main.ReadString('funds','0.0'), 0);
   FFundsCtrl.Text := FloatToStr(FFunds);
   FAuth.IsSanboxMode := json_main.ReadBoolean('sandbox_mode',True);

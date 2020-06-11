@@ -276,7 +276,7 @@ begin
     //    SimpleBot.FLowestTier.OnlyProfit := False;
     //end
     ////downtrend & ignore on down enabled
-    //else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+    //else
     //  SimpleBot.FLowestTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
@@ -315,7 +315,7 @@ begin
     //    SimpleBot.FLowTier.OnlyProfit := False;
     //end
     ////downtrend & ignore on down enabled
-    //else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+    //else
     //  SimpleBot.FLowTier.OnlyProfit := False;
 
     //when we are selling and in position, allow the sell
@@ -357,8 +357,7 @@ begin
       if SimpleBot.FIgnoreOnUpCtrl.Checked then
         SimpleBot.FTier.OnlyProfit := False;
     end
-    //downtrend & ignore on down enabled
-    else if SimpleBot.FIgnoreOnDownCtrl.Checked then
+    else
     begin
       SimpleBot.FTier.IgnoreOnlyProfitThreshold := SimpleBot.FDownFundCtrl.Value / 100;
 
@@ -381,7 +380,7 @@ begin
     else
       Active := (LUptrend and SimpleBot.FBuyOnUpCtrl.Checked) or (not LUptrend and SimpleBot.FBuyOnDownCtrl.Checked);
   finally
-    SimpleBot.LogInfo(Format('Tier::[active]:%s [only-profit]:%s', [BoolToStr(Active, True), BoolToStr(SimpleBot.FTier.OnlyProfit, True)]));
+    SimpleBot.LogInfo(Format('Tier::[active]:%s [only-profit]:%s [uptrend]:%s [ignore-profit]:%f', [BoolToStr(Active, True), BoolToStr(SimpleBot.FLowTier.OnlyProfit, True), BoolToStr(LUptrend, True), SimpleBot.FTier.IgnoreOnlyProfitThreshold]));
   end;
 end;
 

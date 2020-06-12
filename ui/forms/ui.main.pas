@@ -98,7 +98,7 @@ type
     FBuyOnUpCtrl,
     FBuyOnDownCtrl,
     FIgnoreOnUpCtrl,
-    FIgnoreOnDownCtrl : TBool;
+    FIgnoreOnDownCtrl: TBool;
     FTimeFrameCtrl,
     FPosSizeCtrl,
     FSellPosSizeCtrl,
@@ -106,7 +106,8 @@ type
     FUpFundCtrl,
     FDownFundCtrl: TSlider;
     FProfitCtrl,
-    FMinRedCtrl: TProfitTarget;
+    FMinUpRedCtrl,
+    FMinDownRedCtrl: TProfitTarget;
     FInit : Boolean;
     FEngine,
     FTempEngine: IDelilah;
@@ -115,7 +116,8 @@ type
     FHighPosSize,
     FHighSellPosSize,
     FHighDCASize,
-    FHighMinRed: Single;
+    FHighUpMinRed,
+    FHighDownMinRed: Single;
     FMarketFee,
     FLimitFee,
     FHighTakeProfit,
@@ -269,15 +271,27 @@ begin
     //default to only profit
     SimpleBot.FLowestTier.OnlyProfit := True;
 
-    //depending on price direction, adjust the strategy
-    //if LUptrend then
-    //begin
-    //  if SimpleBot.FIgnoreOnUpCtrl.Checked then
-    //    SimpleBot.FLowestTier.OnlyProfit := False;
-    //end
-    ////downtrend & ignore on down enabled
-    //else
-    //  SimpleBot.FLowestTier.OnlyProfit := False;
+    //toggly the aac based on the trend
+    if LUptrend then
+    begin
+      if SimpleBot.FHighUpMinRed > 0 then
+      begin
+        SimpleBot.FLowestTier.OnlyLowerAAC := True;
+        SimpleBot.FLowestTier.MinReduction := SimpleBot.FHighUpMinRed / 3;
+      end
+      else
+        SimpleBot.FLowestTier.OnlyLowerAAC := False;
+    end
+    else
+    begin
+      if SimpleBot.FHighDownMinRed > 0 then
+      begin
+        SimpleBot.FLowestTier.OnlyLowerAAC := True;
+        SimpleBot.FLowestTier.MinReduction := SimpleBot.FHighDownMinRed / 3;
+      end
+      else
+        SimpleBot.FLowestTier.OnlyLowerAAC := False;
+    end;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
@@ -308,15 +322,27 @@ begin
     //default to only profit
     SimpleBot.FLowTier.OnlyProfit := True;
 
-    //depending on price direction, adjust the strategy
-    //if LUptrend then
-    //begin
-    //  if SimpleBot.FIgnoreOnUpCtrl.Checked then
-    //    SimpleBot.FLowTier.OnlyProfit := False;
-    //end
-    ////downtrend & ignore on down enabled
-    //else
-    //  SimpleBot.FLowTier.OnlyProfit := False;
+    //toggly the aac based on the trend
+    if LUptrend then
+    begin
+      if SimpleBot.FHighUpMinRed > 0 then
+      begin
+        SimpleBot.FLowTier.OnlyLowerAAC := True;
+        SimpleBot.FLowTier.MinReduction := SimpleBot.FHighUpMinRed / 2;
+      end
+      else
+        SimpleBot.FLowestTier.OnlyLowerAAC := False;
+    end
+    else
+    begin
+      if SimpleBot.FHighDownMinRed > 0 then
+      begin
+        SimpleBot.FLowTier.OnlyLowerAAC := True;
+        SimpleBot.FLowTier.MinReduction := SimpleBot.FHighDownMinRed / 2;
+      end
+      else
+        SimpleBot.FLowTier.OnlyLowerAAC := False;
+    end;
 
     //when we are selling and in position, allow the sell
     if not ADetails^.IsBuy then
@@ -346,6 +372,28 @@ begin
 
     //default to only profit
     SimpleBot.FTier.OnlyProfit := True;
+
+    //toggly the aac based on the trend
+    if LUptrend then
+    begin
+      if SimpleBot.FHighUpMinRed > 0 then
+      begin
+        SimpleBot.FTier.OnlyLowerAAC := True;
+        SimpleBot.FTier.MinReduction := SimpleBot.FHighUpMinRed;
+      end
+      else
+        SimpleBot.FTier.OnlyLowerAAC := False;
+    end
+    else
+    begin
+      if SimpleBot.FHighDownMinRed > 0 then
+      begin
+        SimpleBot.FTier.OnlyLowerAAC := True;
+        SimpleBot.FTier.MinReduction := SimpleBot.FHighDownMinRed;
+      end
+      else
+        SimpleBot.FTier.OnlyLowerAAC := False;
+    end;
 
     //depending on price direction, adjust the strategy
     if LUptrend then
@@ -600,8 +648,11 @@ begin
   FHighTakeProfit := StrToFloatDef(json_main.ReadString('high_take_profit','0.03'), 0.03);
   FProfitCtrl.Percent := FHighTakeProfit;
 
-  FHighMinRed := StrToFloatDef(json_main.ReadString('high_min_reduction','0.0'), 0.0);
-  FMinRedCtrl.Percent := FHighMinRed;
+  FHighUpMinRed := StrToFloatDef(json_main.ReadString('high_min_reduction','0.0'), 0.0);
+  FMinUpRedCtrl.Percent := FHighUpMinRed;
+
+  FHighDownMinRed := StrToFloatDef(json_main.ReadString('high_min_reduction_downtrend','0.0'), 0.0);
+  FMinDownRedCtrl.Percent := FHighDownMinRed;
 
   FUseMarketBuy := StrToBoolDef(json_main.ReadString('market_buy','false'), False);
   FUseMarketSell := StrToBoolDef(json_main.ReadString('market_sell','false'), False);
@@ -701,8 +752,11 @@ begin
   FHighTakeProfit := FProfitCtrl.Percent;
   json_main.WriteString('high_take_profit', FloatToStr(FHighTakeProfit));
 
-  FHighMinRed := FMinRedCtrl.Percent;
-  json_main.WriteString('high_min_reduction', FloatToStr(FHighMinRed));
+  FHighUpMinRed := FMinUpRedCtrl.Percent;
+  json_main.WriteString('high_min_reduction', FloatToStr(FHighUpMinRed));
+
+  FHighDownMinRed := FMinDownRedCtrl.Percent;
+  json_main.WriteString('high_min_reduction_downtrend', FloatToStr(FHighDownMinRed));
 
   json_main.WriteString('market_buy', BoolToStr(FUseMarketBuy, True));
   json_main.WriteString('market_sell', BoolToStr(FUseMarketSell, True));
@@ -711,8 +765,8 @@ begin
 
   json_main.WriteString('buy_uptrend', BoolToStr(FBuyOnUpCtrl.Checked, True));
   json_main.WriteString('buy_downtrend', BoolToStr(FBuyOnDownCtrl.Checked, True));
-  json_main.WriteString('ignore_uptrend', BoolToStr(FIgnoreOnUpCtrl.Checked, False));
-  json_main.WriteString('ignore_downtrend', BoolToStr(FIgnoreOnDownCtrl.Checked, False));
+  json_main.WriteString('ignore_uptrend', BoolToStr(FIgnoreOnUpCtrl.Checked, True));
+  json_main.WriteString('ignore_downtrend', BoolToStr(FIgnoreOnDownCtrl.Checked, True));
 end;
 
 procedure TSimpleBot.mi_gunslingerClick(Sender: TObject);
@@ -976,14 +1030,23 @@ begin
     FProfitCtrl.Title := 'Target Profit';
     FProfitCtrl.Description := 'used to allow the strategy to begin scaling out of a position. sell positions may vary though, depending on market conditions';
 
-    FMinRedCtrl := TProfitTarget.Create(Self);
-    FMinRedCtrl.Name := 'MinReduction';
-    FMinRedCtrl.Align := TAlign.alTop;
-    FMinRedCtrl.Height := 350;
-    FMinRedCtrl.ControlWidthPercent := 1;
-    FMinRedCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
-    FMinRedCtrl.Title := 'Minimum DCA Reduction';
-    FMinRedCtrl.Description := 'specify a minimum percentage to lower your cost. if you wish to allow trading without lowering, specify "0" in the "custom" box';
+    FMinUpRedCtrl := TProfitTarget.Create(Self);
+    FMinUpRedCtrl.Name := 'MinUpReduction';
+    FMinUpRedCtrl.Align := TAlign.alTop;
+    FMinUpRedCtrl.Height := 350;
+    FMinUpRedCtrl.ControlWidthPercent := 1;
+    FMinUpRedCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FMinUpRedCtrl.Title := 'Minimum Uptrend Reduction';
+    FMinUpRedCtrl.Description := 'specify a minimum percentage to lower your cost during an uptrend. if you wish to allow trading without lowering, specify "0" in the "custom" box';
+
+    FMinDownRedCtrl := TProfitTarget.Create(Self);
+    FMinDownRedCtrl.Name := 'MinDownReduction';
+    FMinDownRedCtrl.Align := TAlign.alTop;
+    FMinDownRedCtrl.Height := 350;
+    FMinDownRedCtrl.ControlWidthPercent := 1;
+    FMinDownRedCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
+    FMinDownRedCtrl.Title := 'Minimum Downtrend Reduction';
+    FMinDownRedCtrl.Description := 'specify a minimum percentage to lower your cost during a downtrend. if you wish to allow trading without lowering, specify "0" in the "custom" box';
 
     FScaledBuyCtrl := TSingleLine.Create(Self);
     FScaledBuyCtrl.Name := 'ScaledBuy';
@@ -1024,7 +1087,7 @@ begin
     FIgnoreOnDownCtrl := TBool.Create(Self);
     FIgnoreOnDownCtrl.Name := 'IgnoreDown';
     FIgnoreOnDownCtrl.Align := TAlign.alTop;
-    FIgnoreOnDownCtrl.Title := 'Ignore Profit on Downtrend';
+    FIgnoreOnDownCtrl.Title := 'Ignore Profit on Uptrend';
     FIgnoreOnDownCtrl.Description := 'when enabled, sells will be made without taking profit into consideration on the downtrend';
     FIgnoreOnDownCtrl.Height := 300;
     FIgnoreOnDownCtrl.ControlWidthPercent := 0.30;
@@ -1036,7 +1099,8 @@ begin
     FBuyOnDownCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FScaledBuyCtrl.Parent := pnl_strat_ctrl_container;
-    FMinRedCtrl.Parent := pnl_strat_ctrl_container;
+    FMinDownRedCtrl.Parent := pnl_strat_ctrl_container;
+    FMinUpRedCtrl.Parent := pnl_strat_ctrl_container;
     FProfitCtrl.Parent := pnl_strat_ctrl_container;
     FSellPosSizeCtrl.Parent := pnl_strat_ctrl_container;
     FDownFundCtrl.Parent := pnl_strat_ctrl_container;
@@ -1290,7 +1354,7 @@ begin
   InterpolateSellPositionSetting(FHighSellPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
   FHighTakeProfit := FProfitCtrl.Percent;
-  FHighMinRed := FMinRedCtrl.Percent;
+  FHighUpMinRed := FMinUpRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
   LScaledBuy := StrToFloatDef(FScaledBuyCtrl.Text, 0);
 
@@ -1310,15 +1374,6 @@ begin
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
-
-  if FHighMinRed > 0 then
-  begin
-    LSellForMoniesLowest.OnlyLowerAAC := True;
-    LSellForMoniesLowest.MinReduction := FHighMinRed / 3;
-  end
-  else
-    LSellForMoniesLowest.OnlyLowerAAC := False;
-
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := LScaledBuy;
@@ -1367,15 +1422,6 @@ begin
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
-
-  if FHighMinRed > 0 then
-  begin
-    LSellForMoniesLow.OnlyLowerAAC := True;
-    LSellForMoniesLow.MinReduction := FHighMinRed / 2;
-  end
-  else
-    LSellForMoniesLow.OnlyLowerAAC := False;
-
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
   LSellForMoniesLow.MaxScaledBuyPerc := LScaledBuy;
@@ -1424,15 +1470,6 @@ begin
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
-
-  if FHighMinRed > 0 then
-  begin
-    LSellForMonies.OnlyLowerAAC := True;
-    LSellForMonies.MinReduction := FHighMinRed;
-  end
-  else
-    LSellForMonies.OnlyLowerAAC := False;
-
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
   LSellForMonies.MaxScaledBuyPerc := LScaledBuy;
@@ -1573,7 +1610,7 @@ begin
   InterpolateSellPositionSetting(FHighSellPosSize);
   InterpolateDCAPositionSetting(FHighDCASize);
   FHighTakeProfit := FProfitCtrl.Percent;
-  FHighMinRed := FMinRedCtrl.Percent;
+  FHighUpMinRed := FMinUpRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
   LScaledBuy := StrToFloatDef(FScaledBuyCtrl.Text, 0);
 
@@ -1593,15 +1630,6 @@ begin
   LSellForMoniesLowest.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLowest.LimitFee := FLimitFee;
   LSellForMoniesLowest.MarketFee := FMarketFee;
-
-  if FHighMinRed > 0 then
-  begin
-    LSellForMoniesLowest.OnlyLowerAAC := True;
-    LSellForMoniesLowest.MinReduction := FHighMinRed / 3;
-  end
-  else
-    LSellForMoniesLowest.OnlyLowerAAC := False;
-
   LSellForMoniesLowest.OnlyProfit := True;
   LSellForMoniesLowest.MinProfit := FHighTakeProfit / 3;
   LSellForMoniesLowest.MaxScaledBuyPerc := LScaledBuy;
@@ -1650,15 +1678,6 @@ begin
   LSellForMoniesLow.IgnoreOnlyProfitThreshold := 0;
   LSellForMoniesLow.LimitFee := FLimitFee;
   LSellForMoniesLow.MarketFee := FMarketFee;
-
-  if FHighMinRed > 0 then
-  begin
-    LSellForMoniesLow.OnlyLowerAAC := True;
-    LSellForMoniesLow.MinReduction := FHighMinRed / 2;
-  end
-  else
-    LSellForMoniesLow.OnlyLowerAAC := False;
-
   LSellForMoniesLow.OnlyProfit := True;
   LSellForMoniesLow.MinProfit := FHighTakeProfit / 2;
   LSellForMoniesLow.MaxScaledBuyPerc := LScaledBuy;
@@ -1707,15 +1726,6 @@ begin
   LSellForMonies.IgnoreOnlyProfitThreshold := 0;
   LSellForMonies.LimitFee := FLimitFee;
   LSellForMonies.MarketFee := FMarketFee;
-
-  if FHighMinRed > 0 then
-  begin
-    LSellForMonies.OnlyLowerAAC := True;
-    LSellForMonies.MinReduction := FHighMinRed;
-  end
-  else
-    LSellForMonies.OnlyLowerAAC := False;
-
   LSellForMonies.OnlyProfit := True;
   LSellForMonies.MinProfit := FHighTakeProfit;
   LSellForMonies.MaxScaledBuyPerc := LScaledBuy;

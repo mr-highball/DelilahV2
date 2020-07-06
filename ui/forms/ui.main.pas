@@ -12,7 +12,7 @@ uses
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
   delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration,
   ui.usercontrol.slider, ui.usercontrol.profittarget, utilities.tickerparser.main,
-  ui.usercontrol.boolean
+  ui.usercontrol.boolean, delilah.strategy.bobber.gdax
   {, ezthreads};
 
 type

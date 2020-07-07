@@ -59,6 +59,7 @@ type
     FLimitBuy,
     FLimitSell: Boolean;
     FOrder : IOrderDetails;
+    FOrderID : String;
 
     (*
       handles state for a new ticker when we are in position
@@ -406,15 +407,85 @@ function TGDAXBobberStrategyImpl.ClosePosition(const ATicker: ITickerGDAX;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
 var
-  LBid, LMin: Extended;
+  LBid, LMin, LSize: Extended;
   LOrder: IGDAXOrder;
+  LError : String;
+
+  (*
+    fixed base determines sell amount in 'base' currency (ie.btc/usd usd would be base)
+  *)
+  function FixedBaseSize : Extended;
+  begin
+    //find the total value in base that we have
+    Result := LBid * AInventory;
+
+    //as long as the total inventory is greater than what is set to maintain,
+    //return the smaller of the two, otherwise return the total inventory value
+    if Result >= FFunds then
+      Result := FFunds;
+  end;
+
+  (*
+    fixed coin determines sell size in 'product' (ie. btc/usd btc would be coin)
+  *)
+  function FixedCoinSize : Extended;
+  begin
+    Result := AInventory;
+
+    //as long as the total inventory is greater than what is set to maintain,
+    //return the smaller of the two, otherwise return all of inventory
+    if Result >= FFunds then
+      Result := FFunds;
+  end;
+
+  (*
+    percent available will determine sell size on a percent of current inventory
+  *)
+  function PercentAvailableSize : Extended;
+  begin
+    //set the result to a percentage current inv
+    Result := AInventory * FFunds;
+
+    //minimum inventory check
+    if Result < LMin then
+      Result := LMin;
+  end;
+
+  (*
+    percent total calculates the account's 'total' value, and takes a percentage
+    of this to sell
+  *)
+  function PercentTotalSize : Extended;
+  var
+    LCurrent : Extended;
+  begin
+    //in this case ffunds is a percent of total
+    Result := (AInventory * AAAC + AFunds) * FFunds;
+
+    //find the current value of inventory
+    LCurrent := AInventory * AAAC;
+
+    //when the current value is less than what is requested, set it to current
+    if Result >= LCurrent then
+      Result := LCurrent;
+  end;
+
 begin
   try
     Result := False;
 
+    //initialize local vars
+    LBid := ATicker.Ticker.Bid;
+    LSize := 0;
+    LMin := ATicker.Ticker.Product.BaseMinSize;
+
+    //since we use market orders, we need to adjust for funds
+    if not FLimitSell and (LMin < (ATicker.Ticker.Product.MinMarketFunds / LBid)) then
+      LMin :=  ATicker.Ticker.Product.MinMarketFunds / LBid;
+
     //position size is "actual" inventory, but we need to check if what we
     //have recorded isn't less than what is currently available
-    if FPosSize < AInventory then
+    if FPosSize > AInventory then
       FPosSize := AInventory;
 
     //check to see if our position is less than the minimum size, if so
@@ -426,35 +497,58 @@ begin
       Exit(True);
     end;
 
-    //
-    LBid := ATicker.Ticker.Bid;
-
-    //since we use market orders, we need to adjust for funds
-    if LMin < (ATicker.Ticker.Product.MinMarketFunds / LBid) then
-      LMin :=  ATicker.Ticker.Product.MinMarketFunds / LBid;
+    //determine the size of the order dependant on the mode
+    case FMode of
+      bmFixedBase:
+        LSize := FixedBaseSize;
+      bmFixedCoin:
+        LSize := FixedCoinSize;
+      bmPercentAvailable:
+        LSize := PercentAvailableSize;
+      bmPercentTotal:
+        LSize := PercentTotalSize;
+      else
+      begin
+        Error := 'ClosePosition::unhandled funds mode';
+        Exit;
+      end
+    end;
 
     //create and initialize an order
     LOrder := TGDAXOrderImpl.Create;
     LOrder.Product := ATicker.Ticker.Product;
-    LOrder.OrderType := otMarket; //for now to ensure we get the position always do market
-    LOrder.Side := osBuy;
-    LOrder.Price := LBid;
-    LOrder.Size := Trunc(ASize / LBid / LMin) * LMin; //todo - figure out size based on funds mode
 
-    if LOrder.Size < LMin then
+    if FLimitSell then
+      LOrder.OrderType := otLimit
+    else
+      LOrder.OrderType := otMarket;
+
+    LOrder.Side := osSell;
+    LOrder.Price := LBid;
+    LOrder.Size := Trunc(LSize / LBid / LMin) * LMin;
+
+    //if the size doesn't work out for market, flip to limit
+    if (LOrder.Size < LMin) and (LOrder.OrderType = otMarket) then
+    begin
+      LOrder.OrderType := otLimit;
       LOrder.Size := LMin;
+    end;
 
     //record the details so we can monitor status
     FOrder := TGDAXOrderDetailsImpl.Create(LOrder);
 
-    //submit the order
-    //...
+    //try and submit the order
+    if not AManager.Place(FOrder, FOrderID, LError) then
+    begin
+      Error := 'ClosePosition::' + LError;
 
-    //if failure we don't update state
-    //...
+      //if failure we don't update state
+      Exit;
+    end;
 
-    //success
-    //Result := True;
+    //on success update the state to 'entering' and return
+    FState := bsEntering;
+    Result := True;
   except on E : Exception do
     Error := 'ClosePosition::' + E.Message;
   end;
@@ -463,11 +557,148 @@ end;
 function TGDAXBobberStrategyImpl.OpenPosition(const ATicker: ITickerGDAX;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
+var
+  LAsk, LMin, LSize: Extended;
+  LOrder: IGDAXOrder;
+  LError : String;
+
+  (*
+    fixed base determines sell amount in 'base' currency (ie.btc/usd usd would be base)
+  *)
+  function FixedBaseSize : Extended;
+  begin
+    //find the total value in base that we have
+    Result := LAsk * AInventory;
+
+    //as long as the total inventory is greater than what is set to maintain,
+    //return the smaller of the two, otherwise return the total inventory value
+    if Result >= FFunds then
+      Result := FFunds;
+  end;
+
+  (*
+    fixed coin determines sell size in 'product' (ie. btc/usd btc would be coin)
+  *)
+  function FixedCoinSize : Extended;
+  begin
+    Result := AInventory;
+
+    //as long as the total inventory is greater than what is set to maintain,
+    //return the smaller of the two, otherwise return all of inventory
+    if Result >= FFunds then
+      Result := FFunds;
+  end;
+
+  (*
+    percent available will determine sell size on a percent of current inventory
+  *)
+  function PercentAvailableSize : Extended;
+  begin
+    //set the result to a percentage current inv
+    Result := AInventory * FFunds;
+
+    //minimum inventory check
+    if Result < LMin then
+      Result := LMin;
+  end;
+
+  (*
+    percent total calculates the account's 'total' value, and takes a percentage
+    of this to sell
+  *)
+  function PercentTotalSize : Extended;
+  var
+    LCurrent : Extended;
+  begin
+    //in this case ffunds is a percent of total
+    Result := (AInventory * AAAC + AFunds) * FFunds;
+
+    //find the current value of inventory
+    LCurrent := AInventory * AAAC;
+
+    //when the current value is less than what is requested, set it to current
+    if Result >= LCurrent then
+      Result := LCurrent;
+  end;
+
 begin
   try
     Result := False;
-    Error := 'OpenPosition::not impl';
 
+    //initialize local vars
+    LAsk := ATicker.Ticker.Bid;
+    LSize := 0;
+    LMin := ATicker.Ticker.Product.BaseMinSize;
+
+    //since we use market orders, we need to adjust for funds
+    if not FLimitBuy and  (LMin < (ATicker.Ticker.Product.MinMarketFunds / LAsk)) then
+      LMin :=  ATicker.Ticker.Product.MinMarketFunds / LAsk;
+
+    //determine the max that we can p
+    if (AFunds / LAsk) > AInventory then
+      FPosSize := AInventory;
+
+    //check to see if our position is less than the minimum size, if so
+    //we can skip straight to "out of position"
+    if FPosSize < ATicker.Ticker.Product.BaseMinSize then
+    begin
+      FPosSize := 0;
+      FState := bsOutPos;
+      Exit(True);
+    end;
+
+    //determine the size of the order dependant on the mode
+    case FMode of
+      bmFixedBase:
+        LSize := FixedBaseSize;
+      bmFixedCoin:
+        LSize := FixedCoinSize;
+      bmPercentAvailable:
+        LSize := PercentAvailableSize;
+      bmPercentTotal:
+        LSize := PercentTotalSize;
+      else
+      begin
+        Error := 'OpenPosition::unhandled funds mode';
+        Exit;
+      end
+    end;
+
+    //create and initialize an order
+    LOrder := TGDAXOrderImpl.Create;
+    LOrder.Product := ATicker.Ticker.Product;
+
+    if FLimitSell then
+      LOrder.OrderType := otLimit
+    else
+      LOrder.OrderType := otMarket;
+
+    LOrder.Side := osSell;
+    LOrder.Price := LAsk;
+    LOrder.Size := Trunc(LSize / LAsk / LMin) * LMin;
+
+    //if the size doesn't work out for market, flip to limit
+    if (LOrder.Size < LMin) and (LOrder.OrderType = otMarket) then
+    begin
+      LOrder.OrderType := otLimit;
+      LOrder.Size := LMin;
+    end;
+
+    //record the details so we can monitor status
+    FOrder := TGDAXOrderDetailsImpl.Create(LOrder);
+
+    //try and submit the order
+    if not AManager.Place(FOrder, FOrderID, LError) then
+    begin
+      Error := 'OpenPosition::' + LError;
+
+      //if failure we don't update state
+      Exit;
+    end;
+
+    //on success update the state to 'entering' and return
+    FState := bsEntering;
+    Result := True;
   except on E : Exception do
     Error := 'OpenPosition::' + E.Message;
   end;

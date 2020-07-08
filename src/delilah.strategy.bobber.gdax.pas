@@ -105,6 +105,8 @@ type
     *)
     function OpenPosition(const ATicker : ITickerGDAX; const AManager : IOrderManager;
       const AFunds, AInventory, AAAC : Extended; out Error : String) : Boolean;
+
+    procedure AdjustForQuoteSize(var Size : Extended; const ATicker : ITickerGDAX);
   protected
     function GetThresh: Extended;
     function GetPositionSize: Extended;
@@ -474,15 +476,6 @@ begin
   try
     Result := False;
 
-    //initialize local vars
-    LBid := ATicker.Ticker.Bid;
-    LSize := 0;
-    LMin := ATicker.Ticker.Product.BaseMinSize;
-
-    //since we use market orders, we need to adjust for funds
-    if not FLimitSell and (LMin < (ATicker.Ticker.Product.MinMarketFunds / LBid)) then
-      LMin :=  ATicker.Ticker.Product.MinMarketFunds / LBid;
-
     //position size is "actual" inventory, but we need to check if what we
     //have recorded isn't less than what is currently available
     if FPosSize > AInventory then
@@ -496,6 +489,15 @@ begin
       FState := bsOutPos;
       Exit(True);
     end;
+
+    //initialize local vars
+    LBid := ATicker.Ticker.Bid;
+    LSize := 0;
+    LMin := ATicker.Ticker.Product.BaseMinSize;
+
+    //since we use market orders, we need to adjust for funds
+    if not FLimitSell and (LMin < (ATicker.Ticker.Product.MinMarketFunds / LBid)) then
+      LMin :=  ATicker.Ticker.Product.MinMarketFunds / LBid;
 
     //determine the size of the order dependant on the mode
     case FMode of
@@ -514,6 +516,9 @@ begin
       end
     end;
 
+    //now make sure we respect the quote increment
+    AdjustForQuoteSize(LSize, ATicker);
+
     //create and initialize an order
     LOrder := TGDAXOrderImpl.Create;
     LOrder.Product := ATicker.Ticker.Product;
@@ -525,14 +530,7 @@ begin
 
     LOrder.Side := osSell;
     LOrder.Price := LBid;
-    LOrder.Size := Trunc(LSize / LBid / LMin) * LMin;
-
-    //if the size doesn't work out for market, flip to limit
-    if (LOrder.Size < LMin) and (LOrder.OrderType = otMarket) then
-    begin
-      LOrder.OrderType := otLimit;
-      LOrder.Size := LMin;
-    end;
+    LOrder.Size := LSize;
 
     //record the details so we can monitor status
     FOrder := TGDAXOrderDetailsImpl.Create(LOrder);
@@ -563,12 +561,12 @@ var
   LError : String;
 
   (*
-    fixed base determines sell amount in 'base' currency (ie.btc/usd usd would be base)
+    fixed base determines buy amount in 'base' currency (ie.btc/usd usd would be base)
   *)
   function FixedBaseSize : Extended;
   begin
-    //find the total value in base that we have
-    Result := LAsk * AInventory;
+    //init to the total size we can purchase
+    Result := FFunds / LAsk;
 
     //as long as the total inventory is greater than what is set to maintain,
     //return the smaller of the two, otherwise return the total inventory value
@@ -634,19 +632,6 @@ begin
     if not FLimitBuy and  (LMin < (ATicker.Ticker.Product.MinMarketFunds / LAsk)) then
       LMin :=  ATicker.Ticker.Product.MinMarketFunds / LAsk;
 
-    //determine the max that we can p
-    if (AFunds / LAsk) > AInventory then
-      FPosSize := AInventory;
-
-    //check to see if our position is less than the minimum size, if so
-    //we can skip straight to "out of position"
-    if FPosSize < ATicker.Ticker.Product.BaseMinSize then
-    begin
-      FPosSize := 0;
-      FState := bsOutPos;
-      Exit(True);
-    end;
-
     //determine the size of the order dependant on the mode
     case FMode of
       bmFixedBase:
@@ -664,6 +649,17 @@ begin
       end
     end;
 
+    //check minimum order amount
+    if LSize < LMin then
+      LSize := LMin;
+
+    //now make sure we respect the quote increment
+    AdjustForQuoteSize(LSize, ATicker);
+
+    //now do a final check to see if we have enough funds to cover the buy
+    if (LSize * LAsk) < AFunds then
+      Exit(True);
+
     //create and initialize an order
     LOrder := TGDAXOrderImpl.Create;
     LOrder.Product := ATicker.Ticker.Product;
@@ -673,16 +669,9 @@ begin
     else
       LOrder.OrderType := otMarket;
 
-    LOrder.Side := osSell;
+    LOrder.Side := osBuy;
     LOrder.Price := LAsk;
-    LOrder.Size := Trunc(LSize / LAsk / LMin) * LMin;
-
-    //if the size doesn't work out for market, flip to limit
-    if (LOrder.Size < LMin) and (LOrder.OrderType = otMarket) then
-    begin
-      LOrder.OrderType := otLimit;
-      LOrder.Size := LMin;
-    end;
+    LOrder.Size := LSize;
 
     //record the details so we can monitor status
     FOrder := TGDAXOrderDetailsImpl.Create(LOrder);
@@ -702,6 +691,22 @@ begin
   except on E : Exception do
     Error := 'OpenPosition::' + E.Message;
   end;
+end;
+
+procedure TGDAXBobberStrategyImpl.AdjustForQuoteSize(var Size: Extended;
+  const ATicker: ITickerGDAX);
+var
+  LQuote : Extended;
+begin
+  LQuote := ATicker.Ticker.Product.QuoteIncrement;
+
+  if LQuote < ATicker.Ticker.Product.BaseMinSize then
+    LQuote := ATicker.Ticker.Product.BaseMinSize;
+
+  if LQuote <= 0 then
+    Exit;
+
+  Size := Trunc(Size / LQuote) * LQuote;
 end;
 
 procedure TGDAXBobberStrategyImpl.ExitPosition;

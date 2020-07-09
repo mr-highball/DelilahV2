@@ -32,8 +32,8 @@ type
 
   { IBobberStrategy }
   (*
-    bobber strategy is probably not named very well to how it should behave,
-    but it's the mental picture I had in mind...
+    bobber strategy maintains a "floating" amount of funds that are affected
+    by price movements
 
     general workings should go like...
     You start at a price point and specify the threshold (ie. 0.5%).

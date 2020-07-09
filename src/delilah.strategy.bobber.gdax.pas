@@ -898,15 +898,15 @@ var
   end;
 
   (*
-    percent available will determine sell size on a percent of current inventory
+    percent available will determine sell size on a percent of current funds
   *)
   function PercentAvailableSize : Extended;
   begin
     //set the result to a percentage current inv
-    Result := AInventory * FFunds;
+    Result := (AFunds * FFunds) / LAsk;
 
     //minimum inventory check
-    if Result > LMin then
+    if Result < LMin then
       Result := LMin;
   end;
 

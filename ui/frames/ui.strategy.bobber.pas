@@ -82,7 +82,7 @@ begin
 
   if LStrat.FundsMode = bmPercentTotal then
     radio_funds_mode.ItemIndex := radio_funds_mode.Items.IndexOf('bmPercentTotal')
-  else if LStrat.FundsMode = bmPercentTotal then
+  else if LStrat.FundsMode = bmPercentAvailable then
     radio_funds_mode.ItemIndex := radio_funds_mode.Items.IndexOf('bmPercentAvailable')
   else if LStrat.FundsMode = bmFixedBase then
     radio_funds_mode.ItemIndex := radio_funds_mode.Items.IndexOf('bmFixedBase')

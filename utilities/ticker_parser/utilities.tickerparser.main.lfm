@@ -11,7 +11,7 @@ object TickerParser: TTickerParser
   OnDestroy = FormDestroy
   OnShow = FormShow
   ShowHint = True
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.8.0'
   object pctrl_main: TPageControl
     Left = 0
     Height = 648
@@ -212,7 +212,7 @@ object TickerParser: TTickerParser
         ParentShowHint = False
         ShowHint = True
         TabOrder = 2
-        Text = '0.02'
+        Text = '0.002'
         TextHint = 'fee %'
       end
       object progress_simulate: TProgressBar

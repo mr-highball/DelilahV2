@@ -33,7 +33,8 @@ var
 implementation
 uses
   ui.strategy.tiers,
-  ui.strategy.acceleration.gdax;
+  ui.strategy.acceleration.gdax,
+  ui.strategy.bobber;
 
 {$R *.lfm}
 
@@ -43,8 +44,10 @@ function TStrategyPicker.GetConfig: TConfigureStrategyClass;
 begin
   if radio_options.ItemIndex <= 0 then
     Result := TConfigureTiers
+  else if radio_options.ItemIndex = 1 then
+    Result := TConfigureAccelerationGDAX
   else
-    Result := TConfigureAccelerationGDAX;
+    Result := TConfigureBobber;
 end;
 
 end.

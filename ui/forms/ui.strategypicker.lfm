@@ -8,7 +8,7 @@ object StrategyPicker: TStrategyPicker
   ClientWidth = 914
   Color = clWhite
   DesignTimePPI = 192
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.0.8.0'
   object pnl_ctrls: TPanel
     Left = 0
     Height = 100
@@ -56,6 +56,7 @@ object StrategyPicker: TStrategyPicker
     Items.Strings = (
       'Tiers (GDAX)'
       'Acceleration (GDAX)'
+      'Bobber (GDAX)'
     )
     TabOrder = 1
   end

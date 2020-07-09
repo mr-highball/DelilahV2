@@ -730,10 +730,12 @@ var
     //find the total value in base that we have
     Result := LBid * AInventory;
 
-    //as long as the total inventory is greater than what is set to maintain,
-    //return the smaller of the two, otherwise return the total inventory value
+    //check to see if the value of position is greater than requested amount
     if Result >= FFunds then
       Result := FFunds;
+
+    //now return the size
+    Result := Result / LBid;
   end;
 
   (*
@@ -771,10 +773,10 @@ var
     LCurrent : Extended;
   begin
     //in this case ffunds is a percent of total
-    Result := (AInventory * AAAC + AFunds) * FFunds;
+    Result := ((AInventory * AAAC + AFunds) * FFunds) / LBid;
 
     //find the current value of inventory
-    LCurrent := AInventory * AAAC;
+    LCurrent := (AInventory * AAAC) / LBid;
 
     //when the current value is less than what is requested, set it to current
     if Result >= LCurrent then
@@ -877,10 +879,9 @@ var
     //init to the total size we can purchase
     Result := FFunds / LAsk;
 
-    //as long as the total inventory is greater than what is set to maintain,
-    //return the smaller of the two, otherwise return the total inventory value
-    if Result >= FFunds then
-      Result := FFunds;
+    //if we don't have enough funds to cover the fixed amount, use the total funds
+    if Result > (AFunds / LAsk) then
+      Result := AFunds / LAsk;
   end;
 
   (*
@@ -892,7 +893,7 @@ var
 
     //as long as the total inventory is greater than what is set to maintain,
     //return the smaller of the two, otherwise return all of inventory
-    if Result >= FFunds then
+    if Result > FFunds then
       Result := FFunds;
   end;
 
@@ -905,7 +906,7 @@ var
     Result := AInventory * FFunds;
 
     //minimum inventory check
-    if Result < LMin then
+    if Result > LMin then
       Result := LMin;
   end;
 
@@ -918,10 +919,10 @@ var
     LCurrent : Extended;
   begin
     //in this case ffunds is a percent of total
-    Result := (AInventory * AAAC + AFunds) * FFunds;
+    Result := ((AInventory * AAAC + AFunds) * FFunds) / LAsk;
 
     //find the current value of inventory
-    LCurrent := AInventory * AAAC;
+    LCurrent := (AInventory * AAAC) / LAsk;
 
     //when the current value is less than what is requested, set it to current
     if Result >= LCurrent then
@@ -966,7 +967,7 @@ begin
     AdjustForQuoteSize(LSize, ATicker);
 
     //now do a final check to see if we have enough funds to cover the buy
-    if (LSize * LAsk) < AFunds then
+    if (LSize * LAsk) > AFunds then
       Exit(True);
 
     //create and initialize an order

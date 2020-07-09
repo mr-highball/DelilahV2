@@ -1,0 +1,105 @@
+inherited ConfigureBobber: TConfigureBobber
+  Height = 642
+  ClientHeight = 642
+  inherited pnl_ctrls: TPanel
+    Top = 542
+  end
+  inherited scroll_controls: TScrollBox
+    Height = 442
+    HorzScrollBar.Page = 360
+    VertScrollBar.Page = 329
+    ClientHeight = 438
+    ClientWidth = 914
+    object chk_limit_buy: TCheckBox[0]
+      AnchorSideTop.Control = radio_funds_mode
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 36
+      Top = 249
+      Width = 717
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      Caption = 'Limit Buy'
+      TabOrder = 0
+    end
+    object chk_limit_sell: TCheckBox[1]
+      AnchorSideTop.Control = chk_limit_buy
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 36
+      Top = 293
+      Width = 717
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 8
+      Caption = 'Limit Sell'
+      TabOrder = 1
+    end
+    object edit_threshold: TEdit[2]
+      AnchorSideLeft.Control = scroll_controls
+      AnchorSideTop.Control = scroll_controls
+      AnchorSideRight.Control = scroll_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 8
+      Width = 714
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 100
+      BorderSpacing.Top = 8
+      BorderSpacing.Right = 100
+      TabOrder = 2
+      TextHint = 'Threshold'
+    end
+    object edit_funds: TEdit[3]
+      AnchorSideLeft.Control = scroll_controls
+      AnchorSideTop.Control = edit_threshold
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = scroll_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 40
+      Top = 56
+      Width = 714
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 100
+      BorderSpacing.Top = 8
+      BorderSpacing.Right = 100
+      TabOrder = 3
+      TextHint = 'Funds'
+    end
+    object radio_funds_mode: TRadioGroup[4]
+      AnchorSideLeft.Control = edit_funds
+      AnchorSideTop.Control = edit_funds
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = edit_funds
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 135
+      Top = 106
+      Width = 714
+      Anchors = [akTop, akLeft, akRight]
+      AutoFill = True
+      BorderSpacing.Top = 10
+      Caption = 'Funds Mode'
+      ChildSizing.LeftRightSpacing = 6
+      ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+      ChildSizing.EnlargeVertical = crsHomogenousChildResize
+      ChildSizing.ShrinkHorizontal = crsScaleChilds
+      ChildSizing.ShrinkVertical = crsScaleChilds
+      ChildSizing.Layout = cclLeftToRightThenTopToBottom
+      ChildSizing.ControlsPerLine = 2
+      ClientHeight = 98
+      ClientWidth = 710
+      Columns = 2
+      Items.Strings = (
+        'bmPercentTotal'
+        'bmPercentAvailable'
+        'bmFixedBase'
+        'bmFixedCoin'
+      )
+      TabOrder = 4
+    end
+  end
+end

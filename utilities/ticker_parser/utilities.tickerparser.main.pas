@@ -161,7 +161,8 @@ uses
   ui.strategypicker,
   ui.strategyconfig,
   ui.strategy.tiers,
-  ui.strategy.acceleration.gdax
+  ui.strategy.acceleration.gdax,
+  ui.strategy.bobber
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};

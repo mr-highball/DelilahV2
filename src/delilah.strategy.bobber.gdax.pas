@@ -9,6 +9,7 @@ uses
   SysUtils,
   delilah.types,
   delilah.strategy.gdax,
+  delilah.order.gdax,
   delilah.strategy.bobber,
   delilah.ticker.gdax;
 
@@ -58,7 +59,7 @@ type
     FEnterRequest,
     FLimitBuy,
     FLimitSell: Boolean;
-    FOrder : IOrderDetails;
+    FOrder : IGDAXOrderDetails;
     FOrderID : String;
 
     (*
@@ -106,6 +107,9 @@ type
     function OpenPosition(const ATicker : ITickerGDAX; const AManager : IOrderManager;
       const AFunds, AInventory, AAAC : Extended; out Error : String) : Boolean;
 
+    (*
+      avoid "too specific" errors by using the quote increment for order size
+    *)
     procedure AdjustForQuoteSize(var Size : Extended; const ATicker : ITickerGDAX);
   protected
     function GetThresh: Extended;
@@ -146,7 +150,6 @@ type
 
 implementation
 uses
-  delilah.order.gdax,
   gdax.api.types,
   gdax.api.orders,
   gdax.api.consts;
@@ -356,15 +359,321 @@ end;
 function TGDAXBobberStrategyImpl.FeedEnteringPos(const ATicker: ITickerGDAX;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
-begin
+const
+  (*
+    used to cancel limit orders and retry when the cancel clears at cb
+  *)
+  RETRY_ENTER : Boolean = False;
 
+var
+  LStatus: TOrderManagerStatus;
+  LDetails : IOrderDetails;
+
+  procedure ClearOrderDetails;
+  begin
+    FOrder := nil;
+    FOrderID := '';
+    RETRY_ENTER := False;
+  end;
+
+  procedure PlaceReplacementOrder;
+  var
+    LReplacement : IGDAXOrderDetails;
+    LSize : Extended;
+    LID : String;
+  begin
+    //init size by subtracting partials (held in pos size) from total
+    LSize := FOrder.Order.Size - FPosSize;
+    AdjustForQuoteSize(LSize, ATicker);
+
+    //when the new size would be smaller than the minimum, we can
+    //just exit and let the next feed finalize the position
+    if LSize < ATicker.Ticker.Product.BaseMinSize then
+    begin
+      RETRY_ENTER := False;
+      Exit;
+    end;
+
+    //adjust some fields on the order to place it again
+    FOrder.Order.Size := LSize;
+    FOrder.Order.FilledSized := 0;
+    FOrder.Order.OrderStatus := stUnknown;
+    FOrder.Order.ID := '';
+
+    //to simplify things we'll just "chase" the bid until we can get a fill
+    FOrder.Order.Price := ATicker.Ticker.Bid;
+    LReplacement := TGDAXOrderDetailsImpl.Create(FOrder.Order);
+
+    //if we can't place the order then bubble up the exception
+    if not AManager.Place(LReplacement, LID, Error) then
+      raise Exception.Create('PlaceReplacementOrder::' + Error);
+
+    ClearOrderDetails;
+
+    //update new order info
+    FOrderID := LID;
+    FOrder := LReplacement;
+  end;
+
+begin
+  try
+    Result := False;
+
+    //don't be dumb
+    if FPosSize < 0 then
+      FPosSize := 0;
+
+    //orders are removed from the manager on completion, so first check
+    //to see if it exists
+    if not AManager.Exists[FOrderID] then
+    begin
+      //shouldn't happen, but in this case reset
+      if not Assigned(FOrder) then
+      begin
+        FState := bsOutPos;
+        FPosSize := 0;
+        ClearOrderDetails;
+      end
+      //handle cancels by setting to out of position
+      else if FOrder.Order.OrderStatus = stCancelled then
+      begin
+        if RETRY_ENTER then
+          PlaceReplacementOrder;
+      end
+      //handle completed status
+      else
+      begin
+        //no position size, and no partials means we're out of position
+        if (FOrder.Order.FilledSized <= 0) and (FPosSize <= 0) then
+        begin
+          FState := bsOutPos;
+          FPosSize := 0;
+          ClearOrderDetails;
+        end
+        //in-position
+        else
+        begin
+          //add position size plus the filled size to account for any
+          //subsequent partials
+          FPosSize := FPosSize + FOrder.Order.FilledSized;
+          FState := bsInPos;
+          ClearOrderDetails;
+        end;
+      end;
+    end
+    //otherwise we need to handle either re-placing limit orders or waiting
+    else
+    begin
+      LStatus := AManager.Status[FOrderID];
+
+      //handle cancels by setting to out of position or in-position for partial
+      if LStatus = omCanceled then
+      begin
+        //check if retrying
+        if RETRY_ENTER then
+          PlaceReplacementOrder
+        //cancelled externally? if so just count this as in position
+        else if (FPosSize > 0) or (FOrder.Order.FilledSized > 0) then
+        begin
+          FPosSize := FPosSize + FOrder.Order.FilledSized;
+          FState := bsInPos;
+          ClearOrderDetails;
+        end
+        //otherwise we'll go ahead and update state to out of pos
+        else
+        begin
+          FState := bsOutPos;
+          FPosSize := 0;
+          ClearOrderDetails;
+        end;
+      end
+      //check for completion
+      else if LStatus = omCompleted then
+      begin
+        FPosSize := FPosSize + FOrder.Order.FilledSized;
+        FState := bsInPos;
+        ClearOrderDetails;
+      end
+      //for limit orders that are active we handle trying to keep up with the price
+      else if (LStatus = omActive) and (FOrder.Order.OrderType = otLimit) then
+      begin
+        //if the bid hasn't changed then there's nothing to do
+        if ATicker.Ticker.Bid = FOrder.Order.Price then
+          Exit(True);
+
+        //attempt to cancel
+        if not AManager.Cancel(FOrderID, LDetails, Error) then
+        begin
+          Error := 'FeedEnteringPos::' + Error;
+          Exit;
+        end;
+
+        //mark to retry this
+        RETRY_ENTER := True;
+      end;
+    end;
+
+    //if no conditions bailed early above move on for the next feed
+    Result := True;
+  except on E : Exception do
+    Error := 'FeedEnteringPos::' + E.Message;
+  end;
 end;
 
 function TGDAXBobberStrategyImpl.FeedExitingPos(const ATicker: ITickerGDAX;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
-begin
+const
+  (*
+    used to cancel limit orders and retry when the cancel clears at cb
+  *)
+  RETRY_EXIT : Boolean = False;
 
+var
+  LStatus: TOrderManagerStatus;
+  LDetails : IOrderDetails;
+
+  procedure ClearOrderDetails;
+  begin
+    FOrder := nil;
+    FOrderID := '';
+    RETRY_EXIT := False;
+  end;
+
+  procedure PlaceReplacementOrder;
+  var
+    LReplacement : IGDAXOrderDetails;
+    LSize : Extended;
+    LID : String;
+  begin
+    //in this case pos size is decrement for partials so we can use it directly
+    LSize := FPosSize;
+    AdjustForQuoteSize(LSize, ATicker);
+
+    //when the new size would be smaller than the minimum, we can
+    //just exit and let the next feed finalize the position
+    if LSize < ATicker.Ticker.Product.BaseMinSize then
+    begin
+      RETRY_EXIT := False;
+      Exit;
+    end;
+
+    //adjust some fields on the order to place it again
+    FOrder.Order.Size := LSize;
+    FOrder.Order.FilledSized := 0;
+    FOrder.Order.OrderStatus := stUnknown;
+    FOrder.Order.ID := '';
+
+    //to simplify things we'll just "chase" the Ask until we can get a fill
+    FOrder.Order.Price := ATicker.Ticker.Ask;
+    LReplacement := TGDAXOrderDetailsImpl.Create(FOrder.Order);
+
+    //if we can't place the order then bubble up the exception
+    if not AManager.Place(LReplacement, LID, Error) then
+      raise Exception.Create('PlaceReplacementOrder::' + Error);
+
+    ClearOrderDetails;
+
+    //update new order info
+    FOrderID := LID;
+    FOrder := LReplacement;
+  end;
+
+begin
+  try
+    Result := False;
+
+    //orders are removed from the manager on completion, so first check
+    //to see if it exists
+    if not AManager.Exists[FOrderID] then
+    begin
+      //shouldn't happen, but in this case reset
+      if not Assigned(FOrder) then
+      begin
+        FState := bsOutPos;
+        FPosSize := 0;
+        ClearOrderDetails;
+      end
+      //handle cancels by setting to out of position
+      else if FOrder.Order.OrderStatus = stCancelled then
+      begin
+        if RETRY_EXIT then
+          PlaceReplacementOrder;
+      end
+      //handle completed status (out of position)
+      else
+      begin
+        FState := bsOutPos;
+        FPosSize := 0;
+        ClearOrderDetails;
+      end;
+    end
+    //otherwise we need to handle either re-placing limit orders or waiting
+    else
+    begin
+      LStatus := AManager.Status[FOrderID];
+
+      //handle cancels by setting to out of position or in-position for partial
+      if LStatus = omCanceled then
+      begin
+        //check if retrying
+        if RETRY_EXIT then
+          PlaceReplacementOrder
+        //cancelled externally? if so check for partial
+        else if FOrder.Order.FilledSized > 0 then
+        begin
+          FPosSize := FPosSize - FOrder.Order.FilledSized;
+
+          //check to see if we need to place another order
+          if FPosSize > 0 then
+            RETRY_EXIT := True
+          //otherwise close out
+          else
+          begin
+            FState := bsOutPos;
+            FPosSize := 0;
+            ClearOrderDetails;
+          end;
+        end
+        //otherwise we'll go ahead and update state to out of pos
+        else
+        begin
+          FState := bsOutPos;
+          FPosSize := 0;
+          ClearOrderDetails;
+        end;
+      end
+      //check for completion
+      else if LStatus = omCompleted then
+      begin
+        FPosSize := 0;
+        FState := bsOutPos;
+        ClearOrderDetails;
+      end
+      //for limit orders that are active we handle trying to keep up with the price
+      else if (LStatus = omActive) and (FOrder.Order.OrderType = otLimit) then
+      begin
+        //if the ask hasn't changed then there's nothing to do
+        if ATicker.Ticker.Ask = FOrder.Order.Price then
+          Exit(True);
+
+        //attempt to cancel
+        if not AManager.Cancel(FOrderID, LDetails, Error) then
+        begin
+          Error := 'FeedExitingPos::' + Error;
+          Exit;
+        end;
+
+        //mark to retry this
+        RETRY_EXIT := True;
+      end;
+    end;
+
+    //if no conditions bailed early above move on for the next feed
+    Result := True;
+  except on E : Exception do
+    Error := 'FeedExitingPos::' + E.Message;
+  end;
 end;
 
 function TGDAXBobberStrategyImpl.IsNewAnchor(const ATicker: ITickerGDAX;
@@ -544,8 +853,8 @@ begin
       Exit;
     end;
 
-    //on success update the state to 'entering' and return
-    FState := bsEntering;
+    //on success update the state to 'exiting' and return
+    FState := bsExiting;
     Result := True;
   except on E : Exception do
     Error := 'ClosePosition::' + E.Message;

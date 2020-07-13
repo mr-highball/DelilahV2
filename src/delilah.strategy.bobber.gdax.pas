@@ -775,8 +775,8 @@ var
     //in this case ffunds is a percent of total
     Result := ((AInventory * AAAC + AFunds) * FFunds) / LBid;
 
-    //find the current value of inventory
-    LCurrent := (AInventory * AAAC) / LBid;
+    //set to the current inventory
+    LCurrent := AInventory;
 
     //when the current value is less than what is requested, set it to current
     if Result >= LCurrent then
@@ -912,7 +912,7 @@ var
 
   (*
     percent total calculates the account's 'total' value, and takes a percentage
-    of this to sell
+    of this to purchase
   *)
   function PercentTotalSize : Extended;
   var
@@ -921,8 +921,8 @@ var
     //in this case ffunds is a percent of total
     Result := ((AInventory * AAAC + AFunds) * FFunds) / LAsk;
 
-    //find the current value of inventory
-    LCurrent := (AInventory * AAAC) / LAsk;
+    //find the current total purchasable amount
+    LCurrent := AFunds  / LAsk;
 
     //when the current value is less than what is requested, set it to current
     if Result >= LCurrent then

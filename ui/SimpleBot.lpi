@@ -73,7 +73,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="44">
+    <Units Count="45">
       <Unit0>
         <Filename Value="SimpleBot.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -310,6 +310,13 @@
         <Filename Value="..\src\delilah.strategy.bobber.gdax.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit43>
+      <Unit44>
+        <Filename Value="frames\ui.strategy.bobber.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ConfigureBobber"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Unit44>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

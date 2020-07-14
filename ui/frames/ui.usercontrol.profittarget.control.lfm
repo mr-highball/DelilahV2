@@ -1,19 +1,20 @@
 object ProfitTargetControl: TProfitTargetControl
   Left = 0
-  Height = 240
+  Height = 480
   Top = 0
-  Width = 320
-  ClientHeight = 240
-  ClientWidth = 320
+  Width = 640
+  ClientHeight = 480
+  ClientWidth = 640
+  DesignTimePPI = 192
   ParentFont = False
   TabOrder = 0
   DesignLeft = 990
   DesignTop = 409
   object radio_group: TRadioGroup
     Left = 0
-    Height = 39
+    Height = 73
     Top = 0
-    Width = 320
+    Width = 640
     Align = alTop
     AutoFill = True
     AutoSize = True
@@ -24,8 +25,8 @@ object ProfitTargetControl: TProfitTargetControl
     ChildSizing.ShrinkVertical = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 7
-    ClientHeight = 19
-    ClientWidth = 316
+    ClientHeight = 36
+    ClientWidth = 636
     Columns = 7
     Items.Strings = (
       '0.5%'
@@ -46,11 +47,11 @@ object ProfitTargetControl: TProfitTargetControl
     AnchorSideTop.Side = asrBottom
     AnchorSideRight.Control = radio_group
     AnchorSideRight.Side = asrBottom
-    Left = 110
-    Height = 23
-    Top = 84
-    Width = 100
-    BorderSpacing.Top = 5
+    Left = 220
+    Height = 40
+    Top = 167
+    Width = 200
+    BorderSpacing.Top = 10
     ParentFont = False
     TabOrder = 1
     TextHint = '0.00'
@@ -62,13 +63,13 @@ object ProfitTargetControl: TProfitTargetControl
     AnchorSideRight.Control = radio_group
     AnchorSideRight.Side = asrBottom
     Left = 0
-    Height = 30
-    Top = 49
-    Width = 320
+    Height = 64
+    Top = 93
+    Width = 640
     Alignment = taCenter
     Anchors = [akTop, akLeft, akRight]
-    BorderSpacing.Top = 10
-    Caption = 'type a custom profit percentage below '#13#10'(ie. 0.10 is 10%)'
+    BorderSpacing.Top = 20
+    Caption = 'type a custom percentage below '#13#10'(ie. 0.10 is 10%)'
     ParentColor = False
     ParentFont = False
     WordWrap = True

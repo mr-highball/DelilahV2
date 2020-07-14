@@ -12,7 +12,7 @@ uses
   ui.usercontrol.singleline, ui.gunslinger.gdax, delilah.types, ui.email,
   delilah.strategy.gdax.tiers, gdax.api.ticker, delilah.strategy.acceleration,
   ui.usercontrol.slider, ui.usercontrol.profittarget, utilities.tickerparser.main,
-  ui.usercontrol.boolean, delilah.strategy.bobber.gdax
+  ui.usercontrol.boolean, delilah.strategy.bobber.gdax, ui.strategy.bobber
   {, ezthreads};
 
 type
@@ -99,6 +99,8 @@ type
     FBuyOnDownCtrl,
     FIgnoreOnUpCtrl,
     FIgnoreOnDownCtrl: TBool;
+    FBobberCtrl: TUserControl;
+    FBobberInnerCtrl: TConfigureBobber;
     FTimeFrameCtrl,
     FPosSizeCtrl,
     FSellPosSizeCtrl,
@@ -663,6 +665,13 @@ begin
   FBuyOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('buy_downtrend','true'), True);
   FIgnoreOnUpCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_uptrend','false'), False);
   FIgnoreOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_downtrend','false'), False);
+
+  //bobber
+  FBobberInnerCtrl.edit_funds.Text := FloatToStr(StrToFloatDef(json_main.ReadString('bobber_funds','0.0'), 0.0));
+  FBobberInnerCtrl.edit_threshold.Text := FloatToStr(StrToFloatDef(json_main.ReadString('bobber_threshold','0.0'), 0.0));
+  FBobberInnerCtrl.radio_funds_mode.ItemIndex := StrToIntDef(json_main.ReadString('bobber_mode','0'), 0);
+  FBobberInnerCtrl.chk_limit_buy.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_buy','true'), True);
+  FBobberInnerCtrl.chk_limit_sell.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_sell','true'), True);
 end;
 
 procedure TSimpleBot.FormCreate(Sender: TObject);
@@ -767,6 +776,14 @@ begin
   json_main.WriteString('buy_downtrend', BoolToStr(FBuyOnDownCtrl.Checked, True));
   json_main.WriteString('ignore_uptrend', BoolToStr(FIgnoreOnUpCtrl.Checked, True));
   json_main.WriteString('ignore_downtrend', BoolToStr(FIgnoreOnDownCtrl.Checked, True));
+
+
+  //bobber
+  json_main.WriteString('bobber_funds', FloatToStr(StrToFloatDef(FBobberInnerCtrl.edit_funds.Text, 0)));
+  json_main.WriteString('bobber_threshold', FloatToStr(StrToFloatDef(FBobberInnerCtrl.edit_threshold.Text, 0)));
+  json_main.WriteString('bobber_mode', IntToStr(FBobberInnerCtrl.radio_funds_mode.ItemIndex));
+  json_main.WriteString('bobber_limit_buy', BoolToStr(FBobberInnerCtrl.chk_limit_buy.Checked, True));
+  json_main.WriteString('bobber_limit_sell', BoolToStr(FBobberInnerCtrl.chk_limit_sell.Checked, True));
 end;
 
 procedure TSimpleBot.mi_gunslingerClick(Sender: TObject);
@@ -1093,7 +1110,20 @@ begin
     FIgnoreOnDownCtrl.ControlWidthPercent := 0.30;
     FIgnoreOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
+    FBobberCtrl := TUserControl.Create(Self);
+    FBobberCtrl.Name := 'Bobber';
+    FBobberCtrl.Align := TAlign.alTop;
+    FBobberCtrl.Title := 'Floating Position';
+    FBobberCtrl.Description := 'holds a floating position of inventory based on specified rules';
+    FBobberCtrl.Height := 600;
+    FBobberCtrl.ControlWidthPercent := 1;
+    FBobberCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
+    FBobberInnerCtrl := TConfigureBobber.Create(FBobberCtrl);
+    FBobberInnerCtrl.scroll_controls.Parent := FBobberCtrl.pnl_control; //not normal way to do this but didn't want to dupe ui stuff
+    FBobberInnerCtrl.edit_name.Text := 'BobberInner';
+
     //reverse order (bottom first to show)
+    FBobberCtrl.Parent := pnl_strat_ctrl_container;
     FIgnoreOnDownCtrl.Parent := pnl_strat_ctrl_container;
     FIgnoreOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnDownCtrl.Parent := pnl_strat_ctrl_container;
@@ -1321,6 +1351,7 @@ var
   LAccelLowest: IAccelerationStrategy;
   LHighDCAWindow: Cardinal;
   LScaledBuy: Extended;
+  LBobber : IGDAXBobberStrategy;
 const
   DCA_PERC = 0.0333;
   LEAD_POS_PERC = 0.75;
@@ -1347,6 +1378,7 @@ begin
   LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LBobber := TGDAXBobberStrategyImpl.Create(LogInfo, LogError, LogInfo);
 
   //make sure we have the latest settings
   InterpolateTimeSetting(FHighWindowSize);
@@ -1357,6 +1389,15 @@ begin
   FHighUpMinRed := FMinUpRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
   LScaledBuy := StrToFloatDef(FScaledBuyCtrl.Text, 0);
+
+  //----------------------------------------------------------------------------
+  //configure the bobberstrategy
+  FBobberInnerCtrl.btn_saveClick(Self); //bad practice, but meh
+  LBobber.Funds := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Funds;
+  LBobber.Threshold := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Threshold;
+  LBobber.FundsMode := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).FundsMode;
+  LBobber.UseLimitBuy := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitBuy;
+  LBobber.UseLimitSell := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitSell;
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
@@ -1509,6 +1550,7 @@ begin
   ASim.Strategies.Add(LSellForMoniesLow);
   ASim.Strategies.Add(LAccelHighest);
   ASim.Strategies.Add(LSellForMonies);
+  ASim.Strategies.Add(LBobber);
 end;
 
 procedure TSimpleBot.CheckCanStart(Sender: TObject; var Continue: Boolean);
@@ -1582,6 +1624,7 @@ var
   LAccelLowest: IAccelerationStrategy;
   LHighDCAWindow: Cardinal;
   LScaledBuy: Extended;
+  LBobber : IGDAXBobberStrategy;
 const
   DCA_PERC = 0.0333;
   LEAD_POS_PERC = 0.75;
@@ -1603,6 +1646,7 @@ begin
   LAccelLow := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
   LSellForMonies := TTierStrategyGDAXImpl.Create(LogInfo,LogError,LogInfo);
   LAccelHighest := TGDAXAccelerationStrategyImpl.Create(LogInfo,LogError,LogInfo);
+  LBobber := TGDAXBobberStrategyImpl.Create(LogInfo, LogError, LogInfo);
 
   //make sure we have the latest settings
   InterpolateTimeSetting(FHighWindowSize);
@@ -1613,6 +1657,15 @@ begin
   FHighUpMinRed := FMinUpRedCtrl.Percent;
   LHighDCAWindow := Round(FHighWindowSize * DCA_PERC);
   LScaledBuy := StrToFloatDef(FScaledBuyCtrl.Text, 0);
+
+  //----------------------------------------------------------------------------
+  //configure the bobberstrategy
+  FBobberInnerCtrl.btn_saveClick(Self); //bad practice, but meh
+  LBobber.Funds := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Funds;
+  LBobber.Threshold := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Threshold;
+  LBobber.FundsMode := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).FundsMode;
+  LBobber.UseLimitBuy := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitBuy;
+  LBobber.UseLimitSell := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitSell;
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
@@ -1768,6 +1821,7 @@ begin
   FEngine.Strategies.Add(LSellForMoniesLow);
   FEngine.Strategies.Add(LAccelHighest);
   FEngine.Strategies.Add(LSellForMonies);
+  FEngine.Strategies.Add(LBobber);
 
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;

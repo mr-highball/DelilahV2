@@ -669,6 +669,7 @@ begin
   //bobber
   FBobberInnerCtrl.edit_funds.Text := FloatToStr(StrToFloatDef(json_main.ReadString('bobber_funds','0.0'), 0.0));
   FBobberInnerCtrl.edit_threshold.Text := FloatToStr(StrToFloatDef(json_main.ReadString('bobber_threshold','0.0'), 0.0));
+  FBobberInnerCtrl.edit_anch_threshold.Text := FloatToStr(StrToFloatDef(json_main.ReadString('bobber_anchor_threshold','0.0'), 0.0));
   FBobberInnerCtrl.radio_funds_mode.ItemIndex := StrToIntDef(json_main.ReadString('bobber_mode','0'), 0);
   FBobberInnerCtrl.chk_limit_buy.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_buy','true'), True);
   FBobberInnerCtrl.chk_limit_sell.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_sell','true'), True);
@@ -781,6 +782,7 @@ begin
   //bobber
   json_main.WriteString('bobber_funds', FloatToStr(StrToFloatDef(FBobberInnerCtrl.edit_funds.Text, 0)));
   json_main.WriteString('bobber_threshold', FloatToStr(StrToFloatDef(FBobberInnerCtrl.edit_threshold.Text, 0)));
+  json_main.WriteString('bobber_anchor_threshold', FloatToStr(StrToFloatDef(FBobberInnerCtrl.edit_anch_threshold.Text, 0)));
   json_main.WriteString('bobber_mode', IntToStr(FBobberInnerCtrl.radio_funds_mode.ItemIndex));
   json_main.WriteString('bobber_limit_buy', BoolToStr(FBobberInnerCtrl.chk_limit_buy.Checked, True));
   json_main.WriteString('bobber_limit_sell', BoolToStr(FBobberInnerCtrl.chk_limit_sell.Checked, True));
@@ -1395,6 +1397,7 @@ begin
   FBobberInnerCtrl.btn_saveClick(Self); //bad practice, but meh
   LBobber.Funds := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Funds;
   LBobber.Threshold := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Threshold;
+  LBobber.AdjustAnchorThreshold := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).AdjustAnchorThreshold;
   LBobber.FundsMode := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).FundsMode;
   LBobber.UseLimitBuy := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitBuy;
   LBobber.UseLimitSell := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitSell;
@@ -1663,6 +1666,7 @@ begin
   FBobberInnerCtrl.btn_saveClick(Self); //bad practice, but meh
   LBobber.Funds := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Funds;
   LBobber.Threshold := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).Threshold;
+  LBobber.AdjustAnchorThreshold := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).AdjustAnchorThreshold;
   LBobber.FundsMode := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).FundsMode;
   LBobber.UseLimitBuy := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitBuy;
   LBobber.UseLimitSell := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitSell;

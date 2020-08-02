@@ -50,6 +50,7 @@ type
   TGDAXBobberStrategyImpl = class(TStrategyGDAXImpl, IGDAXBobberStrategy)
   strict private
     FThresh,
+    FAnchThresh,
     FPosSize,
     FAnchor,
     FFunds : Extended;
@@ -113,6 +114,7 @@ type
     procedure AdjustForQuoteSize(var Size : Extended; const ATicker : ITickerGDAX);
   protected
     function GetThresh: Extended;
+    function GetAnchThresh: Extended;
     function GetPositionSize: Extended;
     function GetState: TBobberState;
     procedure SetAnchor(const AValue: Extended);
@@ -120,6 +122,7 @@ type
     procedure SetMode(const AValue: TBobberFundsMode);
     function GetMode: TBobberFundsMode;
     procedure SetThresh(const AValue: Extended);
+    procedure SetAnchThresh(const AValue: Extended);
     function GetAnchor: Extended;
     function GetFunds: Extended;
 
@@ -132,6 +135,7 @@ type
       const AFunds, AInventory, AAAC: Extended; out Error: String): Boolean; override;
   public
     property Threshold : Extended read GetThresh write SetThresh;
+    property AdjustAnchorThreshold : Extended read GetAnchThresh write SetAnchThresh;
     property Anchor : Extended read GetAnchor write SetAnchor;
     property Funds : Extended read GetFunds write SetFunds;
     property FundsMode : TBobberFundsMode read GetMode write SetMode;
@@ -150,6 +154,7 @@ type
 
 implementation
 uses
+  typinfo,
   gdax.api.types,
   gdax.api.orders,
   gdax.api.consts;
@@ -159,6 +164,11 @@ uses
 function TGDAXBobberStrategyImpl.GetThresh: Extended;
 begin
   Result := FThresh;
+end;
+
+function TGDAXBobberStrategyImpl.GetAnchThresh: Extended;
+begin
+  Result := FAnchThresh;
 end;
 
 function TGDAXBobberStrategyImpl.GetPositionSize: Extended;
@@ -194,6 +204,11 @@ end;
 procedure TGDAXBobberStrategyImpl.SetThresh(const AValue: Extended);
 begin
   FThresh := AValue;
+end;
+
+procedure TGDAXBobberStrategyImpl.SetAnchThresh(const AValue: Extended);
+begin
+  FAnchThresh := AValue;
 end;
 
 function TGDAXBobberStrategyImpl.GetAnchor: Extended;
@@ -257,6 +272,9 @@ begin
       else
         Error := 'DoFeed::unhandled state';
     end;
+
+    //now log out the details for the strategy
+    LogInfo(Format('DoFeed::state:%s anchor:%f position:%f', [GetEnumName(TypeInfo(TBobberState), Ord(FState)), FAnchor, FPosSize]));
   except on E : Exception do
     Error := 'DoFeed::' + E.Message;
   end;
@@ -678,36 +696,53 @@ end;
 
 function TGDAXBobberStrategyImpl.IsNewAnchor(const ATicker: ITickerGDAX;
   const ABuySide: Boolean; out IsUp: Boolean; const ASetAnchor: Boolean): Boolean;
+var
+  LThresh : Extended;
 begin
   Result := False;
   IsUp := False;
 
+  //use anchor threshold first, but default to regular thresh if using a
+  //a uniform mode
+  if FAnchThresh > 0 then
+    LThresh := FAnchThresh
+  else
+    LThresh := FThresh;
+
   if ABuySide then
   begin
+    //check to see if ask price is higher than anchor
+    IsUp := ATicker.Ticker.Ask > FAnchor;
+
     //base case
     if FAnchor <= 0 then
       Result := True
+    //on an upwards move buy side needs to exceed the "open threshold"
     //find the percent difference and check if this is at or above the threshold
-    else if Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(FThresh) then
+    else if IsUp and (Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(FThresh)) then
+      Result := True
+    //when we're going down, use the "adjust threshold"
+    else if not IsUp and (Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(LThresh)) then
       Result := True;
-
-    //check to see if ask price is higher than anchor
-    IsUp := ATicker.Ticker.Ask > FAnchor;
 
     if ASetAnchor then
       FAnchor := ATicker.Ticker.Ask;
   end
   else
   begin
+    //check to see if bid price is higher than anchor
+    IsUp := ATicker.Ticker.Bid > FAnchor;
+
     //base case
     if FAnchor <= 0 then
       Result := True
+    //when we're going up, use the "adjust threshold"
+    else if IsUp and (Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(LThresh)) then
+      Result := True
+    //on an downards move sell side needs to exceed the "close threshold"
     //find the percent difference and check if this is at or above the threshold
-    else if Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(FThresh) then
+    else if not IsUp and (Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(FThresh)) then
       Result := True;
-
-    //check to see if bid price is higher than anchor
-    IsUp := ATicker.Ticker.Bid > FAnchor;
 
     if ASetAnchor then
       FAnchor := ATicker.Ticker.Bid;
@@ -1035,6 +1070,7 @@ constructor TGDAXBobberStrategyImpl.Create;
 begin
   inherited Create;
   FThresh := 0;
+  FAnchThresh := 0;
   FPosSize := 0;
   FAnchor := -1;
   FFunds := 0;

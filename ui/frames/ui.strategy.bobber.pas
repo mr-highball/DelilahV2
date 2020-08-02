@@ -25,6 +25,7 @@ type
     chk_limit_sell: TCheckBox;
     edit_funds: TEdit;
     edit_threshold: TEdit;
+    edit_anch_threshold: TEdit;
     radio_funds_mode: TRadioGroup;
   private
     procedure UpdateBobber(Sender : TObject);
@@ -50,10 +51,19 @@ begin
   LStrat := Strategy as IGDAXBobberStrategy;
 
   if edit_threshold.Text <> '' then
-    LStrat.Threshold := StrToFloat(edit_threshold.Text);
+    LStrat.Threshold := StrToFloat(edit_threshold.Text)
+  else
+    LStrat.Threshold := 0;
+
+  if edit_anch_threshold.Text <> '' then
+    LStrat.AdjustAnchorThreshold := StrToFloat(edit_anch_threshold.Text)
+  else
+    LStrat.AdjustAnchorThreshold := 0;
 
   if edit_funds.Text <> '' then
-    LStrat.Funds := StrToFloat(edit_funds.Text);
+    LStrat.Funds := StrToFloat(edit_funds.Text)
+  else
+    LStrat.Funds := 0;
 
   if radio_funds_mode.ItemIndex < 0 then
     radio_funds_mode.ItemIndex := 0;
@@ -78,6 +88,7 @@ begin
   LStrat := Strategy as IGDAXBobberStrategy;
 
   edit_threshold.Text := FloatToStr(LStrat.Threshold);
+  edit_anch_threshold.Text := FloatToStr(LStrat.AdjustAnchorThreshold);
   edit_funds.Text := FloatToStr(LStrat.Funds);
 
   if LStrat.FundsMode = bmPercentTotal then

@@ -49,9 +49,11 @@ type
 
     //property methods
     function GetThresh: Extended;
+    function GetAnchThresh: Extended;
     function GetPositionSize: Extended;
     function GetState: TBobberState;
     procedure SetAnchor(const AValue: Extended);
+    procedure SetAnchThresh(const AValue: Extended);
     procedure SetFunds(const AValue: Extended);
     procedure SetMode(const AValue: TBobberFundsMode);
     function GetMode: TBobberFundsMode;
@@ -70,6 +72,15 @@ type
         2.) anchor price adjusted to the new price
     *)
     property Threshold : Extended read GetThresh write SetThresh;
+
+    (*
+      the adjustment threshold is used to move the anchor price in a
+      conditional fashion. when out of position, the anchor is moved
+      when the price lowers by the threshold (and continues to do so)
+      but when in position, the anchor is moved on the price increasing
+      above this threshold.
+    *)
+    property AdjustAnchorThreshold : Extended read GetAnchThresh write SetAnchThresh;
 
     (*
       current anchor price

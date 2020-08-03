@@ -636,7 +636,12 @@ begin
       begin
         //check if retrying
         if RETRY_EXIT then
-          PlaceReplacementOrder
+        begin
+          if FOrder.Order.FilledSized > 0 then
+            FPosSize := FPosSize - FOrder.Order.FilledSized;
+
+          PlaceReplacementOrder;
+        end
         //cancelled externally? if so check for partial
         else if FOrder.Order.FilledSized > 0 then
         begin
@@ -671,6 +676,18 @@ begin
       //for limit orders that are active we handle trying to keep up with the price
       else if (LStatus = omActive) and (FOrder.Order.OrderType = otLimit) then
       begin
+        //when an order is placed at a larger amount than the recorded
+        //position size, update the position so replacement orders will
+        //accurately be executed
+        if FOrder.Size > FPosSize then
+        begin
+          //account for external strategies to adjust inventory
+          if FOrder.Size < AInventory then
+            FPosSize := FOrder.Size
+          else
+            FPosSize := AInventory;
+        end;
+
         //if the ask hasn't changed then there's nothing to do
         if ATicker.Ticker.Ask = FOrder.Order.Price then
           Exit(True);

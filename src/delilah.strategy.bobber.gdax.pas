@@ -460,7 +460,7 @@ var
       //decrement the size until we find a suitable amount to purchase
       if (REMAINING_SIZE * ATicker.Ticker.Ask) > AFunds then
       begin
-        REMAINING_SIZE := REMAINING_SIZE - ATicker.Ticker.Product.BaseMinSize
+        REMAINING_SIZE := REMAINING_SIZE - ATicker.Ticker.Product.BaseMinSize;
         LogInfo(Format('FeedEnteringPos::CancelledLogic::size too high, adjusting remaining size, new [size]:%f', [REMAINING_SIZE]))
       end
       else

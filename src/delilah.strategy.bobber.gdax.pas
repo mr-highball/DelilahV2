@@ -455,6 +455,15 @@ var
       REMAINING_SIZE := REMAINING_SIZE - FOrder.Order.FilledSized;
     end;
 
+    //check to make sure we have enough funds to purchase the amount
+    repeat
+      //decrement the size until we find a suitable amount to purchase
+      if (REMAINING_SIZE * ATicker.Ticker.Ask) > AFunds then
+        REMAINING_SIZE := REMAINING_SIZE - ATicker.Ticker.Product.BaseMinSize
+      else
+        break;
+    until REMAINING_SIZE < ATicker.Ticker.Product.BaseMinSize;
+
     //min size check
     if REMAINING_SIZE < ATicker.Ticker.Product.BaseMinSize then
       REMAINING_SIZE := 0;
@@ -538,7 +547,7 @@ begin
       else if (LStatus = omActive) and (FOrder.Order.OrderType = otLimit) then
       begin
         //initialize the remaining size
-        if REMAINING_SIZE < FOrder.Size then
+        if REMAINING_SIZE <> FOrder.Size then
           REMAINING_SIZE := FOrder.Size;
 
         //if the bid hasn't changed then there's nothing to do
@@ -567,12 +576,6 @@ end;
 function TGDAXBobberStrategyImpl.FeedExitingPos(const ATicker: ITickerGDAX;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
-const
-  (*
-    used to cancel limit orders and retry when the cancel clears at cb
-  *)
-  RETRY_EXIT : Boolean = False;
-
 var
   LStatus: TOrderManagerStatus;
   LDetails : IOrderDetails;
@@ -581,7 +584,7 @@ var
   begin
     FOrder := nil;
     FOrderID := '';
-    RETRY_EXIT := False;
+    FPosSize := 0;
   end;
 
   procedure PlaceReplacementOrder;
@@ -598,8 +601,7 @@ var
     //just exit and let the next feed finalize the position
     if LSize < ATicker.Ticker.Product.BaseMinSize then
     begin
-      RETRY_EXIT := False;
-      ClearOrderDetails;
+      FPosSize := 0;
       Exit;
     end;
 
@@ -617,55 +619,100 @@ var
     if not AManager.Place(LReplacement, LID, Error) then
       raise Exception.Create('PlaceReplacementOrder::' + Error);
 
-    ClearOrderDetails;
-
     //update new order info
     FOrderID := LID;
     FOrder := LReplacement;
+  end;
+
+  procedure MoveInOrOutPosition;
+  begin
+    //otherwise, see if we have a position
+    if FPosSize > 0 then
+      FState := bsInPos
+    //if all else failed above, we are "out of position"
+    else
+      FState := bsOutPos;
+
+    ClearOrderDetails;
+  end;
+
+  (*
+    when the order status reports back as cancelled
+  *)
+  procedure CancelledLogic;
+  begin
+    //decrement any partials and adjust position
+    if FOrder.Order.FilledSized > 0 then
+      FPosSize := FPosSize - FOrder.Order.FilledSized;
+
+    //now make sure position size isn't higher than inventory
+    if FPosSize > AInventory then
+      FPosSize := AInventory;
+
+    //min size check
+    if FPosSize < ATicker.Ticker.Product.BaseMinSize then
+      FPosSize := 0;
+
+    //check if retrying (still have inventory to sell)
+    if FPosSize > 0 then
+      PlaceReplacementOrder
+    //otherwise move in or out of position
+    else
+      MoveInOrOutPosition;
+  end;
+
+  (*
+    if the order status is completed
+  *)
+  procedure CompletedLogic;
+  begin
+    //need an order to continue, so mark state depending on pos size
+    //also to note, we can't have replacement orders in this situation
+    if not Assigned(FOrder) or (not Assigned(FOrder.Order)) then
+    begin
+      MoveInOrOutPosition;
+      Exit;
+    end;
+
+    //update position
+    FPosSize := FPosSize - FOrder.Order.FilledSized;
+
+    //if the remaining amount is less than the minimum size, discard it
+    if FPosSize < ATicker.Ticker.Product.BaseMinSize then
+      FPosSize := 0;
+
+    //check to see if we have any remaining order amount, if so place a new order
+    if FPosSize > 0 then
+    begin
+      PlaceReplacementOrder;
+      Exit;
+    end;
+
+    //move in or out of position
+    MoveInOrOutPosition;
   end;
 
 begin
   try
     Result := False;
 
+    //simple check to make sure an external source hasn't sold the inventory
+    if FPosSize > AInventory then
+      FPosSize := AInventory;
+
     //orders are removed from the manager on completion, so first check
     //to see if it exists
     if not AManager.Exists[FOrderID] then
     begin
-      //shouldn't happen, but in this case reset
+      //reset when order details has been cleared
       if not Assigned(FOrder) then
-      begin
-        FState := bsOutPos;
-        FPosSize := 0;
-        ClearOrderDetails;
-      end
-      //handle cancels by setting to out of position
+        CompletedLogic
+      //handle cancels
       else if FOrder.Order.OrderStatus = stCancelled then
-      begin
-        //account for partials
-        if FOrder.Order.FilledSized > 0 then
-          FPosSize := FPosSize - FOrder.Order.FilledSized;
-
-        //still have inventory to sell
-        if FPosSize > 0 then
-          RETRY_EXIT := True;
-
-        if RETRY_EXIT then
-          PlaceReplacementOrder
-        else
-        begin
-          FState := bsOutPos;
-          FPosSize := 0;
-          ClearOrderDetails;
-        end;
-      end
-      //handle completed status (out of position)
+        CancelledLogic
+      //handle completed status
       else
-      begin
-        FState := bsOutPos;
-        FPosSize := 0;
-        ClearOrderDetails;
-      end;
+       CompletedLogic;
     end
     //otherwise we need to handle either re-placing limit orders or waiting
     else
@@ -674,53 +721,17 @@ begin
 
       //handle cancels by setting to out of position or in-position for partial
       if LStatus = omCanceled then
-      begin
-        //check if retrying
-        if RETRY_EXIT then
-        begin
-          if FOrder.Order.FilledSized > 0 then
-            FPosSize := FPosSize - FOrder.Order.FilledSized;
-
-          PlaceReplacementOrder;
-        end
-        //cancelled externally? if so check for partial
-        else if FOrder.Order.FilledSized > 0 then
-        begin
-          FPosSize := FPosSize - FOrder.Order.FilledSized;
-
-          //check to see if we need to place another order
-          if FPosSize > 0 then
-            RETRY_EXIT := True
-          //otherwise close out
-          else
-          begin
-            FState := bsOutPos;
-            FPosSize := 0;
-            ClearOrderDetails;
-          end;
-        end
-        //otherwise we'll go ahead and update state to out of pos
-        else
-        begin
-          FState := bsOutPos;
-          FPosSize := 0;
-          ClearOrderDetails;
-        end;
-      end
+        CancelledLogic
       //check for completion
       else if LStatus = omCompleted then
-      begin
-        FPosSize := 0;
-        FState := bsOutPos;
-        ClearOrderDetails;
-      end
+        CompletedLogic
       //for limit orders that are active we handle trying to keep up with the price
       else if (LStatus = omActive) and (FOrder.Order.OrderType = otLimit) then
       begin
         //when an order is placed at a larger amount than the recorded
         //position size, update the position so replacement orders will
         //accurately be executed
-        if FOrder.Size > FPosSize then
+        if FOrder.Size <> FPosSize then
         begin
           //account for external strategies to adjust inventory
           if FOrder.Size < AInventory then
@@ -739,9 +750,6 @@ begin
           Error := 'FeedExitingPos::' + Error;
           Exit;
         end;
-
-        //mark to retry this
-        RETRY_EXIT := True;
       end;
     end;
 

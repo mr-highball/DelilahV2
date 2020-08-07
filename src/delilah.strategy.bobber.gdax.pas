@@ -897,15 +897,6 @@ begin
     if FPosSize > AInventory then
       FPosSize := AInventory;
 
-    //check to see if our position is less than the minimum size, if so
-    //we can skip straight to "out of position"
-    if FPosSize < ATicker.Ticker.Product.BaseMinSize then
-    begin
-      FPosSize := 0;
-      FState := bsOutPos;
-      Exit(True);
-    end;
-
     //initialize local vars
     LBid := ATicker.Ticker.Bid;
     LSize := 0;
@@ -934,6 +925,15 @@ begin
 
     //now make sure we respect the min size
     AdjustForMinSize(LSize, ATicker);
+
+    //check to see if our position is less than the minimum size, if so
+    //we can skip straight to "out of position"
+    if LSize < LMin then
+    begin
+      FPosSize := 0;
+      FState := bsOutPos;
+      Exit(True);
+    end;
 
     //create and initialize an order
     LOrder := TGDAXOrderImpl.Create;

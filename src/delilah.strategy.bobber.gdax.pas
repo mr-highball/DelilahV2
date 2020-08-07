@@ -109,13 +109,14 @@ type
       const AFunds, AInventory, AAAC : Extended; out Error : String) : Boolean;
 
     (*
-      avoid "too specific" errors by using the quote increment for order size
+      avoid "too specific" errors by using adjusting by minimum product size
     *)
-    procedure AdjustForQuoteSize(var Size : Extended; const ATicker : ITickerGDAX);
+    procedure AdjustForMinSize(var Size : Extended; const ATicker : ITickerGDAX);
   protected
     function GetThresh: Extended;
     function GetAnchThresh: Extended;
     function GetPositionSize: Extended;
+    procedure SetPositionSize(const AValue: Extended);
     function GetState: TBobberState;
     procedure SetAnchor(const AValue: Extended);
     procedure SetFunds(const AValue: Extended);
@@ -140,7 +141,7 @@ type
     property Funds : Extended read GetFunds write SetFunds;
     property FundsMode : TBobberFundsMode read GetMode write SetMode;
     property State : TBobberState read GetState;
-    property PositionSize : Extended read GetPositionSize;
+    property PositionSize : Extended read GetPositionSize write SetPositionSize;
 
     property UseLimitBuy : Boolean read GetUseLimitBuy write SetUseLimitBuy;
     property UseLimitSell : Boolean read GetUseLimitSell write SetUseLimitSell;
@@ -402,7 +403,7 @@ var
   begin
     //set local size to remaining, then adjust for quote
     LSize := REMAINING_SIZE;
-    AdjustForQuoteSize(LSize, ATicker);
+    AdjustForMinSize(LSize, ATicker);
 
     //when the new size would be smaller than the minimum, we can
     //just exit and let the next feed finalize the position
@@ -598,7 +599,7 @@ var
   begin
     //in this case pos size is decrement for partials so we can use it directly
     LSize := FPosSize;
-    AdjustForQuoteSize(LSize, ATicker);
+    AdjustForMinSize(LSize, ATicker);
 
     //when the new size would be smaller than the minimum, we can
     //just exit and let the next feed finalize the position
@@ -931,8 +932,8 @@ begin
       end
     end;
 
-    //now make sure we respect the quote increment
-    AdjustForQuoteSize(LSize, ATicker);
+    //now make sure we respect the min size
+    AdjustForMinSize(LSize, ATicker);
 
     //create and initialize an order
     LOrder := TGDAXOrderImpl.Create;
@@ -1067,8 +1068,8 @@ begin
     if LSize < LMin then
       LSize := LMin;
 
-    //now make sure we respect the quote increment
-    AdjustForQuoteSize(LSize, ATicker);
+    //now make sure we respect the min size
+    AdjustForMinSize(LSize, ATicker);
 
     //now do a final check to see if we have enough funds to cover the buy
     if (LSize * LAsk) > AFunds then
@@ -1107,23 +1108,28 @@ begin
   end;
 end;
 
-procedure TGDAXBobberStrategyImpl.AdjustForQuoteSize(var Size: Extended;
+procedure TGDAXBobberStrategyImpl.AdjustForMinSize(var Size: Extended;
   const ATicker: ITickerGDAX);
 var
-  LQuote : Extended;
+  LMin : Extended;
 begin
-  LQuote := ATicker.Ticker.Product.QuoteIncrement;
+  LMin := ATicker.Ticker.Product.BaseMinSize;
 
-  if LQuote < ATicker.Ticker.Product.BaseMinSize then
-    LQuote := ATicker.Ticker.Product.BaseMinSize;
-
-  if LQuote <= 0 then
-    Exit;
-
-  Size := Trunc(Size / LQuote) * LQuote;
+  Size := Trunc(Size / LMin) * LMin;
 
   if Size <= 0 then
     Size := 0;
+end;
+
+procedure TGDAXBobberStrategyImpl.SetPositionSize(const AValue: Extended);
+begin
+  FPosSize := AValue;
+
+  if FPosSize < 0 then
+    FPosSize := 0;
+
+  if (FPosSize > 0) and (FState in [bsOutPos, bsEntering]) then
+    FState := bsInPos;
 end;
 
 procedure TGDAXBobberStrategyImpl.ExitPosition;

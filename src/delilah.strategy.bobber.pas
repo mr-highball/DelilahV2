@@ -57,6 +57,7 @@ type
     procedure SetFunds(const AValue: Extended);
     procedure SetMode(const AValue: TBobberFundsMode);
     function GetMode: TBobberFundsMode;
+    procedure SetPositionSize(const AValue: Extended);
     procedure SetThresh(const AValue: Extended);
     function GetAnchor: Extended;
     function GetFunds: Extended;
@@ -105,7 +106,7 @@ type
     (*
       actual size of inventory this strategy is holding
     *)
-    property PositionSize : Extended read GetPositionSize;
+    property PositionSize : Extended read GetPositionSize write SetPositionSize;
 
     //methods
 

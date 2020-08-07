@@ -840,8 +840,8 @@ begin
         if LOrderSize > AInventory then
           LOrderSize := AInventory;
 
-        //now make sure we respect the quote increment (ie. can only sell
-        //in increments of quote increment, so min order size of 1.0 quote inc
+        //now make sure we respect the min size (ie. can only sell
+        //in increments of min increment, so min order size of 1.0 inc
         //of 1.0, and our calc returned 3.5, we would have to sell 3)
         if LOrderSize > 0 then
         begin

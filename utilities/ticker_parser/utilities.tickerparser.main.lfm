@@ -1,44 +1,46 @@
 object TickerParser: TTickerParser
   Left = 996
-  Height = 648
+  Height = 324
   Top = 398
-  Width = 1021
+  Width = 510
   Caption = 'Strategy Analyzer'
-  ClientHeight = 648
-  ClientWidth = 1021
-  DesignTimePPI = 192
+  ClientHeight = 324
+  ClientWidth = 510
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
   ShowHint = True
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '1.8.4.0'
   object pctrl_main: TPageControl
     Left = 0
-    Height = 648
+    Height = 324
     Top = 0
-    Width = 1021
-    ActivePage = Simulate
+    Width = 510
+    ActivePage = ts_load
     Align = alClient
-    TabIndex = 1
+    ParentFont = False
+    TabIndex = 0
     TabOrder = 0
     object ts_load: TTabSheet
       Caption = 'Load'
-      ClientHeight = 590
-      ClientWidth = 1005
+      ClientHeight = 296
+      ClientWidth = 502
+      ParentFont = False
       object edit_directory: TEdit
         AnchorSideLeft.Control = ts_load
         AnchorSideTop.Control = lbl_load_info
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = ts_load
         AnchorSideRight.Side = asrBottom
-        Left = 50
-        Height = 40
-        Top = 114
-        Width = 805
+        Left = 25
+        Height = 23
+        Top = 40
+        Width = 402
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 50
-        BorderSpacing.Top = 50
-        BorderSpacing.Right = 150
+        BorderSpacing.Left = 25
+        BorderSpacing.Top = 25
+        BorderSpacing.Right = 75
+        ParentFont = False
         TabOrder = 0
         TextHint = 'C:\'
       end
@@ -50,39 +52,55 @@ object TickerParser: TTickerParser
         AnchorSideRight.Side = asrBottom
         AnchorSideBottom.Control = edit_directory
         AnchorSideBottom.Side = asrCenter
-        Left = 855
-        Height = 40
-        Top = 114
-        Width = 50
+        Left = 427
+        Height = 22
+        Top = 40
+        Width = 25
         Anchors = [akTop, akRight, akBottom]
-        BorderSpacing.Right = 100
+        BorderSpacing.Right = 50
         Caption = '...'
         OnClick = btn_open_pickerClick
+        ParentFont = False
       end
       object pnl_ctrls: TPanel
         Left = 0
-        Height = 100
-        Top = 490
-        Width = 1005
+        Height = 50
+        Top = 246
+        Width = 502
         Align = alBottom
         BevelOuter = bvNone
-        ClientHeight = 100
-        ClientWidth = 1005
+        ClientHeight = 50
+        ClientWidth = 502
+        ParentFont = False
         TabOrder = 1
         object btn_load: TButton
           AnchorSideTop.Control = pnl_ctrls
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = pnl_ctrls
           AnchorSideRight.Side = asrBottom
-          Left = 847
-          Height = 50
-          Top = 25
-          Width = 150
+          Left = 423
+          Height = 25
+          Top = 13
+          Width = 75
           Anchors = [akTop, akRight]
-          BorderSpacing.Right = 8
+          BorderSpacing.Right = 4
           Caption = 'Load'
           OnClick = btn_loadClick
+          ParentFont = False
           TabOrder = 0
+        end
+        object btn_save_tickers: TButton
+          AnchorSideTop.Control = btn_load
+          AnchorSideRight.Control = btn_load
+          Left = 338
+          Height = 25
+          Top = 13
+          Width = 75
+          Anchors = [akTop, akRight]
+          BorderSpacing.Right = 10
+          Caption = 'Save'
+          OnClick = btn_save_tickersClick
+          TabOrder = 1
         end
       end
       object memo_load_order: TMemo
@@ -91,24 +109,26 @@ object TickerParser: TTickerParser
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = edit_directory
         AnchorSideRight.Side = asrBottom
-        Left = 50
-        Height = 180
-        Top = 194
-        Width = 805
+        Left = 25
+        Height = 90
+        Top = 83
+        Width = 402
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 40
+        BorderSpacing.Top = 20
+        ParentFont = False
         ReadOnly = True
         TabOrder = 2
       end
       object lbl_load_info: TLabel
         Left = 0
-        Height = 64
+        Height = 15
         Top = 0
-        Width = 1005
+        Width = 502
         Align = alTop
         Alignment = taCenter
         Caption = 'select a folder containing saved ticker files, then press the "load" button to import all the tickers'
         ParentColor = False
+        ParentFont = False
         WordWrap = True
       end
       object trackbar_decimate: TTrackBar
@@ -117,14 +137,15 @@ object TickerParser: TTickerParser
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = memo_load_order
         AnchorSideRight.Side = asrBottom
-        Left = 50
-        Height = 50
-        Top = 416
-        Width = 805
+        Left = 25
+        Height = 25
+        Top = 192
+        Width = 402
         Max = 20
         Position = 0
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 5
+        BorderSpacing.Top = 2
+        ParentFont = False
         TabOrder = 3
       end
       object lbl_decimate_info: TLabel
@@ -132,64 +153,70 @@ object TickerParser: TTickerParser
         AnchorSideLeft.Side = asrCenter
         AnchorSideTop.Control = memo_load_order
         AnchorSideTop.Side = asrBottom
-        Left = 378
-        Height = 32
-        Top = 379
-        Width = 149
-        BorderSpacing.Top = 5
+        Left = 189
+        Height = 15
+        Top = 175
+        Width = 74
+        BorderSpacing.Top = 2
         Caption = 'Decimation %'
         ParentColor = False
+        ParentFont = False
       end
     end
     object Simulate: TTabSheet
       Caption = 'Simulate'
-      ClientHeight = 590
-      ClientWidth = 1005
+      ClientHeight = 296
+      ClientWidth = 502
+      ParentFont = False
       object pnl_ctrls_simulate: TPanel
         Left = 0
-        Height = 100
-        Top = 490
-        Width = 1005
+        Height = 50
+        Top = 246
+        Width = 502
         Align = alBottom
         BevelOuter = bvNone
-        ClientHeight = 100
-        ClientWidth = 1005
+        ClientHeight = 50
+        ClientWidth = 502
+        ParentFont = False
         TabOrder = 0
         object btn_save_simulate: TButton
           AnchorSideTop.Control = pnl_ctrls_simulate
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = pnl_ctrls_simulate
           AnchorSideRight.Side = asrBottom
-          Left = 847
-          Height = 50
-          Top = 25
-          Width = 150
+          Left = 423
+          Height = 25
+          Top = 13
+          Width = 75
           Anchors = [akTop, akRight]
-          BorderSpacing.Right = 8
+          BorderSpacing.Right = 4
           Caption = 'Simulate'
           OnClick = btn_save_simulateClick
+          ParentFont = False
           TabOrder = 0
         end
         object btn_cance_simulate: TButton
           AnchorSideLeft.Control = pnl_ctrls_simulate
           AnchorSideTop.Control = pnl_ctrls_simulate
           AnchorSideTop.Side = asrCenter
-          Left = 8
-          Height = 50
-          Top = 25
-          Width = 150
-          BorderSpacing.Left = 8
+          Left = 4
+          Height = 25
+          Top = 13
+          Width = 75
+          BorderSpacing.Left = 4
           Caption = 'Cancel'
           OnClick = btn_cance_simulateClick
+          ParentFont = False
           TabOrder = 1
         end
       end
       object edit_funds: TEdit
-        Left = 32
-        Height = 40
+        Left = 16
+        Height = 23
         Hint = 'amount of funds'
-        Top = 40
-        Width = 272
+        Top = 20
+        Width = 136
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         TabOrder = 1
@@ -202,13 +229,14 @@ object TickerParser: TTickerParser
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = edit_funds
         AnchorSideRight.Side = asrBottom
-        Left = 32
-        Height = 40
+        Left = 16
+        Height = 23
         Hint = 'fee percentage (0.01 = 1%)'
-        Top = 90
-        Width = 272
+        Top = 48
+        Width = 136
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 10
+        BorderSpacing.Top = 5
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         TabOrder = 2
@@ -221,14 +249,15 @@ object TickerParser: TTickerParser
         AnchorSideRight.Control = Simulate
         AnchorSideRight.Side = asrBottom
         AnchorSideBottom.Control = pnl_ctrls_simulate
-        Left = 50
-        Height = 40
-        Top = 430
-        Width = 905
+        Left = 25
+        Height = 20
+        Top = 216
+        Width = 452
         Anchors = [akLeft, akRight, akBottom]
-        BorderSpacing.Left = 50
-        BorderSpacing.Right = 50
-        BorderSpacing.Bottom = 20
+        BorderSpacing.Left = 25
+        BorderSpacing.Right = 25
+        BorderSpacing.Bottom = 10
+        ParentFont = False
         TabOrder = 3
       end
       object edit_product: TEdit
@@ -237,13 +266,14 @@ object TickerParser: TTickerParser
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = edit_fee_perc
         AnchorSideRight.Side = asrBottom
-        Left = 32
-        Height = 40
+        Left = 16
+        Height = 23
         Hint = 'the trading pair for the loaded tickers (BTC-USD, LTC-USD, etc...)'
-        Top = 140
-        Width = 272
+        Top = 76
+        Width = 136
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 10
+        BorderSpacing.Top = 5
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         TabOrder = 4
@@ -256,13 +286,14 @@ object TickerParser: TTickerParser
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = edit_product
         AnchorSideRight.Side = asrBottom
-        Left = 32
-        Height = 40
+        Left = 16
+        Height = 23
         Hint = 'the smallest unit that can be purchased, consult the coinbase api docs'
-        Top = 190
-        Width = 272
+        Top = 104
+        Width = 136
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 10
+        BorderSpacing.Top = 5
+        ParentFont = False
         ParentShowHint = False
         ShowHint = True
         TabOrder = 5
@@ -275,28 +306,30 @@ object TickerParser: TTickerParser
         AnchorSideRight.Control = Simulate
         AnchorSideRight.Side = asrBottom
         AnchorSideBottom.Control = progress_simulate
-        Left = 400
-        Height = 342
-        Top = 8
-        Width = 597
-        HorzScrollBar.Page = 559
-        VertScrollBar.Page = 304
+        Left = 200
+        Height = 172
+        Top = 4
+        Width = 298
+        HorzScrollBar.Page = 277
+        VertScrollBar.Page = 151
         Anchors = [akTop, akLeft, akRight, akBottom]
-        BorderSpacing.Left = 400
-        BorderSpacing.Top = 8
-        BorderSpacing.Right = 8
-        BorderSpacing.Bottom = 80
-        ClientHeight = 304
-        ClientWidth = 559
+        BorderSpacing.Left = 200
+        BorderSpacing.Top = 4
+        BorderSpacing.Right = 4
+        BorderSpacing.Bottom = 40
+        ClientHeight = 151
+        ClientWidth = 277
+        ParentFont = False
         TabOrder = 6
         object lbl_demo_info: TLabel
           Left = 0
-          Height = 544
+          Height = 255
           Top = 0
-          Width = 679
+          Width = 331
           Align = alTop
           Caption = 'To simulate the strategy first,'#13#10'1.) load ticker data'#13#10'2.) type in the amount of "funds" you wish to use'#13#10'3.) the fee should already be brought in, but if you'#13#10'     wish to simulate different tiers, change it next'#13#10'4.) the pair should also have been brought it, but '#13#10'     if the loaded data is different than what was selected'#13#10'     on the SimpleBot product tab, this will manually need'#13#10'     to be typed in'#13#10'5.) like the pair, the minimum purchase amount needs'#13#10'     to be properly set, for reference you will need to'#13#10'     look this up at coinbase docs if different than what'#13#10'     was selected on the product tab'#13#10'6.) press the simulate button start. at any time during the sim'#13#10'     you can export the data via the export tab to check progress'#13#10'     but otherwise can wait until everything has finished'#13#10'     using the visual loading bar as the indicator'
           ParentColor = False
+          ParentFont = False
         end
       end
       object btn_add_strategy: TButton
@@ -305,14 +338,15 @@ object TickerParser: TTickerParser
         AnchorSideRight.Control = scroll_strategies
         AnchorSideRight.Side = asrBottom
         AnchorSideBottom.Control = progress_simulate
-        Left = 897
-        Height = 50
-        Top = 355
-        Width = 100
+        Left = 448
+        Height = 25
+        Top = 179
+        Width = 50
         Anchors = [akRight, akBottom]
-        BorderSpacing.Bottom = 25
+        BorderSpacing.Bottom = 12
         Caption = 'Add...'
         OnClick = btn_add_strategyClick
+        ParentFont = False
         TabOrder = 7
       end
       object btn_edit_strategy: TButton
@@ -320,15 +354,16 @@ object TickerParser: TTickerParser
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = btn_add_strategy
         AnchorSideBottom.Control = progress_simulate
-        Left = 789
-        Height = 50
-        Top = 355
-        Width = 100
+        Left = 394
+        Height = 25
+        Top = 179
+        Width = 50
         Anchors = [akRight, akBottom]
-        BorderSpacing.Right = 8
-        BorderSpacing.Bottom = 25
+        BorderSpacing.Right = 4
+        BorderSpacing.Bottom = 12
         Caption = 'Edit'
         OnClick = btn_edit_strategyClick
+        ParentFont = False
         TabOrder = 8
       end
     end
@@ -336,29 +371,32 @@ object TickerParser: TTickerParser
       Caption = 'Export'
       ClientHeight = 590
       ClientWidth = 1005
+      ParentFont = False
       object pnl_ctrls1: TPanel
         Left = 0
-        Height = 100
-        Top = 490
+        Height = 50
+        Top = 540
         Width = 1005
         Align = alBottom
         BevelOuter = bvNone
-        ClientHeight = 100
+        ClientHeight = 50
         ClientWidth = 1005
+        ParentFont = False
         TabOrder = 0
         object btn_save_csv: TButton
           AnchorSideTop.Control = pnl_ctrls1
           AnchorSideTop.Side = asrCenter
           AnchorSideRight.Control = pnl_ctrls1
           AnchorSideRight.Side = asrBottom
-          Left = 847
-          Height = 50
-          Top = 25
-          Width = 150
+          Left = 922
+          Height = 25
+          Top = 12
+          Width = 75
           Anchors = [akTop, akRight]
-          BorderSpacing.Right = 8
+          BorderSpacing.Right = 4
           Caption = 'Save'
           OnClick = btn_save_csvClick
+          ParentFont = False
           TabOrder = 0
         end
       end
@@ -367,14 +405,15 @@ object TickerParser: TTickerParser
         AnchorSideTop.Control = ts_load
         AnchorSideRight.Control = ts_load
         AnchorSideRight.Side = asrBottom
-        Left = 50
+        Left = 25
         Height = 40
-        Top = 50
+        Top = 25
         Width = 805
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 50
-        BorderSpacing.Top = 50
-        BorderSpacing.Right = 150
+        BorderSpacing.Left = 25
+        BorderSpacing.Top = 25
+        BorderSpacing.Right = 75
+        ParentFont = False
         TabOrder = 1
         TextHint = 'C:\'
       end
@@ -386,19 +425,20 @@ object TickerParser: TTickerParser
         AnchorSideRight.Side = asrBottom
         AnchorSideBottom.Control = edit_directory_csv
         AnchorSideBottom.Side = asrCenter
-        Left = 855
+        Left = 880
         Height = 40
-        Top = 50
-        Width = 50
+        Top = 25
+        Width = 25
         Anchors = [akTop, akRight, akBottom]
-        BorderSpacing.Right = 100
+        BorderSpacing.Right = 50
         Caption = '...'
         OnClick = btn_open_picker_csvClick
+        ParentFont = False
       end
     end
   end
   object dialog_directory: TSelectDirectoryDialog
-    left = 832
-    top = 160
+    left = 416
+    top = 80
   end
 end

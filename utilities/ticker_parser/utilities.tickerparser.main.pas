@@ -72,6 +72,7 @@ type
     btn_save_simulate: TButton;
     btn_cance_simulate: TButton;
     btn_add_strategy: TButton;
+    btn_save_tickers: TButton;
     edit_product: TEdit;
     edit_funds: TEdit;
     edit_directory: TEdit;
@@ -102,6 +103,7 @@ type
     procedure btn_open_picker_csvClick(Sender: TObject);
     procedure btn_save_csvClick(Sender: TObject);
     procedure btn_save_simulateClick(Sender: TObject);
+    procedure btn_save_tickersClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -146,6 +148,7 @@ type
     procedure LoadFiles(const AFiles : TStrings; const ADecimation : Single = -1);
     procedure SimulateStrategy(const ASilentFinish : Boolean = False);
     procedure SaveCSV(const AFileName : String = ''; const ASilentFinish : Boolean = False);
+    procedure SaveTickerFile(const AFileName : String);
   end;
 
 var
@@ -194,6 +197,19 @@ end;
 procedure TTickerParser.btn_save_simulateClick(Sender: TObject);
 begin
   SimulateStrategy;
+end;
+
+procedure TTickerParser.btn_save_tickersClick(Sender: TObject);
+var
+  LDialog: TSaveDialog;
+begin
+  LDialog := TSaveDialog.Create(nil);
+  try
+    if LDialog.Execute then
+      SaveTickerFile(LDialog.FileName);
+  finally
+    LDialog.Free;
+  end;
 end;
 
 procedure TTickerParser.FormCreate(Sender: TObject);
@@ -405,6 +421,23 @@ begin
   end;
 end;
 
+procedure TTickerParser.SaveTickerFile(const AFileName: String);
+var
+  LFile : TextFile;
+  I: Integer;
+begin
+  AssignFile(LFile, AFileName);
+  try
+    Rewrite(LFile);
+
+    //write json to the file
+    for I := 0 to Pred(FTickers.Count) do
+      WriteLn(LFile, FTickers[I].JSON);
+  finally
+    CloseFile(LFile);
+  end;
+end;
+
 procedure TTickerParser.SimulateStrategy(const ASilentFinish: Boolean);
 var
   LEngine: IDelilah;
@@ -536,13 +569,17 @@ begin
   LFiles := TStringList.Create;
   LSearch := TListFileSearcher.Create(LFiles);
   try
-    LSearch.Search(edit_directory.Text, '', False);
-    LoadFiles(LFiles);
-    memo_load_order.Lines.Assign(LFiles);
-    Application.ProcessMessages;
-  finally
-    LFiles.Free;
-    LSearch.Free;
+    try
+      LSearch.Search(edit_directory.Text, '', False);
+      LoadFiles(LFiles);
+      memo_load_order.Lines.Assign(LFiles);
+      Application.ProcessMessages;
+    finally
+      LFiles.Free;
+      LSearch.Free;
+    end;
+  except on E : Exception do
+    ShowMessage(E.Message);
   end;
 end;
 

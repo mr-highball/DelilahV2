@@ -26,6 +26,8 @@ type
     edit_funds: TEdit;
     edit_threshold: TEdit;
     edit_anch_threshold: TEdit;
+    edit_threshold_profit: TEdit;
+    edit_profit_percent: TEdit;
     radio_funds_mode: TRadioGroup;
   private
     procedure UpdateBobber(Sender : TObject);
@@ -60,6 +62,16 @@ begin
   else
     LStrat.AdjustAnchorThreshold := 0;
 
+  if edit_threshold_profit.Text <> '' then
+    LStrat.ProfitThreshold := StrToFloat(edit_threshold_profit.Text)
+  else
+    LStrat.ProfitThreshold := 0;
+
+  if edit_profit_percent.Text <> '' then
+    LStrat.ProfitPercent := StrToFloat(edit_profit_percent.Text)
+  else
+    LStrat.ProfitPercent := 0;
+
   if edit_funds.Text <> '' then
     LStrat.Funds := StrToFloat(edit_funds.Text)
   else
@@ -89,6 +101,8 @@ begin
 
   edit_threshold.Text := FloatToStr(LStrat.Threshold);
   edit_anch_threshold.Text := FloatToStr(LStrat.AdjustAnchorThreshold);
+  edit_threshold_profit.Text := FloatToStr(LStrat.ProfitThreshold);
+  edit_profit_percent.Text := FloatToStr(LStrat.ProfitPercent);
   edit_funds.Text := FloatToStr(LStrat.Funds);
 
   if LStrat.FundsMode = bmPercentTotal then

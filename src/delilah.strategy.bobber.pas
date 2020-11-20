@@ -57,7 +57,11 @@ type
     procedure SetFunds(const AValue: Extended);
     procedure SetMode(const AValue: TBobberFundsMode);
     function GetMode: TBobberFundsMode;
+    function GetProfPerc: Extended;
+    function GetProfThresh: Extended;
     procedure SetPositionSize(const AValue: Extended);
+    procedure SetProfPerc(const AValue: Extended);
+    procedure SetProfThresh(const AValue: Extended);
     procedure SetThresh(const AValue: Extended);
     function GetAnchor: Extended;
     function GetFunds: Extended;
@@ -73,6 +77,19 @@ type
         2.) anchor price adjusted to the new price
     *)
     property Threshold : Extended read GetThresh write SetThresh;
+
+    (*
+      the percentage "in the money" we count as being profitable.
+      if set in tandem with ProfitThreshold will switch to using
+      ProfitThreshold once profit is met
+    *)
+    property ProfitPercent : Extended read GetProfPerc write SetProfPerc;
+
+    (*
+      exactly like threshold, but takes over only when at or above
+      the specified Profitpercent
+    *)
+    property ProfitThreshold : Extended read GetProfThresh write SetProfThresh;
 
     (*
       the adjustment threshold is used to move the anchor price in a

@@ -18,7 +18,7 @@ inherited ConfigureBobber: TConfigureBobber
     Top = 50
     Width = 459
     HorzScrollBar.Page = 280
-    VertScrollBar.Page = 292
+    VertScrollBar.Page = 354
     ClientHeight = 538
     ClientWidth = 455
     object chk_limit_buy: TCheckBox[0]
@@ -27,7 +27,7 @@ inherited ConfigureBobber: TConfigureBobber
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 19
-      Top = 246
+      Top = 308
       Width = 258
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -40,7 +40,7 @@ inherited ConfigureBobber: TConfigureBobber
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 19
-      Top = 273
+      Top = 335
       Width = 258
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Top = 8
@@ -66,14 +66,14 @@ inherited ConfigureBobber: TConfigureBobber
     end
     object edit_funds: TEdit[3]
       AnchorSideLeft.Control = scroll_controls
-      AnchorSideTop.Control = edit_anch_threshold
+      AnchorSideTop.Control = edit_profit_percent
       AnchorSideTop.Side = asrBottom
       AnchorSideRight.Control = scroll_controls
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 23
       Hint = 'funds operate differently dependant on the funds mode'
-      Top = 70
+      Top = 132
       Width = 255
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Left = 100
@@ -90,7 +90,7 @@ inherited ConfigureBobber: TConfigureBobber
       AnchorSideRight.Side = asrBottom
       Left = 100
       Height = 135
-      Top = 103
+      Top = 165
       Width = 255
       Anchors = [akTop, akLeft, akRight]
       AutoFill = True
@@ -131,6 +131,42 @@ inherited ConfigureBobber: TConfigureBobber
       BorderSpacing.Right = 100
       TabOrder = 5
       TextHint = 'Anchor Adjust Threshold'
+    end
+    object edit_threshold_profit: TEdit[6]
+      AnchorSideLeft.Control = scroll_controls
+      AnchorSideTop.Control = edit_anch_threshold
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = scroll_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 23
+      Hint = 'threshold used when profit percent is met. ignored if no profit percent or set to 0'
+      Top = 70
+      Width = 255
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 100
+      BorderSpacing.Top = 8
+      BorderSpacing.Right = 100
+      TabOrder = 6
+      TextHint = 'Profit Threshold'
+    end
+    object edit_profit_percent: TEdit[7]
+      AnchorSideLeft.Control = scroll_controls
+      AnchorSideTop.Control = edit_threshold_profit
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = scroll_controls
+      AnchorSideRight.Side = asrBottom
+      Left = 100
+      Height = 23
+      Hint = 'percentage greater than aac for where we will use the profit threshold instead of the normal threshold value'
+      Top = 101
+      Width = 255
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 100
+      BorderSpacing.Top = 8
+      BorderSpacing.Right = 100
+      TabOrder = 7
+      TextHint = 'Profit Percent'
     end
   end
   inherited pnl_name: TPanel

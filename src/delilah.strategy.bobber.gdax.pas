@@ -53,15 +53,20 @@ type
     FAnchThresh,
     FPosSize,
     FAnchor,
-    FFunds : Extended;
+    FFunds,
+    FProfPerc,
+    FProfThresh: Extended;
     FState : TBobberState;
     FMode : TBobberFundsMode;
     FExitRequest,
     FEnterRequest,
     FLimitBuy,
-    FLimitSell: Boolean;
+    FLimitSell,
+    FInProfit: Boolean;
     FOrder : IGDAXOrderDetails;
     FOrderID : String;
+
+    procedure UpdateInProfit(const ATicker : ITickerGDAX; const AFunds, AInventory, AAAC : Extended);
 
     (*
       handles state for a new ticker when we are in position
@@ -126,6 +131,10 @@ type
     procedure SetAnchThresh(const AValue: Extended);
     function GetAnchor: Extended;
     function GetFunds: Extended;
+    function GetProfPerc: Extended;
+    function GetProfThresh: Extended;
+    procedure SetProfPerc(const AValue: Extended);
+    procedure SetProfThresh(const AValue: Extended);
 
     function GetUseLimitBuy: Boolean;
     function GetUseLimitSell: Boolean;
@@ -222,6 +231,26 @@ begin
   Result := FFunds;
 end;
 
+function TGDAXBobberStrategyImpl.GetProfPerc: Extended;
+begin
+  Result := FProfPerc;
+end;
+
+function TGDAXBobberStrategyImpl.GetProfThresh: Extended;
+begin
+  Result := FProfThresh;
+end;
+
+procedure TGDAXBobberStrategyImpl.SetProfPerc(const AValue: Extended);
+begin
+  FProfPerc := AValue;
+end;
+
+procedure TGDAXBobberStrategyImpl.SetProfThresh(const AValue: Extended);
+begin
+  FProfThresh := AValue;
+end;
+
 function TGDAXBobberStrategyImpl.GetUseLimitBuy: Boolean;
 begin
   Result := FLimitBuy;
@@ -281,6 +310,19 @@ begin
   end;
 end;
 
+procedure TGDAXBobberStrategyImpl.UpdateInProfit(const ATicker: ITickerGDAX;
+  const AFunds, AInventory, AAAC: Extended);
+var
+  LPrice: Extended;
+begin
+  FInProfit := False;
+  LPrice := ATicker.Price;
+
+  if (AInventory >= ATicker.Ticker.Product.BaseMinSize) and (AAAC <> 0) then
+    if (LPrice / AAAC - 1) >= FProfThresh then
+      FInProfit := True;
+end;
+
 function TGDAXBobberStrategyImpl.FeedInPos(const ATicker: ITickerGDAX;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
   Error: String): Boolean;
@@ -297,6 +339,9 @@ begin
     FPosSize := 0;
     Exit(True);
   end;
+
+  //update the in profit setting
+  UpdateInProfit(ATicker, AFunds, AInventory, AAAC);
 
   //check to see if we've found a new anchor price
   if IsNewAnchor(ATicker, False, LIsUp) then
@@ -568,7 +613,7 @@ begin
     end;
 
     //log some info
-    WriteLn(Format('FeedEnteringPos::[remainingSize]:%f', [REMAINING_SIZE]));
+    LogInfo(Format('FeedEnteringPos::[remainingSize]:%f', [REMAINING_SIZE]));
 
     //if no conditions bailed early above move on for the next feed
     Result := True;
@@ -767,7 +812,8 @@ end;
 function TGDAXBobberStrategyImpl.IsNewAnchor(const ATicker: ITickerGDAX;
   const ABuySide: Boolean; out IsUp: Boolean; const ASetAnchor: Boolean): Boolean;
 var
-  LThresh : Extended;
+  LAnchThresh,
+  LThresh: Extended;
 begin
   Result := False;
   IsUp := False;
@@ -775,9 +821,11 @@ begin
   //use anchor threshold first, but default to regular thresh if using a
   //a uniform mode
   if FAnchThresh > 0 then
-    LThresh := FAnchThresh
+    LAnchThresh := FAnchThresh
   else
-    LThresh := FThresh;
+    LAnchThresh := FThresh;
+
+  LThresh := FThresh;
 
   if ABuySide then
   begin
@@ -789,10 +837,10 @@ begin
       Result := True
     //on an upwards move buy side needs to exceed the "open threshold"
     //find the percent difference and check if this is at or above the threshold
-    else if IsUp and (Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(FThresh)) then
+    else if IsUp and (Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(LThresh)) then
       Result := True
     //when we're going down, use the "adjust threshold"
-    else if not IsUp and (Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(LThresh)) then
+    else if not IsUp and (Abs(1 - ATicker.Ticker.Ask / FAnchor) >= Abs(LAnchThresh)) then
       Result := True;
 
     if ASetAnchor then
@@ -803,15 +851,24 @@ begin
     //check to see if bid price is higher than anchor
     IsUp := ATicker.Ticker.Bid > FAnchor;
 
+    //use profit threshold in place of threshold a closing position check
+    if
+      (not IsUp)
+      and (FProfPerc > 0)
+      and (FProfThresh > 0)
+      and FInProfit
+    then
+      LThresh := FProfThresh;
+
     //base case
     if FAnchor <= 0 then
       Result := True
     //when we're going up, use the "adjust threshold"
-    else if IsUp and (Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(LThresh)) then
+    else if IsUp and (Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(LAnchThresh)) then
       Result := True
-    //on an downards move sell side needs to exceed the "close threshold"
+    //on an downwards move sell side needs to exceed the "close threshold"
     //find the percent difference and check if this is at or above the threshold
-    else if not IsUp and (Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(FThresh)) then
+    else if not IsUp and (Abs(1 - ATicker.Ticker.Bid / FAnchor) >= Abs(LThresh)) then
       Result := True;
 
     if ASetAnchor then

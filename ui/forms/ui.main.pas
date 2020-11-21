@@ -98,7 +98,9 @@ type
     FBuyOnUpCtrl,
     FBuyOnDownCtrl,
     FIgnoreOnUpCtrl,
-    FIgnoreOnDownCtrl: TBool;
+    FIgnoreOnDownCtrl,
+    FBuyBobberIn,
+    FBuyBobberOut: TBool;
     FBobberCtrl: TUserControl;
     FBobberInnerCtrl: TConfigureBobber;
     FTimeFrameCtrl,
@@ -127,6 +129,7 @@ type
     FLowestTier,
     FLowTier,
     FTier: ITierStrategyGDAX;
+    FBobber: IGDAXBobberStrategy;
     FAccelStrategy,
     FLowAccelStrategy,
     FLowestAccelStrategy : IAccelerationStrategy;
@@ -230,7 +233,8 @@ uses
   delilah, delilah.strategy.gdax, delilah.ticker.gdax, delilah.strategy.window,
   delilah.strategy.gdax.sample, delilah.manager.gdax, ledger,
   delilah.strategy.gdax.sample.extended, delilah.strategy.channels,
-  math, dateutils, delilah.strategy.acceleration.gdax, ui.license
+  math, dateutils, delilah.strategy.acceleration.gdax, ui.license,
+  delilah.strategy.bobber
   {$IFDEF WINDOWS}
   ,JwaWindows
   {$ENDIF};
@@ -253,6 +257,17 @@ begin
   Result := (SimpleBot.FAccelStrategy.Position <> TAccelPosition.apNone)
     or (SimpleBot.FLowAccelStrategy.Position <> TAccelPosition.apNone)
     or (SimpleBot.FLowestAccelStrategy.Position <> TAccelPosition.apNone)
+end;
+
+procedure BobberInOutPosition(const ADetails : PActiveCriteriaDetails;
+  var Active : Boolean);
+begin
+  //when we are checking to buy based on the bobber we see if
+  //a.) the settings enabled and b.) we're in or out of pos
+  Active :=
+    (SimpleBot.FBuyBobberIn.Checked and (SimpleBot.FBobber.State = bsInPos))
+    or
+    (SimpleBot.FBuyBobberOut.Checked and (SimpleBot.FBobber.State = bsOutPos));
 end;
 
 procedure AccelLowestStrategyInPosition(Const ADetails : PActiveCriteriaDetails;
@@ -665,6 +680,8 @@ begin
   FBuyOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('buy_downtrend','true'), True);
   FIgnoreOnUpCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_uptrend','false'), False);
   FIgnoreOnDownCtrl.Checked := StrToBoolDef(json_main.ReadString('ignore_downtrend','false'), False);
+  FBuyBobberIn.Checked := StrToBoolDef(json_main.ReadString('buy_bobber_in_pos','true'), True);
+  FBuyBobberOut.Checked := StrToBoolDef(json_main.ReadString('buy_bobber_out_pos','true'), True);
 
   //bobber
   FBobberInnerCtrl.edit_funds.Text := FloatToStr(StrToFloatDef(json_main.ReadString('bobber_funds','0.0'), 0.0));
@@ -704,6 +721,7 @@ procedure TSimpleBot.FormDestroy(Sender: TObject);
 begin
   FAccelStrategy := nil;
   FLowAccelStrategy := nil;
+  FBobber := nil;
 end;
 
 procedure TSimpleBot.FormKeyDown(Sender: TObject; var Key: Word;
@@ -745,7 +763,7 @@ begin
   FLimitFee := StrToFloatDef(FLimitFeeCtrl.Text, 0.005);
   json_main.WriteString('limit_fee',FloatToStr(FLimitFee));
 
-  //temp
+  //dca
   InterpolateTimeSetting(FHighWindowSize);
   json_main.WriteString('high_window_size', IntToStr(FHighWindowSize));
 
@@ -779,6 +797,8 @@ begin
   json_main.WriteString('buy_downtrend', BoolToStr(FBuyOnDownCtrl.Checked, True));
   json_main.WriteString('ignore_uptrend', BoolToStr(FIgnoreOnUpCtrl.Checked, True));
   json_main.WriteString('ignore_downtrend', BoolToStr(FIgnoreOnDownCtrl.Checked, True));
+  json_main.WriteString('buy_bobber_in_pos', BoolToStr(FBuyBobberIn.Checked, True));
+  json_main.WriteString('buy_bobber_out_pos', BoolToStr(FBuyBobberOut.Checked, True));
 
 
   //bobber
@@ -1116,6 +1136,24 @@ begin
     FIgnoreOnDownCtrl.ControlWidthPercent := 0.30;
     FIgnoreOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
+    FBuyBobberIn := TBool.Create(Self);
+    FBuyBobberIn.Name := 'BuyBobberIn';
+    FBuyBobberIn.Align := TAlign.alTop;
+    FBuyBobberIn.Title := 'Buy When Bobber in Position';
+    FBuyBobberIn.Description := 'when enabled, DCA buys will be performed when the bobber strategy is in position';
+    FBuyBobberIn.Height := 300;
+    FBuyBobberIn.ControlWidthPercent := 0.30;
+    FBuyBobberIn.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
+    FBuyBobberOut := TBool.Create(Self);
+    FBuyBobberOut.Name := 'BuyBobberOut';
+    FBuyBobberOut.Align := TAlign.alTop;
+    FBuyBobberOut.Title := 'Buy When Bobber out Position';
+    FBuyBobberOut.Description := 'when enabled, DCA buys will be performed when the bobber strategy is out of position';
+    FBuyBobberOut.Height := 300;
+    FBuyBobberOut.ControlWidthPercent := 0.30;
+    FBuyBobberOut.Options := FLimitFeeCtrl.Options - [ucAuthor];
+
     FBobberCtrl := TUserControl.Create(Self);
     FBobberCtrl.Name := 'Bobber';
     FBobberCtrl.Align := TAlign.alTop;
@@ -1130,6 +1168,8 @@ begin
 
     //reverse order (bottom first to show)
     FBobberCtrl.Parent := pnl_strat_ctrl_container;
+    FBuyBobberOut.Parent := pnl_strat_ctrl_container;
+    FBuyBobberIn.Parent := pnl_strat_ctrl_container;
     FIgnoreOnDownCtrl.Parent := pnl_strat_ctrl_container;
     FIgnoreOnUpCtrl.Parent := pnl_strat_ctrl_container;
     FBuyOnDownCtrl.Parent := pnl_strat_ctrl_container;
@@ -1407,6 +1447,7 @@ begin
   LBobber.FundsMode := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).FundsMode;
   LBobber.UseLimitBuy := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitBuy;
   LBobber.UseLimitSell := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitSell;
+  FBobber := LBobber;
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
@@ -1678,6 +1719,7 @@ begin
   LBobber.FundsMode := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).FundsMode;
   LBobber.UseLimitBuy := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitBuy;
   LBobber.UseLimitSell := (FBobberInnerCtrl.Strategy as IGDAXBobberStrategy).UseLimitSell;
+  FBobber := LBobber;
 
   //----------------------------------------------------------------------------
   //configure the sell for monies to sell for higher profits
@@ -2004,20 +2046,23 @@ end;
 
 function TSimpleBot.GetAccelCriteria: TActiveCriteriaCallbackArray;
 begin
-  SetLength(Result,1);
+  SetLength(Result, 2);
   Result[0] := @AccelStrategyInPosition;
+  Result[1] := @BobberInOutPosition;
 end;
 
 function TSimpleBot.GetLowAccelCriteria: TActiveCriteriaCallbackArray;
 begin
-  SetLength(Result,1);
+  SetLength(Result, 2);
   Result[0] := @AccelLowStrategyInPosition;
+  Result[1] := @BobberInOutPosition;
 end;
 
 function TSimpleBot.GetLowestAccelCriteria: TActiveCriteriaCallbackArray;
 begin
-  SetLength(Result,1);
+  SetLength(Result, 2);
   Result[0] := @AccelLowestStrategyInPosition;
+  Result[1] := @BobberInOutPosition;
 end;
 
 procedure TSimpleBot.InterpolateTimeSetting(var Time: Cardinal;

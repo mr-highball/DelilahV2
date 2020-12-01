@@ -72,11 +72,13 @@ begin
   end;
 
   for I := 0 to Pred(FSubs.Count) do
+  begin
     try
       if Assigned(FSubs[I]) then
         FSubs[I](Self);
     finally
     end;
+  end;
 
   if Assigned(FOnSave) then
   begin

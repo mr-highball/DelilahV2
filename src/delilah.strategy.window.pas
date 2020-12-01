@@ -20,23 +20,23 @@ type
     function GetAverage: Extended;
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
-    function GetCollected: Cardinal;
+    function GetCollected: Int64;
     function GetHighest: Extended;
     function GetIsReady: Boolean;
     function GetLowest: Extended;
     function GetStdDev: Single;
-    function GetWindowSize: Cardinal;
+    function GetWindowSize: Int64;
     procedure SetCleanPerc(Const AValue: Single);
     procedure SetCleanThresh(Const AValue: Single);
-    procedure SetWindowSize(Const AValue: Cardinal);
+    procedure SetWindowSize(Const AValue: Int64);
     function GetTickers: TTickers;
 
     //properties
     (*
       the desired time from start of ticker collection to the last tick
     *)
-    property WindowSizeInMilli : Cardinal read GetWindowSize write SetWindowSize;
-    property CollectedSizeInMilli : Cardinal read GetCollected;
+    property WindowSizeInMilli : Int64 read GetWindowSize write SetWindowSize;
+    property CollectedSizeInMilli : Int64 read GetCollected;
     (*
       all tickers collected within the lifetime of being fed
     *)
@@ -87,14 +87,14 @@ type
     function GetAverage: Extended;
     function GetCleanPerc: Single;
     function GetCleanThresh: Single;
-    function GetCollected: Cardinal;
+    function GetCollected: Int64;
     function GetHighest: Extended;
     function GetLowest: Extended;
     function GetStdDev: Single;
-    function GetWindowSize: Cardinal;
+    function GetWindowSize: Int64;
     procedure SetCleanPerc(Const AValue: Single);
     procedure SetCleanThresh(Const AValue: Single);
-    procedure SetWindowSize(Const AValue: Cardinal);
+    procedure SetWindowSize(Const AValue: Int64);
     function GetTickers: TTickers;
   strict protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
@@ -106,8 +106,8 @@ type
     *)
     function GetIsReady: Boolean;virtual;
   public
-    property WindowSizeInMilli : Cardinal read GetWindowSize write SetWindowSize;
-    property CollectedSizeInMilli : Cardinal read GetCollected;
+    property WindowSizeInMilli : Int64 read GetWindowSize write SetWindowSize;
+    property CollectedSizeInMilli : Int64 read GetCollected;
     property Tickers : TTickers read GetTickers;
     property CleanupPercentage : Single read GetCleanPerc write SetCleanPerc;
     property CleanupThreshold : Single read GetCleanThresh write SetCleanThresh;
@@ -150,7 +150,7 @@ begin
   Result:=FCleanThresh;
 end;
 
-function TWindowStrategyImpl.GetCollected: Cardinal;
+function TWindowStrategyImpl.GetCollected: Int64;
 var
   LFirst,
   LLast:TDateTime;
@@ -220,7 +220,7 @@ begin
   Result:=CollectedSizeInMilli>=FSize;
 end;
 
-function TWindowStrategyImpl.GetWindowSize: Cardinal;
+function TWindowStrategyImpl.GetWindowSize: Int64;
 begin
   Result:=FSize;
 end;
@@ -235,7 +235,7 @@ begin
   FCleanThresh:=AValue;
 end;
 
-procedure TWindowStrategyImpl.SetWindowSize(const AValue: Cardinal);
+procedure TWindowStrategyImpl.SetWindowSize(const AValue: Int64);
 begin
   FSize:=AValue;
 end;

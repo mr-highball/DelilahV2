@@ -20,7 +20,7 @@ type
     FOnInfo,
     FOnError,
     FOnWarn : TStrategyLogEvent;
-  strict protected
+  protected
     function DoFeed(const ATicker: ITicker; const AManager: IOrderManager;
       Const AFunds,AInventory,AAAC:Extended;Out Error: String):Boolean;virtual;abstract;
     procedure LogInfo(Const AMessage:String);

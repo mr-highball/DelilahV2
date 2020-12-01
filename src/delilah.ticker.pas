@@ -14,7 +14,7 @@ type
     base ticker implementation with virtual accessors
   *)
   TTickerImpl = class(TInterfacedObject,ITicker)
-  strict private
+  protected
     function GetPrice: Extended;
     function GetTime: TDateTime;
     procedure SetPrice(Const AValue: Extended);

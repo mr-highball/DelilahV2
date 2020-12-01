@@ -14,7 +14,7 @@ type
     base implementation of IOrderDetails with virtual accessors
   *)
   TOrderDetailsImpl = class(TInterfacedObject,IOrderDetails)
-  strict private
+  protected
     function GetFees: Extended;
     function GetPrice: Extended;
     function GetSize: Extended;

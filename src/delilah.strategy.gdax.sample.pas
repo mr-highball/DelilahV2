@@ -16,10 +16,11 @@ type
 
   { ISampleGDAX }
 
-  ISampleGDAX = interface(IWindowStrategy)
+  ISampleGDAX = interface(IStrategyGDAX)
     ['{0BC943DB-FA2F-4C42-BF55-83C22C82123D}']
     //property methods
     function GetMultiplier: Cardinal;
+    function GetWindow: IWindowStrategy;
     procedure SetMultiplier(Const AValue: Cardinal);
 
     //properties
@@ -30,43 +31,28 @@ type
       the minimum size will be used
     *)
     property Multiplier : Cardinal read GetMultiplier write SetMultiplier;
+
+    (*
+      uses a window strategy for collecting a range of tickers
+    *)
+    property Window : IWindowStrategy read GetWindow;
   end;
 
   { TSampleGDAXImpl }
   (*
-    below we inherit from TStrategyGDAXImpl because we are targeting the
-    GDAX exchange, but we also realize the IWindowStrategy. to make use
-    of base classes functionality, we will use a TStrategyGDAXImpl as base
-    and a delegate class for the window.
+    implementation of our sample strategy
   *)
-  TSampleGDAXImpl = class(TStrategyGDAXImpl,IWindowStrategy,ISampleGDAX)
+  TSampleGDAXImpl = class(TStrategyGDAXImpl, ISampleGDAX)
   strict private
     FWindow: IWindowStrategy;
     FID: String;
     FTime: TDateTime;
     FMultiplier,
     FAccumulate: Cardinal;
+  protected
     function GetMultiplier: Cardinal;
-    function GetWindow: IWindowStrategy;
-    //methods delegates by window, compiler yells if not present.
-    //alternatively we could've just added the Window property to ISampleGDAX
-    //and use it, but is slightly inconvenient when have to call
-    //Strategy.Window.Size vs Strategy.Size, also I already started to
-    //do it this way...
-    function GetCleanPerc: Single;
-    function GetCleanThresh: Single;
-    function GetCollected: Cardinal;
-    function GetHighest: Extended;
-    function GetAverage: Extended;
-    function GetIsReady: Boolean;
-    function GetLowest: Extended;
-    function GetStdDev: Single;
-    function GetWindowSize: Cardinal;
-    procedure SetCleanPerc(Const AValue: Single);
-    procedure SetCleanThresh(Const AValue: Single);
     procedure SetMultiplier(Const AValue: Cardinal);
-    procedure SetWindowSize(Const AValue: Cardinal);
-    function GetTickers: TTickers;
+    function GetWindow: IWindowStrategy;
   strict protected
     (*
       this method is the primary method used to operate on "the tick" and
@@ -85,7 +71,7 @@ type
     function DoAllowBuy(Const AFunds,AInventory,AAC,ATickerPrice:Extended;Out Reason:String):Boolean;virtual;
     function DoAllowSell(Const AFunds,AInventory,AAC,ATickerPrice:Extended;Out Reason:String):Boolean;virtual;
   public
-    property Window : IWindowStrategy read GetWindow implements IWindowStrategy;
+    property Window : IWindowStrategy read GetWindow;
     property Multiplier : Cardinal read GetMultiplier write SetMultiplier;
     constructor Create; override;
     destructor Destroy; override;
@@ -102,87 +88,20 @@ uses
 
 { TSampleGDAXImpl }
 
-{%region Window-Boilerplate}
-function TSampleGDAXImpl.GetWindow: IWindowStrategy;
-begin
-  Result:=FWindow;
-end;
-
 function TSampleGDAXImpl.GetMultiplier: Cardinal;
 begin
-  Result:=FMultiplier;
-end;
-
-function TSampleGDAXImpl.GetCleanPerc: Single;
-begin
-  Result:=FWindow.CleanupPercentage;
-end;
-
-function TSampleGDAXImpl.GetCleanThresh: Single;
-begin
-  Result:=FWindow.CleanupThreshold;
-end;
-
-function TSampleGDAXImpl.GetCollected: Cardinal;
-begin
-  Result:=FWindow.CollectedSizeInMilli;
-end;
-
-function TSampleGDAXImpl.GetHighest: Extended;
-begin
-  Result:=FWindow.HighestPrice;
-end;
-
-function TSampleGDAXImpl.GetAverage: Extended;
-begin
-  Result:=FWindow.AveragePrice;
-end;
-
-function TSampleGDAXImpl.GetIsReady: Boolean;
-begin
-  Result:=FWindow.IsReady;
-end;
-
-function TSampleGDAXImpl.GetLowest: Extended;
-begin
-  Result:=FWindow.LowestPrice;
-end;
-
-function TSampleGDAXImpl.GetStdDev: Single;
-begin
-  Result:=FWindow.StdDev;
-end;
-
-function TSampleGDAXImpl.GetWindowSize: Cardinal;
-begin
-  Result:=FWindow.WindowSizeInMilli;
-end;
-
-procedure TSampleGDAXImpl.SetCleanPerc(const AValue: Single);
-begin
-  FWindow.CleanupPercentage:=AValue;
-end;
-
-procedure TSampleGDAXImpl.SetCleanThresh(const AValue: Single);
-begin
-  FWindow.CleanupThreshold:=AValue;
+  Result := FMultiplier;
 end;
 
 procedure TSampleGDAXImpl.SetMultiplier(const AValue: Cardinal);
 begin
-  FMultiplier:=AValue;
+  FMultiplier := AValue;
 end;
 
-procedure TSampleGDAXImpl.SetWindowSize(const AValue: Cardinal);
+function TSampleGDAXImpl.GetWindow: IWindowStrategy;
 begin
-  FWindow.WindowSizeInMilli:=AValue;
+  Result := FWindow;
 end;
-
-function TSampleGDAXImpl.GetTickers: TTickers;
-begin
-  Result:=FWindow.Tickers;
-end;
-{%endregion}
 
 function TSampleGDAXImpl.DoFeed(const ATicker: ITicker;
   const AManager: IOrderManager; const AFunds, AInventory, AAAC: Extended; out
@@ -468,11 +387,9 @@ constructor TSampleGDAXImpl.Create;
 begin
   inherited Create;
 
-  //create an instance of TWindowStrategyImpl to handle the delegation.
-  //also to note, that this strategy doesn't actually make use of the window,
-  //but thought it may be useful to demonstrate how to save a lot of time
-  //utilizing base classes not related to a particular crypto exchange
-  FWindow:=TWindowStrategyImpl.Create;
+  //create an instance of TWindowStrategyImpl
+  FWindow := TWindowStrategyImpl.Create;
+
   //accumulate min size if we wait in a channel for this long
   FAccumulate:=15 * 60 * 1000;
 end;

@@ -90,7 +90,8 @@ type
   private
     FAuth : TAuthenticator;
     FProducts : TProducts;
-    FProductInit : Boolean;
+    FProductInit,
+    FLoaded: Boolean;
     FFundsCtrl,
     FMarketFeeCtrl,
     FLimitFeeCtrl,
@@ -136,6 +137,7 @@ type
     FUseMarketBuy,
     FUseMarketSell: Boolean;
     FFunds: Single;
+    FTradingPair: String;
     //FDoggy : IEZThread;
     procedure SetupEmail;
     procedure EnableEmail;
@@ -147,6 +149,8 @@ type
     procedure PreloadTickers;
     procedure ValidateLicense;
     procedure LaunchWatchdog;
+    procedure HandleAutoStart;
+    function LoadProduct(out Error : String) : Boolean;
 
     procedure SimulateStrategy;
     procedure AddStrategiesToSim(const ASim : TTickerParser);
@@ -593,7 +597,7 @@ procedure TSimpleBot.json_mainRestoringProperties(Sender: TObject);
 var
   LBal:Extended;
 begin
-  if not FInit then
+  if not FInit or FLoaded then
     Exit;
 
   //get our ledgers setup correctly
@@ -692,12 +696,21 @@ begin
   FBobberInnerCtrl.radio_funds_mode.ItemIndex := StrToIntDef(json_main.ReadString('bobber_mode','0'), 0);
   FBobberInnerCtrl.chk_limit_buy.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_buy','true'), True);
   FBobberInnerCtrl.chk_limit_sell.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_sell','true'), True);
+
+  //menu items
+  mi_auto_start.Checked := StrToBoolDef(json_main.ReadString('auto_start','false'), False);
+  FProducts.ProductFrame.edit_interval.Value := json_main.ReadInteger('poll_interval', 1500);
+  FTradingPair := json_main.ReadString('trading_pair', '');
+
+  FLoaded := True;
 end;
 
 procedure TSimpleBot.FormCreate(Sender: TObject);
 var
   LManager:IGDAXOrderManager;
 begin
+  FInit := False;
+  FLoaded := False;
   FCompletedOrders:=0;
 
   //create an engine
@@ -710,6 +723,7 @@ begin
 
   InitControls;
   LaunchWatchdog;
+  HandleAutoStart;
 end;
 
 procedure TSimpleBot.btn_log_clearClick(Sender: TObject);
@@ -810,6 +824,13 @@ begin
   json_main.WriteString('bobber_mode', IntToStr(FBobberInnerCtrl.radio_funds_mode.ItemIndex));
   json_main.WriteString('bobber_limit_buy', BoolToStr(FBobberInnerCtrl.chk_limit_buy.Checked, True));
   json_main.WriteString('bobber_limit_sell', BoolToStr(FBobberInnerCtrl.chk_limit_sell.Checked, True));
+
+  //menu/ui items
+  json_main.WriteString('poll_interval', IntToStr(FProducts.ProductFrame.edit_interval.Value));
+  json_main.WriteString('auto_start', BoolToStr(mi_auto_start.Checked, True));
+
+  if Assigned(FProducts.ProductFrame) and Assigned(FProducts.ProductFrame.Product) then
+    json_main.WriteString('trading_pair', FProducts.ProductFrame.Product.ID);
 end;
 
 procedure TSimpleBot.mi_gunslingerClick(Sender: TObject);
@@ -911,8 +932,6 @@ var
 begin
   if not FInit then
   begin
-    json_main.Restore;
-
     //SimpleBot tab
     pctrl_main.ActivePage:=ts_auth;
 
@@ -1196,6 +1215,9 @@ begin
     if EXPIRED then
       status_main.Panels[0].Text := 'LICENSE EXPIRED';
     FInit:=True;
+
+    json_main.Restore;
+    FLoaded := True;
   end;
 end;
 
@@ -1207,7 +1229,7 @@ end;
 
 procedure TSimpleBot.EnableAutoStart;
 begin
-  ShowMessage('not implemented');
+  //nothing to do right now since we key of the ui control, may change
 end;
 
 procedure TSimpleBot.PreloadTickers;
@@ -1336,6 +1358,56 @@ begin
 //  FDoggy
 //    .Setup(Sniffer)
 //    .Start;
+end;
+
+procedure TSimpleBot.HandleAutoStart;
+var
+  LError: String;
+begin
+  //first try to load the product regardless of auto start
+  if not LoadProduct(LError) then
+  begin
+    LogError('HandleAutoStart::' + LError);
+    Exit;
+  end;
+
+  //if not enabled, then bail
+  if not mi_auto_start.Checked then
+    Exit;
+
+  //use the button click to trigger proper state
+  ignition_main.btn_start.Click();
+end;
+
+function TSimpleBot.LoadProduct(out Error: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+
+  if Trim(FTradingPair) = '' then
+  begin
+    Error := 'LoadProduct::unable to auto start';
+    Exit;
+  end;
+
+  //ensure we've loaded products
+  FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
+  FProducts.ProductFrame.Init;
+  FProductInit := True;
+
+  //get the index of the pair
+  I := FProducts.ProductFrame.combo_products.Items.IndexOf(FTradingPair);
+
+  if I < 0 then
+  begin
+    Error := 'LoadProduct::trading pair not found [' + FTradingPair + ']';
+    Exit;
+  end;
+
+  //set the product
+  FProducts.ProductFrame.combo_products.ItemIndex := I;
+  Result := True;
 end;
 
 procedure TSimpleBot.SimulateStrategy;
@@ -1880,8 +1952,9 @@ begin
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
 
-  //prompt for pre-loading of tickers
-  PreloadTickers;
+  //prompt for pre-loading of tickers if not auto starting
+  if not mi_auto_start.Checked then
+    PreloadTickers;
 
   //update again after preload due to positions being postponed
   FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);

@@ -14,6 +14,7 @@ type
 
   TSingleLine = class(TUserControl)
   private
+    procedure EditChange(Sender: TObject);
     function GetText: String;
     procedure SetText(AValue: String);
   protected
@@ -30,6 +31,11 @@ uses
 {$R *.lfm}
 
 { TSingleLine }
+
+procedure TSingleLine.EditChange(Sender: TObject);
+begin
+  DoUserChange;
+end;
 
 function TSingleLine.GetText: String;
 begin
@@ -49,7 +55,8 @@ end;
 
 constructor TSingleLine.Create(TheOwner: TComponent);
 begin
-  Control:=TEdit.Create(nil);
+  Control := TEdit.Create(nil);
+  TEdit(Control).OnChange := EditChange;
   inherited Create(TheOwner);
 end;
 

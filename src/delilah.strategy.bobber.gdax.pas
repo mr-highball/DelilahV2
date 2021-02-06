@@ -1121,6 +1121,13 @@ begin
       end
     end;
 
+    //when the mode returns a 0 size just exit
+    if LSize <= 0 then
+    begin
+      LogInfo('OpenPosition::size of order is 0, exiting');
+      Exit(True);
+    end;
+
     //check minimum order amount
     if LSize < LMin then
       LSize := LMin;

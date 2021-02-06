@@ -21,7 +21,7 @@ type
   { TSampleGDAXExtImpl }
 
   TSampleGDAXExtImpl = class(TSampleGDAXImpl,ISampleGDAXExt)
-  strict private
+  protected
     //helper method to calculate an average of the window
     function GetAverage(Const ATickerPrice:Extended):Extended;
   strict protected

@@ -90,7 +90,8 @@ type
   private
     FAuth : TAuthenticator;
     FProducts : TProducts;
-    FProductInit : Boolean;
+    FProductInit,
+    FLoaded: Boolean;
     FFundsCtrl,
     FMarketFeeCtrl,
     FLimitFeeCtrl,
@@ -136,7 +137,9 @@ type
     FUseMarketBuy,
     FUseMarketSell: Boolean;
     FFunds: Single;
+    FTradingPair: String;
     //FDoggy : IEZThread;
+    procedure FundsControlChange(const AControl: TUserControl);
     procedure SetupEmail;
     procedure EnableEmail;
     procedure SetupLogFile;
@@ -147,6 +150,8 @@ type
     procedure PreloadTickers;
     procedure ValidateLicense;
     procedure LaunchWatchdog;
+    procedure HandleAutoStart;
+    function LoadProduct(out Error : String) : Boolean;
 
     procedure SimulateStrategy;
     procedure AddStrategiesToSim(const ASim : TTickerParser);
@@ -593,7 +598,7 @@ procedure TSimpleBot.json_mainRestoringProperties(Sender: TObject);
 var
   LBal:Extended;
 begin
-  if not FInit then
+  if not FInit or FLoaded then
     Exit;
 
   //get our ledgers setup correctly
@@ -692,12 +697,21 @@ begin
   FBobberInnerCtrl.radio_funds_mode.ItemIndex := StrToIntDef(json_main.ReadString('bobber_mode','0'), 0);
   FBobberInnerCtrl.chk_limit_buy.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_buy','true'), True);
   FBobberInnerCtrl.chk_limit_sell.Checked := StrToBoolDef(json_main.ReadString('bobber_limit_sell','true'), True);
+
+  //menu items
+  mi_auto_start.Checked := StrToBoolDef(json_main.ReadString('auto_start','false'), False);
+  FProducts.ProductFrame.edit_interval.Value := json_main.ReadInteger('poll_interval', 1500);
+  FTradingPair := json_main.ReadString('trading_pair', '');
+
+  FLoaded := True;
 end;
 
 procedure TSimpleBot.FormCreate(Sender: TObject);
 var
   LManager:IGDAXOrderManager;
 begin
+  FInit := False;
+  FLoaded := False;
   FCompletedOrders:=0;
 
   //create an engine
@@ -710,6 +724,7 @@ begin
 
   InitControls;
   LaunchWatchdog;
+  HandleAutoStart;
 end;
 
 procedure TSimpleBot.btn_log_clearClick(Sender: TObject);
@@ -810,6 +825,13 @@ begin
   json_main.WriteString('bobber_mode', IntToStr(FBobberInnerCtrl.radio_funds_mode.ItemIndex));
   json_main.WriteString('bobber_limit_buy', BoolToStr(FBobberInnerCtrl.chk_limit_buy.Checked, True));
   json_main.WriteString('bobber_limit_sell', BoolToStr(FBobberInnerCtrl.chk_limit_sell.Checked, True));
+
+  //menu/ui items
+  json_main.WriteString('poll_interval', IntToStr(FProducts.ProductFrame.edit_interval.Value));
+  json_main.WriteString('auto_start', BoolToStr(mi_auto_start.Checked, True));
+
+  if Assigned(FProducts.ProductFrame) and Assigned(FProducts.ProductFrame.Product) then
+    json_main.WriteString('trading_pair', FProducts.ProductFrame.Product.ID);
 end;
 
 procedure TSimpleBot.mi_gunslingerClick(Sender: TObject);
@@ -890,6 +912,12 @@ begin
   end;
 end;
 
+procedure TSimpleBot.FundsControlChange(const AControl: TUserControl);
+begin
+  //update the balance to what the user specified
+  FEngine.FundsLedger.Clear.RecordEntry(StrToFloatDef(FFundsCtrl.Text, 0), ltCredit);
+end;
+
 procedure TSimpleBot.EnableEmail;
 begin
   ShowMessage('not implemented');
@@ -911,8 +939,6 @@ var
 begin
   if not FInit then
   begin
-    json_main.Restore;
-
     //SimpleBot tab
     pctrl_main.ActivePage:=ts_auth;
 
@@ -961,7 +987,7 @@ begin
     FFundsCtrl.Align:=TAlign.alTop;
     FFundsCtrl.Title:='Funds';
     FFundsCtrl.Description:='specify "how much" quote currency is available to spend trading';
-    FFundsCtrl.Height:=300;
+    FFundsCtrl.Height:=150;
     FFundsCtrl.ControlWidthPercent := 0.3;
     FFundsCtrl.Options:=FFundsCtrl.Options - [ucAuthor];
     FFundsCtrl.Text := FLoatToStr(FFunds);
@@ -971,7 +997,7 @@ begin
     FLimitFeeCtrl.Align := TAlign.alTop;
     FLimitFeeCtrl.Title := 'Limit Fee';
     FLimitFeeCtrl.Description := 'specify the fee incurred on a "limit" order (based on your volume under the "orders" -> "fees" tab)';
-    FLimitFeeCtrl.Height := 300;
+    FLimitFeeCtrl.Height := 150;
     FLimitFeeCtrl.ControlWidthPercent := 0.30;
     FLimitFeeCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
     FLimitFeeCtrl.Text := FloatToStr(FLimitFee);
@@ -981,7 +1007,7 @@ begin
     FMarketFeeCtrl.Align := TAlign.alTop;
     FMarketFeeCtrl.Title := 'Market Fee';
     FMarketFeeCtrl.Description := 'specify the fee incurred on a "market" order (based on your volume under the "orders" -> "fees" tab)';
-    FMarketFeeCtrl.Height := 300;
+    FMarketFeeCtrl.Height := 150;
     FMarketFeeCtrl.ControlWidthPercent := 0.30;
     FMarketFeeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FMarketFeeCtrl.Text := FloatToStr(FMarketFee);
@@ -989,7 +1015,7 @@ begin
     FTimeFrameCtrl := TSlider.Create(Self);
     FTimeFrameCtrl.Name := 'TimeFrame';
     FTimeFrameCtrl.Align := TAlign.alTop;
-    FTimeFrameCtrl.Height := 300;
+    FTimeFrameCtrl.Height := 200;
     FTimeFrameCtrl.ControlWidthPercent := 1;
     FTimeFrameCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FTimeFrameCtrl.MinValue := 1;
@@ -1002,7 +1028,7 @@ begin
     FPosSizeCtrl := TSlider.Create(Self);
     FPosSizeCtrl.Name := 'PositionSize';
     FPosSizeCtrl.Align := TAlign.alTop;
-    FPosSizeCtrl.Height := 300;
+    FPosSizeCtrl.Height := 200;
     FPosSizeCtrl.ControlWidthPercent := 1;
     FPosSizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FPosSizeCtrl.MinValue := 1;
@@ -1015,7 +1041,7 @@ begin
     FSellPosSizeCtrl := TSlider.Create(Self);
     FSellPosSizeCtrl.Name := 'SellPositionSize';
     FSellPosSizeCtrl.Align := TAlign.alTop;
-    FSellPosSizeCtrl.Height := 300;
+    FSellPosSizeCtrl.Height := 200;
     FSellPosSizeCtrl.ControlWidthPercent := 1;
     FSellPosSizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FSellPosSizeCtrl.MinValue := 1;
@@ -1028,7 +1054,7 @@ begin
     FDCASizeCtrl := TSlider.Create(Self);
     FDCASizeCtrl.Name := 'DCASize';
     FDCASizeCtrl.Align := TAlign.alTop;
-    FDCASizeCtrl.Height := 300;
+    FDCASizeCtrl.Height := 200;
     FDCASizeCtrl.ControlWidthPercent := 1;
     FDCASizeCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FDCASizeCtrl.MinValue := 1;
@@ -1041,7 +1067,7 @@ begin
     FUpFundCtrl := TSlider.Create(Self);
     FUpFundCtrl.Name := 'UpFundUsage';
     FUpFundCtrl.Align := TAlign.alTop;
-    FUpFundCtrl.Height := 300;
+    FUpFundCtrl.Height := 200;
     FUpFundCtrl.ControlWidthPercent := 1;
     FUpFundCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FUpFundCtrl.MinValue := 0;
@@ -1054,7 +1080,7 @@ begin
     FDownFundCtrl := TSlider.Create(Self);
     FDownFundCtrl.Name := 'DownFundUsage';
     FDownFundCtrl.Align := TAlign.alTop;
-    FDownFundCtrl.Height := 300;
+    FDownFundCtrl.Height := 200;
     FDownFundCtrl.ControlWidthPercent := 1;
     FDownFundCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FDownFundCtrl.MinValue := 0;
@@ -1067,7 +1093,7 @@ begin
     FProfitCtrl := TProfitTarget.Create(Self);
     FProfitCtrl.Name := 'Profit';
     FProfitCtrl.Align := TAlign.alTop;
-    FProfitCtrl.Height := 350;
+    FProfitCtrl.Height := 300;
     FProfitCtrl.ControlWidthPercent := 1;
     FProfitCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FProfitCtrl.Title := 'Target Profit';
@@ -1076,7 +1102,7 @@ begin
     FMinUpRedCtrl := TProfitTarget.Create(Self);
     FMinUpRedCtrl.Name := 'MinUpReduction';
     FMinUpRedCtrl.Align := TAlign.alTop;
-    FMinUpRedCtrl.Height := 350;
+    FMinUpRedCtrl.Height := 300;
     FMinUpRedCtrl.ControlWidthPercent := 1;
     FMinUpRedCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FMinUpRedCtrl.Title := 'Minimum Uptrend Reduction';
@@ -1085,7 +1111,7 @@ begin
     FMinDownRedCtrl := TProfitTarget.Create(Self);
     FMinDownRedCtrl.Name := 'MinDownReduction';
     FMinDownRedCtrl.Align := TAlign.alTop;
-    FMinDownRedCtrl.Height := 350;
+    FMinDownRedCtrl.Height := 300;
     FMinDownRedCtrl.ControlWidthPercent := 1;
     FMinDownRedCtrl.Options := FMarketFeeCtrl.Options - [ucAuthor];
     FMinDownRedCtrl.Title := 'Minimum Downtrend Reduction';
@@ -1096,7 +1122,7 @@ begin
     FScaledBuyCtrl.Align := TAlign.alTop;
     FScaledBuyCtrl.Title := 'Scaled Buy %';
     FScaledBuyCtrl.Description := 'sets the buy scaling percentage to use as more inventory is accumulated. as inventory is accumulated this scale is proportionally applied to orders (future order are larger/smaller as inventory grows)';
-    FScaledBuyCtrl.Height := 300;
+    FScaledBuyCtrl.Height := 150;
     FScaledBuyCtrl.ControlWidthPercent := 0.30;
     FScaledBuyCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1105,7 +1131,7 @@ begin
     FBuyOnUpCtrl.Align := TAlign.alTop;
     FBuyOnUpCtrl.Title := 'Buy on Uptrend';
     FBuyOnUpCtrl.Description := 'when enabled, DCA buys will be performed on the uptrend';
-    FBuyOnUpCtrl.Height := 300;
+    FBuyOnUpCtrl.Height := 150;
     FBuyOnUpCtrl.ControlWidthPercent := 0.30;
     FBuyOnUpCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1114,7 +1140,7 @@ begin
     FBuyOnDownCtrl.Align := TAlign.alTop;
     FBuyOnDownCtrl.Title := 'Buy on Downtrend';
     FBuyOnDownCtrl.Description := 'when enabled, DCA buys will be performed on the downtrend';
-    FBuyOnDownCtrl.Height := 300;
+    FBuyOnDownCtrl.Height := 150;
     FBuyOnDownCtrl.ControlWidthPercent := 0.30;
     FBuyOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1123,7 +1149,7 @@ begin
     FIgnoreOnUpCtrl.Align := TAlign.alTop;
     FIgnoreOnUpCtrl.Title := 'Ignore Profit on Uptrend';
     FIgnoreOnUpCtrl.Description := 'when enabled, sells will be made without taking profit into consideration on the uptrend';
-    FIgnoreOnUpCtrl.Height := 300;
+    FIgnoreOnUpCtrl.Height := 150;
     FIgnoreOnUpCtrl.ControlWidthPercent := 0.30;
     FIgnoreOnUpCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1132,7 +1158,7 @@ begin
     FIgnoreOnDownCtrl.Align := TAlign.alTop;
     FIgnoreOnDownCtrl.Title := 'Ignore Profit on Uptrend';
     FIgnoreOnDownCtrl.Description := 'when enabled, sells will be made without taking profit into consideration on the downtrend';
-    FIgnoreOnDownCtrl.Height := 300;
+    FIgnoreOnDownCtrl.Height := 150;
     FIgnoreOnDownCtrl.ControlWidthPercent := 0.30;
     FIgnoreOnDownCtrl.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1141,7 +1167,7 @@ begin
     FBuyBobberIn.Align := TAlign.alTop;
     FBuyBobberIn.Title := 'Buy When Bobber in Position';
     FBuyBobberIn.Description := 'when enabled, DCA buys will be performed when the bobber strategy is in position';
-    FBuyBobberIn.Height := 300;
+    FBuyBobberIn.Height := 150;
     FBuyBobberIn.ControlWidthPercent := 0.30;
     FBuyBobberIn.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1150,7 +1176,7 @@ begin
     FBuyBobberOut.Align := TAlign.alTop;
     FBuyBobberOut.Title := 'Buy When Bobber out Position';
     FBuyBobberOut.Description := 'when enabled, DCA buys will be performed when the bobber strategy is out of position';
-    FBuyBobberOut.Height := 300;
+    FBuyBobberOut.Height := 150;
     FBuyBobberOut.ControlWidthPercent := 0.30;
     FBuyBobberOut.Options := FLimitFeeCtrl.Options - [ucAuthor];
 
@@ -1196,6 +1222,14 @@ begin
     if EXPIRED then
       status_main.Panels[0].Text := 'LICENSE EXPIRED';
     FInit:=True;
+
+    json_main.Restore;
+
+    //after loading settings setup change events with controls
+    FFundsCtrl.OnUserChange:=FundsControlChange;
+
+    //now we can say we're loaded
+    FLoaded := True;
   end;
 end;
 
@@ -1207,7 +1241,7 @@ end;
 
 procedure TSimpleBot.EnableAutoStart;
 begin
-  ShowMessage('not implemented');
+  //nothing to do right now since we key of the ui control, may change
 end;
 
 procedure TSimpleBot.PreloadTickers;
@@ -1336,6 +1370,56 @@ begin
 //  FDoggy
 //    .Setup(Sniffer)
 //    .Start;
+end;
+
+procedure TSimpleBot.HandleAutoStart;
+var
+  LError: String;
+begin
+  //first try to load the product regardless of auto start
+  if not LoadProduct(LError) then
+  begin
+    LogError('HandleAutoStart::' + LError);
+    Exit;
+  end;
+
+  //if not enabled, then bail
+  if not mi_auto_start.Checked then
+    Exit;
+
+  //use the button click to trigger proper state
+  ignition_main.btn_start.Click();
+end;
+
+function TSimpleBot.LoadProduct(out Error: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+
+  if Trim(FTradingPair) = '' then
+  begin
+    Error := 'LoadProduct::unable to auto start';
+    Exit;
+  end;
+
+  //ensure we've loaded products
+  FProducts.ProductFrame.Authenticator:=FAuth.Authenticator;
+  FProducts.ProductFrame.Init;
+  FProductInit := True;
+
+  //get the index of the pair
+  I := FProducts.ProductFrame.combo_products.Items.IndexOf(FTradingPair);
+
+  if I < 0 then
+  begin
+    Error := 'LoadProduct::trading pair not found [' + FTradingPair + ']';
+    Exit;
+  end;
+
+  //set the product
+  FProducts.ProductFrame.combo_products.ItemIndex := I;
+  Result := True;
 end;
 
 procedure TSimpleBot.SimulateStrategy;
@@ -1880,8 +1964,9 @@ begin
   //also assign the authenticator
   (FEngine.OrderManager as IGDAXOrderManager).Authenticator:=FAuth.Authenticator;
 
-  //prompt for pre-loading of tickers
-  PreloadTickers;
+  //prompt for pre-loading of tickers if not auto starting
+  if not mi_auto_start.Checked then
+    PreloadTickers;
 
   //update again after preload due to positions being postponed
   FAccelStrategy.UpdateCurrentPosition(FEngine.AvailableInventory);

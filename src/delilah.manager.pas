@@ -28,6 +28,7 @@ type
     FOnRemove: TOrderRemoveEvent;
     FOnStatus: TOrderStatusEvent;
     FOrders: TOrderDetails;
+  protected
     function GetCount: Cardinal;
     function GetExists(Const AID: String): Boolean;
     function GetOnBeforePlace: TBeforeOrderPlaceEvent;

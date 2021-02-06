@@ -1,38 +1,36 @@
 object SliderControl: TSliderControl
   Left = 0
-  Height = 381
+  Height = 190
   Top = 0
-  Width = 846
-  ClientHeight = 381
-  ClientWidth = 846
-  DesignTimePPI = 192
+  Width = 423
+  ClientHeight = 190
+  ClientWidth = 423
   ParentFont = False
   TabOrder = 0
   DesignLeft = 996
   DesignTop = 438
   object lbl_left_descr: TLabel
-    Left = 5
-    Height = 381
+    Left = 2
+    Height = 190
     Top = 0
-    Width = 200
+    Width = 100
     Align = alLeft
-    Alignment = taCenter
+    Alignment = taRightJustify
     AutoSize = False
-    BorderSpacing.Left = 5
+    BorderSpacing.Left = 2
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
     WordWrap = True
   end
   object lbl_right_descr: TLabel
-    Left = 641
-    Height = 381
+    Left = 321
+    Height = 190
     Top = 0
-    Width = 200
+    Width = 100
     Align = alRight
-    Alignment = taCenter
     AutoSize = False
-    BorderSpacing.Right = 5
+    BorderSpacing.Right = 2
     Caption = 'test'
     Font.Style = [fsBold]
     ParentColor = False
@@ -44,10 +42,10 @@ object SliderControl: TSliderControl
     AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Control = Owner
     AnchorSideRight.Control = lbl_right_descr
-    Left = 205
-    Height = 50
+    Left = 102
+    Height = 25
     Top = 0
-    Width = 436
+    Width = 219
     Position = 0
     Anchors = [akTop, akLeft, akRight]
     TabOrder = 0

@@ -21,6 +21,9 @@ type
 
   TUserControlOptions = set of TUserControlOption;
 
+  TUserControl = class;
+  TUserChangeEvent = procedure (const AControl : TUserControl) of object;
+
   { TUserControl }
   (*
     base class for a user defined control type with options to determine
@@ -35,6 +38,7 @@ type
     class var FInstance : Integer;
   strict private
     FControl: TControl;
+    FOnChange: TUserChangeEvent;
     FOptions: TUserControlOptions;
     FHeightPerc,
     FWidthPerc : Single;
@@ -55,7 +59,9 @@ type
   protected
     procedure Loaded; override;
     procedure DoInitControls;virtual;
+    procedure DoUserChange;
   public
+    property OnUserChange : TUserChangeEvent read FOnChange write FOnChange;
     property Title : String read GetTitle write SetTitle;
     property Author : String read GetAuthor write SetAuthor;
     property Description : String read GetDescr write SetDescr;
@@ -218,6 +224,12 @@ begin
 
   //default to showing everything
   Options := [ucTitle, ucDescr, ucAuthor, ucControl];
+end;
+
+procedure TUserControl.DoUserChange;
+begin
+  if Assigned(FOnChange) then
+    FOnChange(Self);
 end;
 
 procedure TUserControl.InitControls;

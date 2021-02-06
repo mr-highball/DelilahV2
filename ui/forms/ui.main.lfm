@@ -4,7 +4,7 @@ object SimpleBot: TSimpleBot
   Top = 302
   Width = 646
   Align = alRight
-  Caption = 'SimpleBot v1.0.0'
+  Caption = 'SimpleBot v1.0.1'
   ClientHeight = 483
   ClientWidth = 646
   Menu = menu_main

@@ -169,9 +169,7 @@ type
     procedure EngineStatus(Const ADetails:IOrderDetails;Const AID:String;
       Const AOldStatus,ANewStatus:TOrderManagerStatus);
 
-    procedure LogError(Const AMessage:String);
-    procedure LogInfo(Const AMessage:String);
-    procedure LogWarn(Const AMessage:String);
+
 
     function GetAccelCriteria : TActiveCriteriaCallbackArray;
     function GetLowAccelCriteria : TActiveCriteriaCallbackArray;
@@ -226,6 +224,9 @@ type
     *)
     procedure InterpolateDCAPositionSetting(var Position : Single; const AIsReload : Boolean = False);
   public
+    procedure LogError(Const AMessage:String);
+    procedure LogInfo(Const AMessage:String);
+    procedure LogWarn(Const AMessage:String);
   end;
 
 var

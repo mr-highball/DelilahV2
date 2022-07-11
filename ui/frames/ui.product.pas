@@ -23,11 +23,13 @@ type
   { TProductFrame }
 
   TProductFrame = class(TFrame)
+    btn_refresh: TButton;
     chk_log_tickers: TCheckBox;
     combo_products: TComboBox;
     edit_interval: TSpinEdit;
     lbl_interval: TLabel;
     timer_ticker: TTimer;
+    procedure btn_refreshClick(Sender: TObject);
     procedure timer_tickerTimer(Sender: TObject);
   private
     FAuth : IGDAXAuthenticator;
@@ -72,7 +74,7 @@ type
 
 implementation
 uses
-  DateUtils, gdax.api.products, gdax.api.ticker;
+  DateUtils, gdax.api.products, gdax.api.ticker, ui.main;
 
 {$R *.lfm}
 
@@ -112,6 +114,11 @@ begin
   except on E:Exception do
     LogError(E.Message);
   end;
+end;
+
+procedure TProductFrame.btn_refreshClick(Sender: TObject);
+begin
+  InitCombo;
 end;
 
 function TProductFrame.GetAuth: IGDAXAuthenticator;
@@ -206,15 +213,24 @@ var
   LError : String;
   I : Integer;
 begin
-  //clear combo before continuing
-  combo_products.Clear;
-  if not Assigned(FProducts) then
-    raise Exception.Create('products is invalid');
-  if not FProducts.Get(LContent,LError) then
-    raise Exception.Create(LError);
-  //add all of the product ids to the combo
-  for I:=0 to Pred(FProducts.Products.Count) do
-    combo_products.Items.Add(FProducts.Products[I].ID);
+  try
+    //clear combo before continuing
+    combo_products.Clear;
+    if not Assigned(FProducts) then
+      raise Exception.Create('products is invalid');
+
+    if not FProducts.Get(LContent,LError) then
+      raise Exception.Create(LError);
+
+    SimpleBot.LogInfo('TProductFrame::InitCombo::Count-' + IntToStr(FProducts.Products.Count));
+    SimpleBot.LogInfo('TProductFrame::InitCombo' + LContent);
+
+    //add all of the product ids to the combo
+    for I:=0 to Pred(FProducts.Products.Count) do
+      combo_products.Items.Add(FProducts.Products[I].ID);
+  except on E : Exception do
+    SimpleBot.LogError('TProductFrame::InitCombo::' + E.Message);
+  end;
 end;
 
 procedure TProductFrame.LogTick(const ATicker: IGDAXTicker;

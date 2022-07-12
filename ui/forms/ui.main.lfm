@@ -11,7 +11,7 @@ object SimpleBot: TSimpleBot
   OnCreate = FormCreate
   Position = poWorkAreaCenter
   ShowHint = True
-  LCLVersion = '2.1.0.0'
+  LCLVersion = '2.3.0.0'
   object pctrl_main: TPageControl
     Left = 5
     Height = 330
@@ -40,15 +40,15 @@ object SimpleBot: TSimpleBot
     end
     object ts_strategy: TTabSheet
       Caption = 'Strategy'
-      ClientHeight = 232
-      ClientWidth = 620
+      ClientHeight = 287
+      ClientWidth = 628
       ImageIndex = 3
       ParentFont = False
       object scroll_strategy: TScrollBox
-        Left = 10
-        Height = 585
-        Top = 10
-        Width = 1236
+        Left = 5
+        Height = 277
+        Top = 5
+        Width = 618
         HorzScrollBar.Page = 1
         VertScrollBar.Page = 1
         Align = alClient
@@ -56,8 +56,8 @@ object SimpleBot: TSimpleBot
         BorderSpacing.Top = 5
         BorderSpacing.Right = 5
         BorderSpacing.Bottom = 5
-        ClientHeight = 581
-        ClientWidth = 1232
+        ClientHeight = 273
+        ClientWidth = 614
         ParentFont = False
         TabOrder = 0
         OnResize = scroll_strategyResize
@@ -81,8 +81,8 @@ object SimpleBot: TSimpleBot
     end
     object ts_chart: TTabSheet
       Caption = 'Chart'
-      ClientHeight = 232
-      ClientWidth = 620
+      ClientHeight = 287
+      ClientWidth = 628
       ImageIndex = 0
       ParentFont = False
       object chart_ticker: TChart
@@ -227,52 +227,50 @@ object SimpleBot: TSimpleBot
     end
     object ts_log: TTabSheet
       Caption = 'Logging'
-      ClientHeight = 232
-      ClientWidth = 620
+      ClientHeight = 287
+      ClientWidth = 628
       ImageIndex = 2
       ParentFont = False
       inline multi_log: TMultiLine
-        Left = 10
-        Height = 435
-        Top = 10
-        Width = 1236
+        Left = 5
+        Height = 202
+        Top = 5
+        Width = 618
         Align = alClient
         BorderSpacing.Left = 5
         BorderSpacing.Top = 5
         BorderSpacing.Right = 5
         BorderSpacing.Bottom = 5
-        ClientHeight = 435
-        ClientWidth = 1236
+        ClientHeight = 202
+        ClientWidth = 618
         inherited pnl_control: TPanel
-          Left = 20
-          Height = 239
-          Top = 176
-          Width = 1196
+          Height = 107
+          Top = 85
+          Width = 598
           BorderSpacing.Left = 10
           BorderSpacing.Top = 10
           BorderSpacing.Right = 10
           BorderSpacing.Bottom = 10
         end
         inherited lbl_title: TLabel
-          Left = 20
-          Top = 20
-          Width = 1196
+          Height = 15
+          Width = 598
           BorderSpacing.Left = 10
           BorderSpacing.Top = 10
           BorderSpacing.Right = 10
         end
         inherited lbl_descr: TLabel
-          Left = 20
-          Top = 72
-          Width = 1196
+          Height = 15
+          Top = 35
+          Width = 598
           BorderSpacing.Left = 10
           BorderSpacing.Top = 10
           BorderSpacing.Right = 10
         end
         inherited lbl_author: TLabel
-          Left = 20
-          Top = 124
-          Width = 1196
+          Height = 15
+          Top = 60
+          Width = 598
           BorderSpacing.Left = 10
           BorderSpacing.Top = 10
           BorderSpacing.Right = 10
@@ -281,19 +279,19 @@ object SimpleBot: TSimpleBot
       object grp_log_options: TGroupBox
         Left = 0
         Height = 75
-        Top = 530
-        Width = 1256
+        Top = 212
+        Width = 628
         Align = alBottom
         Caption = 'Logging Options'
         ClientHeight = 55
-        ClientWidth = 1252
+        ClientWidth = 624
         ParentFont = False
         TabOrder = 1
         object chk_log_info: TCheckBox
-          Left = 200
-          Height = 63
+          Left = 100
+          Height = 30
           Top = 0
-          Width = 78
+          Width = 39
           Align = alLeft
           BorderSpacing.Left = 100
           Caption = 'Info'
@@ -305,19 +303,19 @@ object SimpleBot: TSimpleBot
           AnchorSideLeft.Side = asrCenter
           AnchorSideTop.Control = chk_log_info
           AnchorSideTop.Side = asrCenter
-          Left = 279
-          Height = 36
+          Left = 278
+          Height = 19
           Top = 6
-          Width = 136
+          Width = 68
           Caption = 'Warnings'
           ParentFont = False
           TabOrder = 1
         end
         object chk_log_error: TCheckBox
-          Left = 956
-          Height = 63
+          Left = 476
+          Height = 30
           Top = 0
-          Width = 96
+          Width = 48
           Align = alRight
           BorderSpacing.Right = 100
           Caption = 'Errors'
@@ -327,17 +325,17 @@ object SimpleBot: TSimpleBot
         object pnl_log_clear: TPanel
           Left = 0
           Height = 25
-          Top = 88
-          Width = 1252
+          Top = 30
+          Width = 624
           Align = alBottom
           BevelOuter = bvNone
           ClientHeight = 25
-          ClientWidth = 1252
+          ClientWidth = 624
           ParentFont = False
           TabOrder = 3
           object btn_log_clear: TButton
-            Left = 1177
-            Height = 50
+            Left = 549
+            Height = 25
             Top = 0
             Width = 75
             Align = alRight

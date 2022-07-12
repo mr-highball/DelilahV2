@@ -32,11 +32,11 @@ object ProductFrame: TProductFrame
     AnchorSideRight.Side = asrBottom
     AnchorSideBottom.Control = Owner
     AnchorSideBottom.Side = asrBottom
-    Left = 196
+    Left = 199
     Height = 19
     Hint = 'when toggled ''on'' all tickers will be logged to the file system'
     Top = 221
-    Width = 80
+    Width = 77
     Anchors = [akRight, akBottom]
     Caption = 'Log Tickers'
     TabOrder = 1
@@ -72,13 +72,26 @@ object ProductFrame: TProductFrame
     BorderSpacing.Top = 20
     Caption = 'Use the below input to set the polling interval in milliseconds'
     Constraints.MaxWidth = 250
-    ParentColor = False
     WordWrap = True
+  end
+  object btn_refresh: TButton
+    AnchorSideLeft.Control = combo_products
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = combo_products
+    AnchorSideRight.Control = combo_products
+    AnchorSideRight.Side = asrBottom
+    Left = 290
+    Height = 25
+    Top = 5
+    Width = 25
+    Caption = '🔃'
+    OnClick = btn_refreshClick
+    TabOrder = 3
   end
   object timer_ticker: TTimer
     Enabled = False
     OnTimer = timer_tickerTimer
-    left = 24
-    top = 184
+    Left = 24
+    Top = 184
   end
 end
